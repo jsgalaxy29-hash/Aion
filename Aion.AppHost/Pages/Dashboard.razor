@@ -1,0 +1,88 @@
+@page "/"
+@page "/dashboard"
+@using Aion.Domain.UI.State
+@inject IUserDashboardService DashboardService
+@inject IWidgetService WidgetService
+@inject AuthenticationStateProvider Auth
+
+<h2>Dashboard</h2>
+@if (_layouts is null)
+{
+    <FluentProgressRing />
+}
+else
+{
+    <div class="grid gap-2" style="grid-template-columns: repeat(12, 1fr);">
+        @foreach (var item in _layouts)
+        {
+            <div style="grid-column: span @item.W; grid-row: span @item.H;" class="p-2 border rounded">
+                <div class="d-flex justify-content-between mb-1">
+                    <strong>@item.WidgetCode</strong>
+                    <span>
+                        <FluentButton Appearance="Appearance.Neutral" Size="Small" @onclick="() => MoveUp(item)">↑</FluentButton>
+                        <FluentButton Appearance="Appearance.Neutral" Size="Small" @onclick="() => MoveDown(item)">↓</FluentButton>
+                    </span>
+                </div>
+                <Widget code="@item.WidgetCode" settingsJson="@item.SettingsJson" />
+            </div>
+        }
+    </div>
+    <FluentButton Class="mt-2" @onclick="Save">Sauvegarder</FluentButton>
+}
+
+@code {
+    private List<UserDashboardLayoutEntity>? _layouts;
+    private Guid _tenantId;
+    private Guid _userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await Auth.GetAuthenticationStateAsync();
+        _userId = Guid.Parse(state.User.FindFirst("sub")!.Value);
+        _tenantId = Guid.Parse(state.User.FindFirst("tenant")!.Value);
+        var layouts = await DashboardService.GetLayoutAsync(_tenantId, _userId, CancellationToken.None);
+        _layouts = layouts.ToList();
+    }
+
+    private void MoveUp(UserDashboardLayoutEntity item)
+    {
+        var index = _layouts!.IndexOf(item);
+        if (index > 0)
+        {
+            _layouts.RemoveAt(index);
+            _layouts.Insert(index - 1, item);
+            ReindexPositions();
+        }
+    }
+
+    private void MoveDown(UserDashboardLayoutEntity item)
+    {
+        var index = _layouts!.IndexOf(item);
+        if (index < _layouts.Count - 1)
+        {
+            _layouts.RemoveAt(index);
+            _layouts.Insert(index + 1, item);
+            ReindexPositions();
+        }
+    }
+
+    private void ReindexPositions()
+    {
+        // Simplifié : on garde la grille sur une colonne en repositionnant Y
+        int y = 0;
+        foreach (var l in _layouts!)
+        {
+            l.X = 0;
+            l.Y = y;
+            y += l.H;
+        }
+    }
+
+    private async Task Save()
+    {
+        if (_layouts is not null)
+        {
+            await DashboardService.SaveLayoutAsync(_tenantId, _userId, _layouts, CancellationToken.None);
+        }
+    }
+}

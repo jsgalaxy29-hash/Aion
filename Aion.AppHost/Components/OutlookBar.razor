@@ -1,0 +1,75 @@
+@using Aion.Domain.UI
+@using Aion.Domain.Contracts
+@using Microsoft.AspNetCore.Components.Authorization
+@inject IMenuProvider MenuProvider
+@inject ITabService Tabs
+@inject AuthenticationStateProvider Auth
+
+<FluentSearch @bind-Value="_filter" Placeholder="Rechercher..." Class="mb-2" />
+
+@if (_menus is null)
+{
+    <FluentProgressRing />
+}
+else
+{
+    <FluentTreeView>
+        @foreach (var root in _rootNodes)
+        {
+            <FluentTreeItem Text="@root.Libelle" @onclick="() => OnClick(root)">
+                @if (Children.TryGetValue(root.Id, out var children))
+                {
+                    @foreach (var c in children)
+                    {
+                        <FluentTreeItem Text="@c.Libelle" @onclick="() => OnClick(c)" />
+                    }
+                }
+            </FluentTreeItem>
+        }
+    </FluentTreeView>
+}
+
+@code {
+    private IReadOnlyList<MenuEntity>? _menus;
+    private List<MenuEntity> _rootNodes = new();
+    private readonly Dictionary<int, List<MenuEntity>> Children = new();
+    private string _filter = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await Auth.GetAuthenticationStateAsync();
+        var user = state.User;
+        var userId = Guid.Parse(user.FindFirst("sub")!.Value);
+        var tenantId = Guid.Parse(user.FindFirst("tenant")!.Value);
+        _menus = await MenuProvider.GetAuthorizedMenuAsync(tenantId, userId, default);
+        BuildTree();
+    }
+
+    private void BuildTree()
+    {
+        var query = string.IsNullOrWhiteSpace(_filter)
+            ? _menus!
+            : _menus!.Where(m => m.Libelle.Contains(_filter, StringComparison.OrdinalIgnoreCase)).ToList();
+        Children.Clear();
+        foreach (var m in query.Where(x => x.ParentId.HasValue))
+        {
+            Children.TryAdd(m.ParentId!.Value, new List<MenuEntity>());
+            Children[m.ParentId!.Value].Add(m);
+        }
+        _rootNodes = query.Where(x => !x.ParentId.HasValue).OrderBy(x => x.Order).ToList();
+    }
+
+    private async Task OnClick(MenuEntity item)
+    {
+        if (item.IsLeaf)
+        {
+            await Tabs.OpenAsync(item.Libelle, item.Route, null, true, CancellationToken.None);
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (_menus != null)
+            BuildTree();
+    }
+}

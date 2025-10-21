@@ -1,0 +1,59 @@
+@using Microsoft.FluentUI.AspNetCore.Components
+@using Aion.Domain.Contracts
+@using Aion.Domain.UI
+@inject ITabService Tabs
+
+<Tabs ActiveId="@_activeId" OnChange="OnTabChanged">
+    @foreach (var tab in Tabs.Tabs)
+    {
+        <Tab Id="@tab.Id.ToString()">
+            @tab.Title
+            <button type="button" class="close" style="margin-left:0.5rem" @onclick="() => Close(tab)">x</button>
+        </Tab>
+    }
+</Tabs>
+
+@if (_active is not null)
+{
+    <DynamicComponent Type="@RouteRegistry.Resolve(_active.Route)"
+                      Parameters="@(RouteRegistry.ToParameters(_active.Parameters))" />
+}
+
+@code {
+    private Guid? _activeId;
+    private TabDescriptor? _active;
+
+    protected override void OnInitialized()
+    {
+        if (Tabs.Tabs.Count > 0)
+        {
+            _active = Tabs.Tabs[^1];
+            _activeId = _active.Id;
+        }
+    }
+
+    private Task OnTabChanged(Microsoft.FluentUI.AspNetCore.Components.TabChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.ActiveId, out var id))
+        {
+            _active = Tabs.Tabs.FirstOrDefault(t => t.Id == id);
+            _activeId = id;
+        }
+        return Task.CompletedTask;
+    }
+
+    private async Task Close(TabDescriptor tab)
+    {
+        await Tabs.CloseAsync(tab.Id, CancellationToken.None);
+        if (Tabs.Tabs.Count > 0)
+        {
+            _active = Tabs.Tabs[^1];
+            _activeId = _active.Id;
+        }
+        else
+        {
+            _active = null;
+            _activeId = null;
+        }
+    }
+}

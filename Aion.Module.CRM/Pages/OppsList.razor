@@ -1,0 +1,63 @@
+@using Aion.Domain.Contracts
+@using Microsoft.AspNetCore.Components.Authorization
+@inject IDataQueryResolver DataResolver
+
+<h3>Liste des opportunités</h3>
+@if (_opps is null)
+{
+    <FluentProgressRing />
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Code</th>
+                <th>Libellé</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var opp in _opps)
+        {
+            <tr>
+                <td>@opp.Code</td>
+                <td>@opp.Libelle</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<OppVm>? _opps;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Appel DataQueryRef ef:LatestModules pour illustrer (adapté à CRM ensuite)
+        var result = await DataResolver.ExecuteAsync("ef:LatestModules", null, CancellationToken.None);
+        if (result is IEnumerable<object> list)
+        {
+            _opps = new();
+            foreach (var o in list)
+            {
+                // Reflection sur anonyme
+                var codeProp = o.GetType().GetProperty("Code");
+                var libelleProp = o.GetType().GetProperty("Libelle");
+                if (codeProp != null && libelleProp != null)
+                {
+                    _opps.Add(new OppVm
+                    {
+                        Code = (string)codeProp.GetValue(o)!,
+                        Libelle = (string)libelleProp.GetValue(o)!
+                    });
+                }
+            }
+        }
+    }
+
+    private sealed class OppVm
+    {
+        public string Code { get; set; } = string.Empty;
+        public string Libelle { get; set; } = string.Empty;
+    }
+}

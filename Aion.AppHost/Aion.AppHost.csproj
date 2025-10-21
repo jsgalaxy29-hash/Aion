@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Fast.Components.FluentUI" Version="3.8.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Aion.Domain\Aion.Domain.csproj" />
+    <ProjectReference Include="..\Aion.Infrastructure\Aion.Infrastructure.csproj" />
+    <ProjectReference Include="..\Aion.Module.CRM\Aion.Module.CRM.csproj" />
+  </ItemGroup>
+</Project>

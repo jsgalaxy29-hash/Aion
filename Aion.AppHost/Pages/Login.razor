@@ -1,0 +1,37 @@
+@page "/login"
+@inject Aion.Domain.Contracts.IAuthService AuthService
+@inject NavigationManager Navigation
+
+<h2>Connexion</h2>
+
+<EditForm Model="_model" OnValidSubmit="HandleLogin">
+    <FluentTextField @bind-Value="_model.Login" Placeholder="Identifiant" Required="true" />
+    <FluentTextField @bind-Value="_model.Password" Placeholder="Mot de passe" Type="password" Required="true" />
+
+    <FluentButton Appearance="Appearance.Accent" Class="mt-2">Se connecter</FluentButton>
+</EditForm>
+
+@if (!string.IsNullOrWhiteSpace(_error))
+{
+    <FluentBadge Appearance="Appearance.Accent">@_error</FluentBadge>
+}
+
+@code {
+    private readonly LoginVm _model = new();
+    private string? _error;
+
+    private async Task HandleLogin()
+    {
+        var result = await AuthService.SignInAsync(_model.Login, _model.Password, default);
+        if (result.Succeeded)
+            Navigation.NavigateTo("/dashboard", true);
+        else
+            _error = "Identifiants invalides";
+    }
+
+    private sealed class LoginVm
+    {
+        public string Login { get; set; } = "";
+        public string Password { get; set; } = "";
+    }
+}

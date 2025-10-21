@@ -1,0 +1,49 @@
+@inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider Auth
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+
+<FluentStack Horizontal="true" Style="height:100vh">
+    <!-- Outlook bar (menu) -->
+    <div class="p-2" style="width:260px; overflow:auto">
+        @if (_authState?.User.Identity?.IsAuthenticated == true)
+        {
+            <OutlookBar />
+        }
+    </div>
+    <FluentDivider Vertical="true" />
+    <!-- Main content area -->
+    <div class="flex-grow p-2 overflow-auto">
+        @if (_authState?.User.Identity?.IsAuthenticated == true)
+        {
+            <TabHost />
+        }
+        else
+        {
+            @Body
+        }
+    </div>
+    <!-- Simple header with user info and sign out -->
+    <div class="position-fixed top-0 end-0 p-2" style="z-index:1000">
+        @if (_authState?.User.Identity?.IsAuthenticated == true)
+        {
+            <FluentButton OnClick="Logout">Se déconnecter (@_authState.User.Identity?.Name)</FluentButton>
+        }
+    </div>
+</FluentStack>
+
+@code {
+    private AuthenticationState? _authState;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _authState = await Auth.GetAuthenticationStateAsync();
+    }
+
+    private async Task Logout()
+    {
+        await AuthService.SignOutAsync(CancellationToken.None);
+        Navigation.NavigateTo("/login", true);
+    }
+}

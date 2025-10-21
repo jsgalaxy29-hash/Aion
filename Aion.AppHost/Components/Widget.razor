@@ -1,0 +1,38 @@
+@using Aion.Domain.Contracts
+@inject IWidgetService WidgetService
+
+@if (_data is null)
+{
+    <FluentProgressRing />
+}
+else if (_data is string str)
+{
+    <pre>@str</pre>
+}
+else if (_data is IEnumerable<object> list)
+{
+    <ul>
+        @foreach (var item in list)
+        {
+            <li>@item</li>
+        }
+    </ul>
+}
+else
+{
+    <pre>@System.Text.Json.JsonSerializer.Serialize(_data, new System.Text.Json.JsonSerializerOptions { WriteIndented = true })</pre>
+}
+
+@code {
+    [Parameter] public string Code { get; set; } = default!;
+    [Parameter] public string? SettingsJson { get; set; }
+    private object? _data;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var settings = string.IsNullOrWhiteSpace(SettingsJson)
+            ? null
+            : System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object?>>(SettingsJson);
+        _data = await WidgetService.GetDataAsync(Code, settings, CancellationToken.None);
+    }
+}

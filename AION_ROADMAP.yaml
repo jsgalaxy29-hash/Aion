@@ -1,0 +1,36 @@
+ui:
+  library: fluentui
+  outlookbar:
+    filter: true
+    favorites: true
+  tabs:
+    deep_links: true
+  dashboard:
+    rearrangement: true
+    data_query_ref:
+      modes: [ "ef", "api", "report" ]
+
+security:
+  droit_types:
+    - code: "Menu"
+      libelle: "Droits sur menus"
+      source: "S_Menu"
+      bools:
+        - key: "Droit1"
+          libelle: "Autorisé"
+      multi_tenant: true
+
+modules:
+  - code: "CRM"
+    libelle: "CRM"
+    menus:
+      - libelle: "Ventes"
+        route: "/noop"
+        is_leaf: false
+      - libelle: "Opportunités"
+        route: "/modules/crm/opps"
+        parent: "Ventes"
+        is_leaf: true
+      - libelle: "Dashboard"
+        route: "/dashboard"
+        is_leaf: true
