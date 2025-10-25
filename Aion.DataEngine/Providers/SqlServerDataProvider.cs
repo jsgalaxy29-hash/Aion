@@ -72,5 +72,14 @@ namespace Aion.DataEngine.Providers
                 command.Parameters.AddWithValue(kvp.Key, kvp.Value ?? DBNull.Value);
             }
         }
+
+        public async Task<object?> ExecuteScalarAsync(string sql, IDictionary<string, object?>? parameters = null)
+        {
+            await using var connection = new SqlConnection(ConnectionString);
+            await connection.OpenAsync().ConfigureAwait(false);
+            await using var command = new SqlCommand(sql, connection);
+            AddParameters(command, parameters);
+            return await command.ExecuteScalarAsync().ConfigureAwait(false);
+        }
     }
 }

@@ -124,7 +124,7 @@ namespace Aion.DataEngine.Services
                     OldValue = row["OLD_VALUE"] as string,
                     NewValue = row["NEW_VALUE"] as string,
                     Operation = row["OPERATION"].ToString() ?? string.Empty,
-                    Version = Convert.ToInt32(row["VERSION"]),
+                    VersionId = Convert.ToInt32(row["VERSION"]),
                     DtModification = Convert.ToDateTime(row["DT_MODIFICATION"]),
                     UserId = Convert.ToInt32(row["USR_ID"])
                 });

@@ -1,0 +1,41 @@
+*** AionDbContext.cs.orig
+--- AionDbContext.cs
+@@
+-using Microsoft.EntityFrameworkCore;
++using Microsoft.EntityFrameworkCore;
++using Aion.DataEngine.Interfaces;
+@@
+-public class AionDbContext : DbContext
++public class AionDbContext : DbContext
+ {
++    private readonly IUserContext _userContext;
++
+-    public AionDbContext(DbContextOptions options) : base(options) { }
++    public AionDbContext(DbContextOptions options, IUserContext userContext) : base(options)
++    {
++        _userContext = userContext;
++    }
+@@
+-    protected override void OnModelCreating(ModelBuilder modelBuilder)
++    protected override void OnModelCreating(ModelBuilder modelBuilder)
+     {
+         base.OnModelCreating(modelBuilder);
+-        // TODO: existing mappings...
++        // Filtres multi-tenant
++        modelBuilder.Entity<Aion.DataEngine.Entities.SMenu>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
++        modelBuilder.Entity<Aion.DataEngine.Entities.SModule>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
++        modelBuilder.Entity<Aion.DataEngine.Entities.SAction>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
++        modelBuilder.Entity<Aion.DataEngine.Entities.SReport>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
++        modelBuilder.Entity<Aion.DataEngine.Entities.SUser>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
++        modelBuilder.Entity[Aion.DataEngine.Entities.SGroup]().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
++        modelBuilder.Entity<Aion.DataEngine.Entities.SUserGroup>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
++        modelBuilder.Entity<Aion.DataEngine.Entities.SRightType>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
++        modelBuilder.Entity<Aion.DataEngine.Entities.SRight>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
++        modelBuilder.Entity<Aion.DataEngine.Entities.STable>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
++        modelBuilder.Entity<Aion.DataEngine.Entities.SField>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
++        modelBuilder.Entity<Aion.DataEngine.Entities.RRegex>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
++        modelBuilder.Entity<Aion.DataEngine.Entities.FDocument>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
++        modelBuilder.Entity<Aion.DataEngine.Entities.SHistoVersion>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
++        modelBuilder.Entity<Aion.DataEngine.Entities.SHistoChange>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
++        modelBuilder.Entity<Aion.DataEngine.Entities.STenant>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
+     }

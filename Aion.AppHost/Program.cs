@@ -1,62 +1,62 @@
 using Aion.AppHost;
-using Aion.Domain.Contracts;
+using Aion.AppHost.Services;
 using Aion.Infrastructure;
-using Aion.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Fast.Components.FluentUI;
+using Microsoft.FluentUI.AspNetCore.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// === UI (.NET 8 Razor Components) ===
-builder.Services.AddRazorComponents()
-                .AddInteractiveServerComponents();
+// Services
+builder.Services.AddRazorComponents().AddInteractiveServerComponents();
+builder.Services.AddHttpClient();             // requis cÙtÈ Server
+builder.Services.AddFluentUIComponents();     // enregistre tous les services Fluent UI
 
-// === Fluent UI ===
-builder.Services.AddFluentUIComponents();
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(o =>
+    {
+        o.LoginPath = "/login";
+        o.LogoutPath = "/logout";
+        o.AccessDeniedPath = "/login";
+        o.SlidingExpiration = true;
+    });
 
-// === EF Core / DB ===
+builder.Services.AddAuthorization();
+
 builder.Services.AddDbContext<AionDbContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("AionDb")));
 
-// === Auth cookies ===
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(opt =>
-    {
-        opt.LoginPath = "/login";
-        opt.AccessDeniedPath = "/forbidden";
-    });
-builder.Services.AddAuthorization();
+builder.Services.AddHttpContextAccessor();
 
-// ‚òÖ n√©cessaires pour DataQueryResolver/AuthService
-builder.Services.AddHttpClient();           // IHttpClientFactory
-builder.Services.AddHttpContextAccessor();  // IHttpContextAccessor
-
-// === Services applicatifs ===
-builder.Services.AddScoped<IRightsService, RightsServiceEf>();
-builder.Services.AddScoped<IMenuProvider, MenuProviderEf>();
-builder.Services.AddScoped<ITabService, TabService>();
-builder.Services.AddScoped<IUserDashboardService, DashboardServiceEf>();
-builder.Services.AddScoped<IDataQueryResolver, DataQueryResolver>();
+builder.Services.AddScoped<IAionThemeService, AionThemeService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IWidgetService, WidgetServiceEf>();
+
+builder.Services.AddRazorPages();
 
 var app = builder.Build();
 
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/error");
+    app.UseHsts();
+}
+
 app.UseHttpsRedirection();
 app.UseStaticFiles();
-app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.UseAntiforgery();
 
-// modules
-new Aion.Module.CRM.CrmBootstrapper().Register();
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AionDbContext>();
+    db.Database.EnsureCreated();
+}
 
-// point d'entr√©e Razor Components
 app.MapRazorComponents<App>()
    .AddInteractiveServerRenderMode();
+
+app.MapRazorPages();
 
 app.Run();

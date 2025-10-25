@@ -1,17 +1,24 @@
-@using Aion.AppHost.Layouts
+@using Microsoft.FluentUI.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Authorization
-@using Microsoft.AspNetCore.Components.Routing
-@using Microsoft.AspNetCore.Components.Web
+@inject Aion.AppHost.Services.IAionThemeService ThemeSvc
 
-<CascadingAuthenticationState>
-    <Router AppAssembly="typeof(App).Assembly">
-        <Found Context="routeData">
-            <RouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)" />
-        </Found>
-        <NotFound>
-            <LayoutView Layout="typeof(MainLayout)">
-                <p>Sorry, there's nothing at this address.</p>
-            </LayoutView>
-        </NotFound>
-    </Router>
-</CascadingAuthenticationState>
+<HeadContent>
+    <link href="_content/Microsoft.FluentUI.AspNetCore.Components/css/reboot.css" rel="stylesheet" />
+    <link href="Aion.AppHost.styles.css" rel="stylesheet" />
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+</HeadContent>
+
+<FluentProvider Theme="ThemeSvc.Current">
+    <CascadingAuthenticationState>
+        <Router AppAssembly="typeof(App).Assembly">
+            <Found Context="routeData">
+                <RouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)" />
+            </Found>
+            <NotFound>
+                <LayoutView Layout="typeof(MainLayout)">
+                    <p>Page introuvable.</p>
+                </LayoutView>
+            </NotFound>
+        </Router>
+    </CascadingAuthenticationState>
+</FluentProvider>

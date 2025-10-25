@@ -1,0 +1,21 @@
+@inherits LayoutComponentBase
+@using Microsoft.FluentUI.AspNetCore.Components
+
+<div style="display:flex;gap:.5rem;align-items:center;padding:.5rem">
+    <FluentButton Appearance="Appearance.Accent" OnClick="() => ThemeSvc.UseLight()">Clair</FluentButton>
+    <FluentButton Appearance="Appearance.Outline" OnClick="() => ThemeSvc.UseDark()">Sombre</FluentButton>
+    <FluentButton Appearance="Appearance.Stealth"
+                  OnClick='() => ThemeSvc.SetAccent("#0D3B66", "#D4AF37")'>
+        Aion
+    </FluentButton>
+    <FluentAnchor Href="/dashboard">Dashboard</FluentAnchor>
+    <FluentAnchor Href="/login">Login</FluentAnchor>
+</div>
+
+<div style="margin:1rem">
+    @Body
+</div>
+
+@code {
+    [Microsoft.AspNetCore.Components.Inject] Aion.AppHost.Services.IAionThemeService ThemeSvc { get; set; } = default!;
+}

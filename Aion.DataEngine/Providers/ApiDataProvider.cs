@@ -107,5 +107,10 @@ namespace Aion.DataEngine.Providers
             }
             return table;
         }
+
+        public Task<object?> ExecuteScalarAsync(string sql, IDictionary<string, object?>? parameters = null)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

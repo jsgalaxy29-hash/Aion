@@ -7,12 +7,12 @@ namespace Aion.DataEngine.Entities
     /// Represents a field (column) definition stored in the system catalog (S_CHAMP).
     /// Each record defines metadata for a column belonging to a user‑defined table.
     /// </summary>
-    public class SChamp
+    public class SChamp : BaseEntity
     {
-        /// <summary>
-        /// Primary key of the S_CHAMP record.
-        /// </summary>
-        public int Id { get; set; }
+        // BaseEntity provides the primary key and system fields (Id, Doc, Actif,
+        // Deleted, DtCreation, DtModification, DtSuppression, UsrCreationId,
+        // UsrModificationId and UsrSuppressionId).  These are omitted here
+        // to avoid duplication.  See <see cref="BaseEntity"/> for details.
 
         /// <summary>
         /// Foreign key to the owning table (S_TABLE.Id).
@@ -151,20 +151,7 @@ namespace Aion.DataEngine.Entities
         /// </summary>
         public string? Commentaire { get; set; }
 
-        /// <summary>
-        /// Indicates whether the column holds documents.
-        /// </summary>
-        public bool Doc { get; set; }
-
-        /// <summary>
-        /// Indicates whether the column is active.
-        /// </summary>
-        public bool Actif { get; set; } = true;
-
-        /// <summary>
-        /// Indicates whether the column has been logically deleted.
-        /// </summary>
-        public bool Deleted { get; set; }
+        // System flags Doc, Actif and Deleted are inherited from BaseEntity.
 
         /// <summary>
         /// Indicates whether changes to this field should be historized.  
@@ -172,35 +159,9 @@ namespace Aion.DataEngine.Entities
         /// </summary>
         public bool IsHistorise { get; set; } = true;
 
-        /// <summary>
-        /// Creation timestamp.
-        /// </summary>
-        public DateTime DtCreation { get; set; } = DateTime.UtcNow;
-
-        /// <summary>
-        /// Last modification timestamp.
-        /// </summary>
-        public DateTime DtModification { get; set; } = DateTime.UtcNow;
-
-        /// <summary>
-        /// Deletion timestamp, if any.
-        /// </summary>
-        public DateTime? DtSuppression { get; set; }
-
-        /// <summary>
-        /// Id of the user who created this definition.
-        /// </summary>
-        public int UsrCreationId { get; set; }
-
-        /// <summary>
-        /// Id of the user who last modified this definition.
-        /// </summary>
-        public int UsrModificationId { get; set; }
-
-        /// <summary>
-        /// Id of the user who deleted this definition.
-        /// </summary>
-        public int? UsrSuppressionId { get; set; }
+        // Timestamps (DtCreation, DtModification, DtSuppression) and user
+        // identifiers (UsrCreationId, UsrModificationId, UsrSuppressionId)
+        // are inherited from BaseEntity.
 
         /// <summary>
         /// Navigation property to owning table (populated by EF).

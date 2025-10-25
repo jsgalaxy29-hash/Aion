@@ -4,18 +4,17 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
-
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.Cookies" Version="2.3.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.Core" Version="2.3.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.10" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.10" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.10" PrivateAssets="All" />
-    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.10" />
-    <PackageReference Include="Polly" Version="8.6.4" />
+    <Compile Remove="Services\DashboardServiceEf.cs" />
   </ItemGroup>
-
   <ItemGroup>
+    <ProjectReference Include="..\Aion.DataEngine\Aion.DataEngine.csproj" />
     <ProjectReference Include="..\Aion.Domain\Aion.Domain.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication" Version="2.3.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Cookies" Version="2.3.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.10" />
   </ItemGroup>
 </Project>

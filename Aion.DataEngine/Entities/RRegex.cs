@@ -8,12 +8,9 @@ namespace Aion.DataEngine.Entities
     /// property contains the actual regular expression and may be selected
     /// from a dropdown when defining a field in S_CHAMP.
     /// </summary>
-    public class RRegex
+    public class RRegex : BaseEntity
     {
-        /// <summary>
-        /// Primary key of the regex definition.
-        /// </summary>
-        public int Id { get; set; }
+       
 
         /// <summary>
         /// Unique name identifying the regex pattern.

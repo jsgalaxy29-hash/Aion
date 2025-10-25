@@ -11,12 +11,9 @@ namespace Aion.DataEngine.Entities
     /// and an optional snapshot of the record as JSON.  A collection of
     /// <see cref="SHistoChange"/> records describes the changes field by field.
     /// </summary>
-    public class SHistoVersion
+    public class SHistoVersion : BaseEntity
     {
-        /// <summary>
-        /// Identity of the version record.
-        /// </summary>
-        public int Id { get; set; }
+       
 
         /// <summary>
         /// The physical table name on which the operation was performed.

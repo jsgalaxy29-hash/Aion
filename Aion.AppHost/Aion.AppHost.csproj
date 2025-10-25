@@ -1,18 +1,18 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <InvariantGlobalization>true</InvariantGlobalization>
+    <RootNamespace>Aion.AppHost</RootNamespace>
   </PropertyGroup>
-
   <ItemGroup>
-    <PackageReference Include="Microsoft.Fast.Components.FluentUI" Version="3.8.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Aion.Domain\Aion.Domain.csproj" />
     <ProjectReference Include="..\Aion.Infrastructure\Aion.Infrastructure.csproj" />
-    <ProjectReference Include="..\Aion.Module.CRM\Aion.Module.CRM.csproj" />
+    <ProjectReference Include="..\Aion.Domain\Aion.Domain.csproj" />
+    <ProjectReference Include="..\Aion.Security\Aion.Security.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore" Version="2.3.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="8.0.21" />
+    <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.13.0" />
   </ItemGroup>
 </Project>

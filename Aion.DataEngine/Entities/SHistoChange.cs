@@ -9,12 +9,8 @@ namespace Aion.DataEngine.Entities
     /// retrieval.  The parent version is indicated by the foreign key
     /// <see cref="HistoVersionId"/>.
     /// </summary>
-    public class SHistoChange
+    public class SHistoChange : BaseEntity
     {
-        /// <summary>
-        /// Identity of the change record.
-        /// </summary>
-        public int Id { get; set; }
 
         /// <summary>
         /// Foreign key to the associated history version record.

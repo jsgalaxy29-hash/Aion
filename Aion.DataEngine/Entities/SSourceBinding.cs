@@ -7,13 +7,9 @@ namespace Aion.DataEngine.Entities
     /// dynamic database.  Each binding tells the engine how to read or write
     /// data from a source for a given table and (optionally) column.
     /// </summary>
-    public class SSourceBinding
+    public class SSourceBinding : BaseEntity
     {
-        /// <summary>
-        /// Primary key of the binding record.
-        /// </summary>
-        public int Id { get; set; }
-
+       
         /// <summary>
         /// Foreign key to the external source configuration.
         /// </summary>

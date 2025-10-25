@@ -13,11 +13,11 @@ namespace Aion.Domain.Contracts
         /// <summary>
         /// Détermine si un menu est autorisé pour l'utilisateur.
         /// </summary>
-        Task<bool> IsMenuAuthorizedAsync(Guid tenantId, Guid userId, int menuId, CancellationToken ct);
+        Task<bool> IsMenuAuthorizedAsync(int tenantId, int userId, string menu, CancellationToken ct);
 
         /// <summary>
         /// Récupère tous les identifiants de menus autorisés pour l'utilisateur.
         /// </summary>
-        Task<HashSet<int>> GetAuthorizedMenuIdsAsync(Guid tenantId, Guid userId, CancellationToken ct);
+        Task<HashSet<string>> GetAuthorizedMenuIdsAsync(int tenantId, int userId, CancellationToken ct);
     }
 }

@@ -1,11 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Aion.Domain.Contracts;
 using Aion.Domain.UI;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
 
 namespace Aion.Infrastructure.Services
 {
@@ -23,34 +19,34 @@ namespace Aion.Infrastructure.Services
             _rights = rights;
         }
 
-        public async Task<IReadOnlyList<MenuEntity>> GetAuthorizedMenuAsync(Guid tenantId, Guid userId, CancellationToken ct)
+        public async Task<IReadOnlyList<MenuEntity>> GetAuthorizedMenuAsync(int tenantId, int userId, CancellationToken ct)
         {
             var authorizedIds = await _rights.GetAuthorizedMenuIdsAsync(tenantId, userId, ct);
 
             // On récupère tous les menus du tenant
-            var menus = await _db.S_Menu
+            var menus = await _db.SMenu
                 .Where(m => m.TenantId == tenantId)
                 .OrderBy(m => m.ModuleId).ThenBy(m => m.ParentId).ThenBy(m => m.Order)
                 .ToListAsync(ct);
 
             // Garder les feuilles autorisées et leurs ancêtres
-            var keep = new HashSet<int>(authorizedIds);
+            var keep = new HashSet<string>(authorizedIds);
             bool added;
             do
             {
                 added = false;
-                foreach (var m in menus.Where(x => x.ParentId.HasValue))
+                foreach (var m in menus.Where(x => x.ParentId != 0))
                 {
-                    if (keep.Contains(m.Id) && m.ParentId.HasValue && !keep.Contains(m.ParentId.Value))
+                    if (keep.Contains(m.Id.ToString()) && !keep.Contains(m.ParentId.ToString()))
                     {
-                        keep.Add(m.ParentId.Value);
+                        keep.Add(m.ParentId.ToString());
                         added = true;
                     }
                 }
             } while (added);
 
             // Filtrer et retourner
-            return menus.Where(m => keep.Contains(m.Id)).ToList();
+            return (IReadOnlyList<MenuEntity>)menus.Where(m => keep.Contains(m.Id.ToString())).ToList();
         }
     }
 }

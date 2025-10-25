@@ -9,12 +9,8 @@ namespace Aion.DataEngine.Entities
     /// (REST_API, CSV, EXCEL, S3, GED, etc.).  Additional parameters such
     /// as authentication and custom parameters are stored as JSON strings.
     /// </summary>
-    public class SSourceExterne
+    public class SSourceExterne : BaseEntity
     {
-        /// <summary>
-        /// Primary key of the source configuration.
-        /// </summary>
-        public int Id { get; set; }
 
         /// <summary>
         /// Human‑readable name of the source (e.g. "API Entreprise").
@@ -54,24 +50,5 @@ namespace Aion.DataEngine.Entities
         /// </summary>
         public string? Params { get; set; }
 
-        /// <summary>
-        /// Indicates whether the source is active.
-        /// </summary>
-        public bool Actif { get; set; } = true;
-
-        /// <summary>
-        /// Indicates whether the source is logically deleted.
-        /// </summary>
-        public bool Deleted { get; set; }
-
-        /// <summary>
-        /// Timestamp of creation.
-        /// </summary>
-        public DateTime DtCreation { get; set; } = DateTime.UtcNow;
-
-        /// <summary>
-        /// Timestamp of last modification.
-        /// </summary>
-        public DateTime DtModification { get; set; } = DateTime.UtcNow;
     }
 }

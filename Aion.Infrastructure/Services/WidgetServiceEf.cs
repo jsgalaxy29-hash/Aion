@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Aion.Domain.Contracts;
 using Aion.Domain.Widgets;
+using Aion.DataEngine.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Aion.Infrastructure.Services
@@ -23,14 +24,14 @@ namespace Aion.Infrastructure.Services
             _resolver = resolver;
         }
 
-        public async Task<IReadOnlyList<WidgetEntity>> GetAvailableWidgetsAsync(Guid tenantId, CancellationToken ct)
+        public async Task<IReadOnlyList<WidgetEntity>> GetAvailableWidgetsAsync(int tenantId, CancellationToken ct)
         {
-            return await _db.S_Widget.Where(w => w.TenantId == tenantId || w.TenantId == Guid.Empty).ToListAsync(ct);
+            return (IReadOnlyList<WidgetEntity>)await _db.SWidget.Where(w => w.TenantId == tenantId || w.TenantId == 0).ToListAsync(ct);
         }
 
         public async Task<object?> GetDataAsync(string widgetCode, IDictionary<string, object?>? settings, CancellationToken ct)
         {
-            var widget = await _db.S_Widget.FirstOrDefaultAsync(w => w.Code == widgetCode, ct);
+            var widget = await _db.SWidget.FirstOrDefaultAsync(w => w.Code == widgetCode, ct);
             if (widget is null) return null;
             return await _resolver.ExecuteAsync(widget.DataQueryRef, settings, ct);
         }

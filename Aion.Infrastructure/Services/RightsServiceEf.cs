@@ -17,51 +17,52 @@ namespace Aion.Infrastructure.Services
         private readonly AionDbContext _db;
         public RightsServiceEf(AionDbContext db) => _db = db;
 
-        public async Task<bool> IsMenuAuthorizedAsync(Guid tenantId, Guid userId, int menuId, CancellationToken ct)
+        public async Task<bool> IsMenuAuthorizedAsync(int tenantId, int userId, string menu, CancellationToken ct)
         {
-            var groupIds = await _db.S_Groupe_User
+            var groupIds = await _db.SUserGroup
                 .Where(x => x.TenantId == tenantId && x.UserId == userId)
-                .Select(x => x.GroupeId)
+                .Select(x => x.GroupId)
                 .ToListAsync(ct);
 
             if (groupIds.Count == 0) return false;
 
-            var menuTypeId = await _db.S_Droit_Type
-                .Where(t => (t.TenantId == tenantId || t.TenantId == Guid.Empty) && t.Code == "Menu")
+            var menuTypeId = await _db.SRightType
+                .Where(t => (t.TenantId == tenantId || t.TenantId ==0) && t.Code == "Menu")
                 .Select(t => t.Id)
                 .FirstAsync(ct);
 
-            var allowed = await _db.S_Droit.AnyAsync(d =>
+            var allowed = await _db.SRight.AnyAsync(d =>
                 d.TenantId == tenantId &&
-                d.DroitTypeId == menuTypeId &&
-                d.TargetId == menuId &&
-                groupIds.Contains(d.GroupeId) &&
-                d.Droit1, ct);
+                d.SubjectId == menuTypeId &&
+                d.Target == menu &&
+                groupIds.Contains(d.GroupId) &&
+                d.Right1.GetValueOrDefault(false), ct);
 
             return allowed;
         }
 
-        public async Task<HashSet<int>> GetAuthorizedMenuIdsAsync(Guid tenantId, Guid userId, CancellationToken ct)
+        public async Task<HashSet<string>> GetAuthorizedMenuIdsAsync(int tenantId, int userId, CancellationToken ct)
         {
-            var groupIds = await _db.S_Groupe_User
+            var groupIds = await _db.SUserGroup
                 .Where(x => x.TenantId == tenantId && x.UserId == userId)
-                .Select(x => x.GroupeId)
+                .Select(x => x.GroupId)
                 .ToListAsync(ct);
 
-            if (groupIds.Count == 0) return new HashSet<int>();
+            if (groupIds.Count == 0) return new HashSet<string>();
 
-            var menuTypeId = await _db.S_Droit_Type
-                .Where(t => (t.TenantId == tenantId || t.TenantId == Guid.Empty) && t.Code == "Menu")
+            var menuTypeId = await _db.SRightType
+                .Where(t => (t.TenantId == tenantId || t.TenantId == 0) && t.Code == "Menu")
                 .Select(t => t.Id)
                 .FirstAsync(ct);
 
-            var ids = await _db.S_Droit
-                .Where(d => d.TenantId == tenantId && d.DroitTypeId == menuTypeId && d.Droit1 && groupIds.Contains(d.GroupeId) && d.TargetId != null)
-                .Select(d => d.TargetId!.Value)
+            var ids = await _db.SRight 
+                .Where(d => d.TenantId == tenantId && d.SubjectId == menuTypeId && d.Right1.GetValueOrDefault(false) && groupIds.Contains(d.GroupId) && d.Target != null)
+                .Select(d => d.Target)
                 .Distinct()
                 .ToListAsync(ct);
 
             return ids.ToHashSet();
         }
+
     }
 }

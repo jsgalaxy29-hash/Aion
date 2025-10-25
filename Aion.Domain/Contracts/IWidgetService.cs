@@ -10,7 +10,7 @@ namespace Aion.Domain.Contracts
     /// </summary>
     public interface IWidgetService
     {
-        Task<IReadOnlyList<WidgetEntity>> GetAvailableWidgetsAsync(Guid tenantId, CancellationToken ct);
+        Task<IReadOnlyList<WidgetEntity>> GetAvailableWidgetsAsync(int tenantId, CancellationToken ct);
         Task<object?> GetDataAsync(string widgetCode, IDictionary<string, object?>? settings, CancellationToken ct);
     }
 }

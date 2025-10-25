@@ -1,5 +1,6 @@
 @using Aion.Domain.UI
 @using Aion.Domain.Contracts
+@using Aion.Security
 @using Microsoft.AspNetCore.Components.Authorization
 @inject IMenuProvider MenuProvider
 @inject ITabService Tabs
@@ -39,7 +40,7 @@ else
     {
         var state = await Auth.GetAuthenticationStateAsync();
         var user = state.User;
-        var userId = Guid.Parse(user.FindFirst("sub")!.Value);
+        var userId = Guid.Parse(user.FindFirst("sub")!);
         var tenantId = Guid.Parse(user.FindFirst("tenant")!.Value);
         _menus = await MenuProvider.GetAuthorizedMenuAsync(tenantId, userId, default);
         BuildTree();

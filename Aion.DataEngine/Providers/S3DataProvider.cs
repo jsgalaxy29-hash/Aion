@@ -46,5 +46,10 @@ namespace Aion.DataEngine.Providers
         {
             throw new NotSupportedException("ExecuteQueryAsync is not implemented for S3DataProvider.  AWS SDK integration is required.");
         }
+
+        public Task<object?> ExecuteScalarAsync(string sql, IDictionary<string, object?>? parameters = null)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

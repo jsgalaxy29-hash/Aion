@@ -18,6 +18,6 @@ namespace Aion.Domain.Contracts
         /// <param name="tenantId">Identifiant du tenant.</param>
         /// <param name="userId">Identifiant de l'utilisateur.</param>
         /// <param name="ct">Token d'annulation.</param>
-        Task<IReadOnlyList<MenuEntity>> GetAuthorizedMenuAsync(Guid tenantId, Guid userId, CancellationToken ct);
+        Task<IReadOnlyList<MenuEntity>> GetAuthorizedMenuAsync(int tenantId, int userId, CancellationToken ct);
     }
 }

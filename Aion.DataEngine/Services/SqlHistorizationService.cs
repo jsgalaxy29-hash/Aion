@@ -81,10 +81,8 @@ namespace Aion.DataEngine.Services
                 foreach (var kvp in newValues)
                 {
                     object? oldVal = null;
-                    if (oldValues != null)
-                    {
-                        oldValues.TryGetValue(kvp.Key, out oldVal);
-                    }
+                    oldValues?.TryGetValue(kvp.Key, out oldVal);
+
                     changes.Add((kvp.Key, oldVal, kvp.Value));
                 }
             }
@@ -144,7 +142,7 @@ namespace Aion.DataEngine.Services
                     histo = new SHistorique
                     {
                         VersionId = versionId,
-                        Version = Convert.ToInt32(row["VERSION_NUM"]),
+                        VersionNum = Convert.ToInt32(row["VERSION_NUM"]),
                         Operation = row["OPERATION"].ToString()!,
                         DtVersion = Convert.ToDateTime(row["DT_VERSION"]),
                         SnapshotJson = row["SNAPSHOT_JSON"] as string,

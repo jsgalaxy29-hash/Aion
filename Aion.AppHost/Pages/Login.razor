@@ -1,37 +1,41 @@
+@page "/"
 @page "/login"
-@inject Aion.Domain.Contracts.IAuthService AuthService
-@inject NavigationManager Navigation
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.Extensions.Logging
+@inject NavigationManager Nav
+@inject Aion.AppHost.Services.IAuthService Auth
+@inject ILogger<Login> Log
 
-<h2>Connexion</h2>
-
-<EditForm Model="_model" OnValidSubmit="HandleLogin">
-    <FluentTextField @bind-Value="_model.Login" Placeholder="Identifiant" Required="true" />
-    <FluentTextField @bind-Value="_model.Password" Placeholder="Mot de passe" Type="password" Required="true" />
-
-    <FluentButton Appearance="Appearance.Accent" Class="mt-2">Se connecter</FluentButton>
-</EditForm>
-
-@if (!string.IsNullOrWhiteSpace(_error))
-{
-    <FluentBadge Appearance="Appearance.Accent">@_error</FluentBadge>
-}
+<FluentCard style="max-width:420px;margin:4rem auto;padding:1.25rem">
+    <h3>Connexion</h3>
+    <EditForm Model="@_model" OnValidSubmit="OnSubmit">
+        <DataAnnotationsValidator />
+        <FluentTextField @bind-Value="_model.Login"
+                         Placeholder="Identifiant" />
+        <FluentTextField @bind-Value="_model.Password" 
+                        Placeholder="Mot de passe" class="mt-2" />
+        <FluentButton Appearance="Appearance.Accent" class="mt-3" Type="ButtonType.Submit">Se connecter</FluentButton>
+    </EditForm>
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <FluentBadge Appearance="Appearance.Neutral" class="mt-2">@_error</FluentBadge>
+    }
+</FluentCard>
 
 @code {
-    private readonly LoginVm _model = new();
+    private LoginVm _model = new();
     private string? _error;
 
-    private async Task HandleLogin()
+    private async Task OnSubmit()
     {
-        var result = await AuthService.SignInAsync(_model.Login, _model.Password, default);
-        if (result.Succeeded)
-            Navigation.NavigateTo("/dashboard", true);
-        else
-            _error = "Identifiants invalides";
+        var ok = await Auth.SignInAsync(_model.Login, _model.Password);
+        if (ok) Nav.NavigateTo("/dashboard", true);
+        else _error = "Identifiants invalides.";
     }
 
-    private sealed class LoginVm
+    public class LoginVm
     {
-        public string Login { get; set; } = "";
-        public string Password { get; set; } = "";
+        public string Login { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
     }
 }

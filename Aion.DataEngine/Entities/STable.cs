@@ -8,12 +8,12 @@ namespace Aion.DataEngine.Entities
     /// Represents a logical table definition stored in the system catalog (S_TABLE).
     /// Each record defines a user‑defined table that can be materialized in the database.
     /// </summary>
-    public class STable
+    public class STable : BaseEntity
     {
-        /// <summary>
-        /// Primary key of the S_TABLE record.
-        /// </summary>
-        public int Id { get; set; }
+        // BaseEntity provides the primary key and system fields (Id, Doc, Actif,
+        // Deleted, DtCreation, DtModification, DtSuppression, UsrCreationId,
+        // UsrModificationId and UsrSuppressionId).  These are omitted here
+        // to avoid duplication.  See <see cref="BaseEntity"/> for details.
 
         /// <summary>
         /// Logical name of the table (must correspond to the physical table when materialized).
@@ -47,20 +47,7 @@ namespace Aion.DataEngine.Entities
         /// </summary>
         public string? Type { get; set; }
 
-        /// <summary>
-        /// Indicates whether the table holds documents.
-        /// </summary>
-        public bool Doc { get; set; }
-
-        /// <summary>
-        /// Indicates whether the table is active.
-        /// </summary>
-        public bool Actif { get; set; } = true;
-
-        /// <summary>
-        /// Indicates whether the table has been logically deleted.
-        /// </summary>
-        public bool Deleted { get; set; }
+        // System flags Doc, Actif and Deleted are inherited from BaseEntity.
 
         /// <summary>
         /// Indicates whether changes on this table should be historized.  
@@ -69,35 +56,9 @@ namespace Aion.DataEngine.Entities
         /// </summary>
         public bool IsHistorise { get; set; } = true;
 
-        /// <summary>
-        /// Date of creation.
-        /// </summary>
-        public DateTime DtCreation { get; set; } = DateTime.UtcNow;
-
-        /// <summary>
-        /// Date of last modification.
-        /// </summary>
-        public DateTime DtModification { get; set; } = DateTime.UtcNow;
-
-        /// <summary>
-        /// Date of deletion, if any.
-        /// </summary>
-        public DateTime? DtSuppression { get; set; }
-
-        /// <summary>
-        /// Identifier of the user who created this definition.
-        /// </summary>
-        public int UsrCreationId { get; set; }
-
-        /// <summary>
-        /// Identifier of the user who last modified this definition.
-        /// </summary>
-        public int UsrModificationId { get; set; }
-
-        /// <summary>
-        /// Identifier of the user who deleted this definition.
-        /// </summary>
-        public int? UsrSuppressionId { get; set; }
+        // Timestamps (DtCreation, DtModification, DtSuppression) and user
+        // identifiers (UsrCreationId, UsrModificationId, UsrSuppressionId)
+        // are inherited from BaseEntity.
 
         /// <summary>
         /// The collection of fields (columns) associated with this table.
