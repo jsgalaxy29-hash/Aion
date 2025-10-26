@@ -1,0 +1,51 @@
+@using Microsoft.AspNetCore.Components.Authorization
+<Router AppAssembly="@typeof(App).Assembly">
+    <Found Context="routeData">
+        <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+            <NotAuthorized>
+                @if (context.User.Identity?.IsAuthenticated != true)
+                {
+                    <RedirectToLogin />
+                }
+                else
+                {
+                    <FluentCard Style="
+                        max-width: 680px;
+                        margin: 40px auto;
+                        padding: 24px;">
+                        <h2>Accès refusé</h2>
+                        <p>Vous n'avez pas les droits nécessaires pour accéder à cette ressource.</p>
+                        <FluentButton Appearance="Appearance.Accent" href="/">Retour à l'accueil</FluentButton>
+                    </FluentCard>
+                }
+            </NotAuthorized>
+
+            <Authorizing>
+                <FluentStack
+                    HorizontalAlignment="HorizontalAlignment.Center"
+                    VerticalAlignment="VerticalAlignment.Center"
+                    Style="height: 100vh;">
+                    <FluentProgressRing />
+                    <p>Chargement...</p>
+                </FluentStack>
+            </Authorizing>
+        </AuthorizeRouteView>
+
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+    </Found>
+
+    <NotFound>
+        <PageTitle>Page introuvable</PageTitle>
+        <LayoutView Layout="@typeof(MainLayout)">
+            <FluentCard Style="max-width: 680px; margin: 40px auto; padding: 24px;">
+                <h2>Page introuvable</h2>
+                <p>La ressource demandée n'existe pas.</p>
+                <FluentButton Appearance="Appearance.Accent" href="/">Retour à l'accueil</FluentButton>
+            </FluentCard>
+        </LayoutView>
+    </NotFound>
+</Router>
+
+@code {
+    // Composant pour rediriger vers login
+}

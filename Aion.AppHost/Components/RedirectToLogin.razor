@@ -1,0 +1,13 @@
+﻿@inject NavigationManager Navigation
+
+@code {
+    /// <summary>
+    /// Redirige automatiquement l’utilisateur vers la page de connexion,
+    /// en conservant l’URL de retour pour navigation post-authentification.
+    /// </summary>
+    protected override void OnInitialized()
+    {
+        var returnUrl = Uri.EscapeDataString(Navigation.Uri);
+        Navigation.NavigateTo($"/login?returnUrl={returnUrl}", forceLoad: true);
+    }
+}
