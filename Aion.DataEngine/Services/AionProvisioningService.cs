@@ -255,7 +255,7 @@ CLOSE cur; DEALLOCATE cur;
 
         private async Task<int> EnsureAdminUserAsync()
         {
-            var idObj = await _db.ExecuteScalarAsync("SELECT ID FROM dbo.SUser WHERE Login=@l", new Dictionary<string, object?> { ["@l"]="Admin" });
+            var idObj = await _db.ExecuteScalarAsync("SELECT ID FROM dbo.SUser WHERE Name=@l", new Dictionary<string, object?> { ["@l"]="Admin" });
             int uid;
             if (idObj is int id) uid = id;
             else
@@ -263,12 +263,12 @@ CLOSE cur; DEALLOCATE cur;
                 // Default password 'Admin' hashed with SHA-256 (replace later by stronger hash).
                 var hash = SimpleSha256("Admin");
                 var newId = await _db.ExecuteScalarAsync(
-                    "INSERT INTO dbo.SUser(Login, PasswordHash) VALUES(@l,@p); SELECT CAST(SCOPE_IDENTITY() AS INT);",
+                    "INSERT INTO dbo.SUser(Name, PasswordHash) VALUES(@l,@p); SELECT CAST(SCOPE_IDENTITY() AS INT);",
                     new Dictionary<string, object?> { ["@l"]="Admin", ["@p"]=hash });
                 uid = Convert.ToInt32(newId);
             }
 
-            var gid = await _db.ExecuteScalarAsync("SELECT ID FROM dbo.SGroupe WHERE Nom=@n", new Dictionary<string, object?> { ["@n"]="Administrateur" });
+            var gid = await _db.ExecuteScalarAsync("SELECT ID FROM dbo.SGroupe WHERE Name=@n", new Dictionary<string, object?> { ["@n"]="Administrateur" });
             if (gid is int groupId)
             {
                 await _db.ExecuteNonQueryAsync(
@@ -287,17 +287,17 @@ CLOSE cur; DEALLOCATE cur;
 
         private async Task EnsureRightTypesAsync()
         {
-            async Task Seed(string code, string lib)
+            async Task Seed(string code, string lib,string r1n, string r2n, string r3n)
             {
                 var exists = await _db.ExecuteScalarAsync("SELECT 1 FROM dbo.SRightType WHERE Code=@c", new Dictionary<string, object?> { ["@c"]=code });
                 if (exists == null)
-                    await _db.ExecuteNonQueryAsync("INSERT INTO dbo.SRightType(Code, Libelle) VALUES(@c,@l)", new Dictionary<string, object?> { ["@c"]=code, ["@l"]=lib });
+                    await _db.ExecuteNonQueryAsync("INSERT INTO dbo.SRightType(Code, Libelle, Right1Name,Right2Name,Right3Name) VALUES(@c,@l)", new Dictionary<string, object?> { ["@c"]=code, ["@l"]=lib });
             }
-            await Seed("MENU",   "Accès menu (Autorisé)");
-            await Seed("TABLE",  "Accès table (Lecture/Ecriture/Suppression)");
-            await Seed("MODULE", "Accès module (Autorisé)");
-            await Seed("ACTION", "Accès action (Autorisé)");
-            await Seed("REPORT", "Accès rapport (Autorisé)");
+            await Seed("MENU",   "Accès menu (Autorisé)", "Autorisé", "", "");
+            await Seed("TABLE",  "Accès table (Lecture/Ecriture/Suppression)", "Lecture", "Ecriture", "Suppression");
+            await Seed("MODULE", "Accès module (Autorisé)", "Autorisé", "","");
+            await Seed("ACTION", "Accès action (Autorisé)", "Autorisé", "", "");
+            await Seed("REPORT", "Accès rapport (Autorisé)", "Autorisé", "", "");
         }
 
         #endregion
@@ -317,13 +317,13 @@ CLOSE cur; DEALLOCATE cur;
             {
                 var tableName = (string)tr["TableName"];
                 // Ensure S_TABLE entry
-                var exists = await _db.ExecuteScalarAsync("SELECT ID FROM dbo.S_TABLE WHERE Nom=@n", new Dictionary<string, object?> { ["@n"]=tableName });
+                var exists = await _db.ExecuteScalarAsync("SELECT ID FROM dbo.STable WHERE Libelle=@n", new Dictionary<string, object?> { ["@n"]=tableName });
                 int tableId;
                 if (exists is int id) tableId = id;
                 else
                 {
                     var newId = await _db.ExecuteScalarAsync(
-                        "INSERT INTO dbo.S_TABLE(Nom, Libelle, IsHistorise) VALUES(@n,@l,0); SELECT CAST(SCOPE_IDENTITY() AS INT);",
+                        "INSERT INTO dbo.STable(Nom, Libelle, IsHistorise) VALUES(@n,@l,0); SELECT CAST(SCOPE_IDENTITY() AS INT);",
                         new Dictionary<string, object?> { ["@n"]=tableName, ["@l"]=tableName });
                     tableId = Convert.ToInt32(newId);
                 }
@@ -340,20 +340,18 @@ CLOSE cur; DEALLOCATE cur;
                 {
                     var col = (string)cr["ColName"];
                     var present = await _db.ExecuteScalarAsync(
-                        "SELECT ID FROM dbo.S_CHAMP WHERE TableId=@tid AND Nom=@c",
+                        "SELECT ID FROM dbo.SChamp WHERE TableId=@tid AND Nom=@c",
                         new Dictionary<string, object?> { ["@tid"]=tableId, ["@c"]=col });
                     if (present != null) continue;
 
                     await _db.ExecuteNonQueryAsync(
-                        @"INSERT INTO dbo.S_CHAMP(TableId, Nom, TypeSql, Longueur, Precision, Echelle, Nullable, IsHistorise)
+                        @"INSERT INTO dbo.SChamp(TableId, Nom, TypeSql, Taille, Nullable, IsHistorise)
                           VALUES(@tid,@n,@t,@len,@prec,@scale,@nulls, 0);",
                         new Dictionary<string, object?> {
                             ["@tid"]=tableId,
                             ["@n"]=col,
                             ["@t"]= (string)cr["TypeName"],
                             ["@len"]= Convert.ToInt32(cr["max_length"]),
-                            ["@prec"]= Convert.ToInt32(cr["precision"]),
-                            ["@scale"]= Convert.ToInt32(cr["scale"]),
                             ["@nulls"]= Convert.ToBoolean(cr["is_nullable"])
                         });
                 }

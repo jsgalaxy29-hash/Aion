@@ -1,63 +1,119 @@
+using System;
+using System.Linq;
 using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
-using Aion.Infrastructure;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Aion.Security;
+using Aion.DataEngine.Entities;
 
 namespace Aion.AppHost.Services
 {
     public interface IAuthService
     {
-        Task<bool> SignInAsync(string login, string password);
-        Task SignOutAsync();
+        Task<bool> LoginAsync(string username, string password, int tenantId, bool rememberMe = false);
+        Task LogoutAsync();
+        Task<SUser?> GetCurrentUserAsync();
     }
 
+    /// <summary>
+    /// Service d'authentification Aion.
+    /// Gère le login/logout et la création des claims.
+    /// </summary>
     public class AuthService : IAuthService
     {
-        private readonly IHttpContextAccessor _http;
-        private readonly AionDbContext _db;
+        private readonly SecurityDbContext _db;
+        private readonly IHttpContextAccessor _httpContext;
 
-        public AuthService(IHttpContextAccessor http, AionDbContext db)
+        public AuthService(SecurityDbContext db, IHttpContextAccessor httpContext)
         {
-            _http = http;
             _db = db;
+            _httpContext = httpContext;
         }
 
-        public async Task<bool> SignInAsync(string login, string password)
+        public async Task<bool> LoginAsync(string username, string password, int tenantId, bool rememberMe = false)
         {
-            var hash = Sha256(password);
-            var user = await _db.Users.AsNoTracking()
-                .FirstOrDefaultAsync(x => x.Login == login && x.PasswordHash == hash && x.IsActive);
+            var user = await _db.SUser
+                .FirstOrDefaultAsync(u =>
+                    u.NormalizedUserName == username.ToUpperInvariant() &&
+                    u.TenantId == tenantId &&
+                    u.IsActive &&
+                    !u.Deleted);
 
-            if (user is null) return false;
+            if (user == null)
+                return false;
 
-            var claims = new List<Claim>
+            // Vérification du mot de passe (à remplacer par BCrypt en production)
+            if (!VerifyPassword(password, user.PasswordHash))
             {
-                new Claim(ClaimTypes.Name, user.Login),
+                user.AccessFailedCount++;
+                if (user.AccessFailedCount >= 5)
+                    user.LockoutEnd = DateTime.UtcNow.AddMinutes(30);
+
+                await _db.SaveChangesAsync();
+                return false;
+            }
+
+            // Vérification du lockout
+            if (user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTime.UtcNow)
+                return false;
+
+            // Reset des échecs
+            user.AccessFailedCount = 0;
+            user.LockoutEnd = null;
+            user.LastLoginDate = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+
+            // Création des claims de base
+            var claims = new[]
+            {
                 new Claim("sub", user.Id.ToString()),
-                new Claim("tenant", user.TenantId.ToString())
+                new Claim("tenant", user.TenantId.ToString()),
+                new Claim(ClaimTypes.Name, user.UserName),
+                new Claim(ClaimTypes.Email, user.Email ?? string.Empty),
+                new Claim("fullname", user.FullName ?? user.UserName)
             };
 
             var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
             var principal = new ClaimsPrincipal(identity);
 
-            await _http.HttpContext!.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+            var authProperties = new AuthenticationProperties
+            {
+                IsPersistent = rememberMe,
+                ExpiresUtc = rememberMe ? DateTimeOffset.UtcNow.AddDays(30) : DateTimeOffset.UtcNow.AddHours(8),
+                AllowRefresh = true
+            };
+
+            await _httpContext.HttpContext!.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                principal,
+                authProperties);
+
             return true;
         }
 
-        public Task SignOutAsync() =>
-            _http.HttpContext!.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-
-        private static string Sha256(string input)
+        public async Task LogoutAsync()
         {
-            using var sha = SHA256.Create();
-            var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(input));
-            var sb = new StringBuilder();
-            foreach (var b in bytes) sb.Append(b.ToString("x2"));
-            return sb.ToString();
+            await _httpContext.HttpContext!.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        }
+
+        public async Task<SUser?> GetCurrentUserAsync()
+        {
+            var userIdClaim = _httpContext.HttpContext?.User.FindFirst("sub");
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var userId))
+                return null;
+
+            return await _db.SUser.FirstOrDefaultAsync(u => u.Id == userId && !u.Deleted);
+        }
+
+        private bool VerifyPassword(string password, string hash)
+        {
+            // TEMPORAIRE : comparaison simple
+            // EN PRODUCTION : utiliser BCrypt.Net-Next
+            // return BCrypt.Net.BCrypt.Verify(password, hash);
+            return password == hash; // À REMPLACER !
         }
     }
 }

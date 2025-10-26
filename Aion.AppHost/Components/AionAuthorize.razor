@@ -1,0 +1,85 @@
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@using Aion.Security.Services
+@using Aion.Security.Models
+@inject AuthenticationStateProvider AuthState
+@inject IRightService RightService
+
+@if (_isAuthorized)
+{
+    @ChildContent
+}
+else if (NotAuthorizedContent != null)
+{
+    @NotAuthorizedContent
+}
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public RenderFragment? NotAuthorizedContent { get; set; }
+
+    [Parameter, EditorRequired]
+    public string Target { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public int SubjectId { get; set; }
+
+    [Parameter]
+    public RightFlag RequiredRight { get; set; } = RightFlag.Right1;
+
+    private bool _isAuthorized = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthState.GetAuthenticationStateAsync();
+        var user = state.User;
+
+        if (!user.Identity?.IsAuthenticated ?? true)
+        {
+            _isAuthorized = false;
+            return;
+        }
+
+        var userIdClaim = user.FindFirst("sub");
+        var tenantIdClaim = user.FindFirst("tenant");
+
+        if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var userId))
+        {
+            _isAuthorized = false;
+            return;
+        }
+
+        if (tenantIdClaim == null || !int.TryParse(tenantIdClaim.Value, out var tenantId))
+        {
+            _isAuthorized = false;
+            return;
+        }
+
+        _isAuthorized = await RightService.HasRightAsync(
+            userId,
+            tenantId,
+            Target,
+            SubjectId,
+            RequiredRight
+        );
+    }
+}
+
+@* 
+Utilisation :
+
+<AionAuthorize Target="Module" SubjectId="5" RequiredRight="RightFlag.Right2">
+    <button @onclick="Save">Enregistrer</button>
+</AionAuthorize>
+
+<AionAuthorize Target="Action" SubjectId="42" RequiredRight="RightFlag.Right1">
+    <ChildContent>
+        <button>Exécuter</button>
+    </ChildContent>
+    <NotAuthorizedContent>
+        <span class="text-muted">Action non autorisée</span>
+    </NotAuthorizedContent>
+</AionAuthorize>
+*@

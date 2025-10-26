@@ -4,4 +4,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Aion.DataEngine\Aion.DataEngine.csproj" />
+  </ItemGroup>
 </Project>

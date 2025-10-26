@@ -7,7 +7,7 @@ using Aion.DataEngine.Entities;
 
 namespace Aion.Infrastructure
 {
-    public class AionDbContext : DbContext
+    public class AionDbContext(DbContextOptions<AionDbContext> options) : DbContext(options)
     {
 
         private readonly IUserContext _userContext;
@@ -35,8 +35,6 @@ namespace Aion.Infrastructure
         public DbSet<STenant> STenant => Set<STenant>();
         public DbSet<SWidget> SWidget => Set<SWidget>();
 
-
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder); 
@@ -45,14 +43,14 @@ namespace Aion.Infrastructure
             {
                 e.ToTable("S_User");
                 e.HasKey(x => x.Id);
-                e.Property(x => x.Login).HasMaxLength(128).IsRequired();
-                e.HasIndex(x => x.Login).IsUnique();
+                e.Property(x => x.UserName).HasMaxLength(128).IsRequired();
+                e.HasIndex(x => x.UserName).IsUnique();
                 e.Property(x => x.PasswordHash).HasMaxLength(128).IsRequired();
             });
 
             modelBuilder.Entity<SUser>().HasData(new SUser
             {
-                Login = "admin",
+                UserName = "admin",
                 PasswordHash = Sha256("admin"),
                 IsActive = true,
             });

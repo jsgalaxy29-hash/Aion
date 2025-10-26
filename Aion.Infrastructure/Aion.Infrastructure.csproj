@@ -5,11 +5,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="Services\AuthService.cs" />
     <Compile Remove="Services\DashboardServiceEf.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Aion.DataEngine\Aion.DataEngine.csproj" />
     <ProjectReference Include="..\Aion.Domain\Aion.Domain.csproj" />
+    <ProjectReference Include="..\Aion.Security\Aion.Security.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication" Version="2.3.0" />

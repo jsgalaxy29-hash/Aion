@@ -1,6 +1,6 @@
+@using Aion.DataEngine.Entities
 @using Aion.Domain.UI
 @using Aion.Domain.Contracts
-@using Aion.Security
 @using Microsoft.AspNetCore.Components.Authorization
 @inject IMenuProvider MenuProvider
 @inject ITabService Tabs
@@ -12,17 +12,24 @@
 {
     <FluentProgressRing />
 }
+else if (!_menus.Any())
+{
+    <div class="text-muted p-3">
+        <p>Aucun menu disponible.</p>
+        <small>Contactez votre administrateur pour obtenir les droits nécessaires.</small>
+    </div>
+}
 else
 {
     <FluentTreeView>
         @foreach (var root in _rootNodes)
         {
-            <FluentTreeItem Text="@root.Libelle" @onclick="() => OnClick(root)">
+            <FluentTreeItem Text="@root.Title" @onclick="() => OnClick(root)">
                 @if (Children.TryGetValue(root.Id, out var children))
                 {
                     @foreach (var c in children)
                     {
-                        <FluentTreeItem Text="@c.Libelle" @onclick="() => OnClick(c)" />
+                        <FluentTreeItem Text="@c.Title" @onclick="() => OnClick(c)" />
                     }
                 }
             </FluentTreeItem>
@@ -31,40 +38,81 @@ else
 }
 
 @code {
-    private IReadOnlyList<MenuEntity>? _menus;
-    private List<MenuEntity> _rootNodes = new();
-    private readonly Dictionary<int, List<MenuEntity>> Children = new();
+    private IReadOnlyList<SMenu>? _menus;
+    private List<SMenu> _rootNodes = new();
+    private readonly Dictionary<int, List<SMenu>> Children = new();
     private string _filter = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
-        var state = await Auth.GetAuthenticationStateAsync();
-        var user = state.User;
-        var userId = Guid.Parse(user.FindFirst("sub")!);
-        var tenantId = Guid.Parse(user.FindFirst("tenant")!.Value);
-        _menus = await MenuProvider.GetAuthorizedMenuAsync(tenantId, userId, default);
-        BuildTree();
+        try
+        {
+            var state = await Auth.GetAuthenticationStateAsync();
+            var user = state.User;
+
+            // Récupération sécurisée des claims
+            var userIdClaim = user.FindFirst("sub");
+            var tenantIdClaim = user.FindFirst("tenant");
+
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var userId))
+            {
+                // Utilisateur non authentifié ou claim invalide
+                _menus = new List<SMenu>();
+                return;
+            }
+
+            if (tenantIdClaim == null || !int.TryParse(tenantIdClaim.Value, out var tenantId))
+            {
+                // Tenant non défini
+                _menus = new List<SMenu>();
+                return;
+            }
+
+            // Récupération des menus autorisés (filtrage RBAC côté serveur)
+            _menus = await MenuProvider.GetAuthorizedMenuAsync(tenantId, userId, default);
+
+            BuildTree();
+        }
+        catch (Exception ex)
+        {
+            // Log l'erreur en production
+            Console.WriteLine($"Erreur chargement menus: {ex.Message}");
+            _menus = new List<SMenu>();
+        }
     }
 
     private void BuildTree()
     {
+        if (_menus == null || !_menus.Any())
+            return;
+
         var query = string.IsNullOrWhiteSpace(_filter)
-            ? _menus!
-            : _menus!.Where(m => m.Libelle.Contains(_filter, StringComparison.OrdinalIgnoreCase)).ToList();
+            ? _menus
+            : _menus.Where(m => m.Title.Contains(_filter, StringComparison.OrdinalIgnoreCase)).ToList();
+
         Children.Clear();
-        foreach (var m in query.Where(x => x.ParentId.HasValue))
+
+        // Construction de l'arbre enfants
+        foreach (var m in query.Where(x => x.ParentId > 0))
         {
-            Children.TryAdd(m.ParentId!.Value, new List<MenuEntity>());
-            Children[m.ParentId!.Value].Add(m);
+            if (!Children.ContainsKey(m.ParentId))
+                Children[m.ParentId] = new List<SMenu>();
+
+            Children[m.ParentId].Add(m);
         }
-        _rootNodes = query.Where(x => !x.ParentId.HasValue).OrderBy(x => x.Order).ToList();
+
+        // Noeuds racines
+        _rootNodes = query
+            .Where(x => x.ParentId <= 0)
+            .OrderBy(x => x.Order)
+            .ToList();
     }
 
-    private async Task OnClick(MenuEntity item)
+    private async Task OnClick(SMenu item)
     {
-        if (item.IsLeaf)
+        if (item.IsLeaf && !string.IsNullOrEmpty(item.Route))
         {
-            await Tabs.OpenAsync(item.Libelle, item.Route, null, true, CancellationToken.None);
+            await Tabs.OpenAsync(item.Title, item.Route, null, true, CancellationToken.None);
         }
     }
 

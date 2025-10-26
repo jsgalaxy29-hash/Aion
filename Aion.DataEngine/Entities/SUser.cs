@@ -1,30 +1,72 @@
 using System;
-using System.Security.Claims;
-using Microsoft.AspNetCore.Identity;
+using System.ComponentModel.DataAnnotations;
 
 namespace Aion.DataEngine.Entities
 {
-    public class SUser : IdentityUser<Guid>
+    /// <summary>
+    /// Utilisateur du système Aion.
+    /// Gère l'authentification et les informations utilisateur de base.
+    /// Les droits sont gérés via l'appartenance aux groupes (<see cref="SUserGroup"/>).
+    /// </summary>
+    public class SUser : BaseEntity
     {
-        // Propriétés de BaseEntity
-        public int TenantId { get; set; }
-        public bool Actif { get; set; }
-        public bool Doc { get; set; }
-        public bool Deleted { get; set; }
-        public DateTime DtCreation { get; set; }
-        public DateTime? DtModification { get; set; }
-        public DateTime? DtSuppression { get; set; }
-        public int? UsrCreationId { get; set; }
-        public int? UsrModificationId { get; set; }
-        public int? UsrSuppressionId { get; set; }
-        public byte[]? RowVersion { get; set; }
+        /// <summary>
+        /// Nom d'utilisateur (login).
+        /// </summary>
+        [Required, MaxLength(128)]
+        public string UserName { get; set; } = string.Empty;
 
-        // Propriétés spécifiques à SUser
-        public string Login { get; set; } = string.Empty;
+        /// <summary>
+        /// Version normalisée du nom d'utilisateur (uppercase pour recherche).
+        /// </summary>
+        [MaxLength(128)]
+        public string NormalizedUserName { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Email de l'utilisateur.
+        /// </summary>
+        [MaxLength(256)]
+        public string? Email { get; set; }
+
+        /// <summary>
+        /// Version normalisée de l'email.
+        /// </summary>
+        [MaxLength(256)]
+        public string? NormalizedEmail { get; set; }
+
+        /// <summary>
+        /// Hash du mot de passe (BCrypt ou PBKDF2).
+        /// </summary>
+        [MaxLength(512)]
+        public string PasswordHash { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Nom complet de l'utilisateur.
+        /// </summary>
+        [MaxLength(256)]
+        public string? FullName { get; set; }
+
+        /// <summary>
+        /// Indique si l'utilisateur est actif (peut se connecter).
+        /// </summary>
         public bool IsActive { get; set; } = true;
-        public ClaimsIdentity? Name { get; set; }
 
-        public IList<SGroupUser> Groups { get; set; } = new List<SGroupUser>();
+        /// <summary>
+        /// Date de dernière connexion.
+        /// </summary>
+        public DateTime? LastLoginDate { get; set; }
 
+        /// <summary>
+        /// Nombre d'échecs de connexion consécutifs.
+        /// </summary>
+        public int AccessFailedCount { get; set; } = 0;
+
+        /// <summary>
+        /// Date de verrouillage du compte (si dépassement tentatives).
+        /// </summary>
+        public DateTime? LockoutEnd { get; set; }
+
+        // Navigation properties
+        public virtual ICollection<SUserGroup> UserGroups { get; set; } = new List<SUserGroup>();
     }
 }

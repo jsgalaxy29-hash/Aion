@@ -1,0 +1,209 @@
+﻿@page "/debug/rights"
+@using Microsoft.AspNetCore.Components.Authorization
+@using Aion.Security.Services
+@using Aion.Security.Extensions
+@inject AuthenticationStateProvider AuthState
+@inject IRightService RightService
+
+<PageTitle>Debug - Droits utilisateur</PageTitle>
+
+<h2>🔍 Vérification des droits utilisateur</h2>
+
+@if (_loading)
+{
+    <FluentProgressRing />
+}
+else if (_error != null)
+{
+    <FluentMessageBar Intent="MessageIntent.Error">
+        @_error
+    </FluentMessageBar>
+}
+else
+{
+    <FluentCard Class="mb-3">
+        <h3>👤 Informations utilisateur</h3>
+
+        <FluentDataGrid Items="@_userInfo.AsQueryable()" GridTemplateColumns="200px 1fr">
+            <PropertyColumn Property="@(x => x.Key)" Title="Propriété" />
+            <PropertyColumn Property="@(x => x.Value)" Title="Valeur" />
+        </FluentDataGrid>
+    </FluentCard>
+
+    <FluentCard Class="mb-3">
+        <h3>🎫 Claims chargés</h3>
+        <small class="text-muted">Claims injectés dans le ClaimsPrincipal</small>
+
+        @if (!_claims.Any())
+        {
+            <p class="text-warning">⚠️ Aucun claim trouvé (utilisateur non authentifié ?)</p>
+        }
+        else
+        {
+            <FluentDataGrid Items="@_claims.AsQueryable()" GridTemplateColumns="200px 1fr">
+                <PropertyColumn Property="@(x => x.Type)" Title="Type" />
+                <PropertyColumn Property="@(x => x.Value)" Title="Valeur" />
+            </FluentDataGrid>
+        }
+    </FluentCard>
+
+    <FluentCard Class="mb-3">
+        <h3>🔐 Droits effectifs (depuis RightService)</h3>
+        <small class="text-muted">Droits calculés par agrégation des groupes</small>
+
+        @if (!_rights.Any())
+        {
+            <p class="text-warning">⚠️ Aucun droit trouvé</p>
+        }
+        else
+        {
+            @foreach (var targetGroup in _rights)
+            {
+                <FluentAccordionItem Heading="@($"{targetGroup.Key} ({targetGroup.Value.Count} droits)")"
+                                     Class="mt-2">
+
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>SubjectId</th>
+                                <th>R1</th>
+                                <th>R2</th>
+                                <th>R3</th>
+                                <th>R4</th>
+                                <th>R5</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var right in targetGroup.Value)
+                            {
+                                <tr>
+                                    <td><code>@right.SubjectId</code></td>
+                                    <td>@RenderBool(right.Right1)</td>
+                                    <td>@RenderBool(right.Right2)</td>
+                                    <td>@RenderBool(right.Right3)</td>
+                                    <td>@RenderBool(right.Right4)</td>
+                                    <td>@RenderBool(right.Right5)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </FluentAccordionItem>
+            }
+        }
+    </FluentCard>
+
+    <FluentButton Appearance="Appearance.Accent" @onclick="Reload">
+        🔄 Recharger
+    </FluentButton>
+}
+
+@code {
+    private bool _loading = true;
+    private string? _error;
+
+    private List<KeyValuePair<string, string>> _userInfo = new();
+    private List<System.Security.Claims.Claim> _claims = new();
+    private Dictionary<string, List<Aion.Security.Models.UserRights>> _rights = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _loading = true;
+        _error = null;
+
+        try
+        {
+            var state = await AuthState.GetAuthenticationStateAsync();
+            var user = state.User;
+
+            if (!user.Identity?.IsAuthenticated ?? true)
+            {
+                _error = "Utilisateur non authentifié";
+                return;
+            }
+
+            // Informations utilisateur
+            _userInfo = new List<KeyValuePair<string, string>>
+            {
+                new("UserId", user.GetUserId()?.ToString() ?? "N/A"),
+                new("TenantId", user.GetTenantId()?.ToString() ?? "N/A"),
+                new("UserName", user.Identity.Name ?? "N/A"),
+                new("Email", user.GetEmail() ?? "N/A"),
+                new("FullName", user.GetFullName()),
+                new("IsAdmin", user.IsAdmin().ToString()),
+                new("IsAuthenticated", user.Identity.IsAuthenticated.ToString()),
+                new("AuthenticationType", user.Identity.AuthenticationType ?? "N/A")
+            };
+
+            // Claims
+            _claims = user.Claims.ToList();
+
+            // Droits via RightService
+            var userId = user.GetUserId();
+            var tenantId = user.GetTenantId();
+
+            if (userId.HasValue && tenantId.HasValue)
+            {
+                _rights = await RightService.GetUserRightsAsync(userId.Value, tenantId.Value);
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"Erreur : {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task Reload()
+    {
+        await LoadData();
+        StateHasChanged();
+    }
+
+    private string RenderBool(bool value)
+    {
+        return value ? "✅" : "❌";
+    }
+}
+
+<style>
+    .mb-3 {
+        margin-bottom: 1rem;
+    }
+
+    .mt-2 {
+        margin-top: 0.5rem;
+    }
+
+    .table {
+        width: 100%;
+        margin-top: 0.5rem;
+    }
+
+        .table th,
+        .table td {
+            padding: 0.5rem;
+            text-align: left;
+            border-bottom: 1px solid var(--neutral-stroke-rest);
+        }
+
+    .table-sm th,
+    .table-sm td {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    code {
+        background: var(--neutral-fill-secondary-rest);
+        padding: 0.2rem 0.4rem;
+        border-radius: 3px;
+        font-family: 'Consolas', monospace;
+    }
+</style>

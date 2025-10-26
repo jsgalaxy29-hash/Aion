@@ -1,4 +1,5 @@
 @inherits LayoutComponentBase
+@using Aion.AppHost.Services
 @using Aion.Domain.Contracts
 @using Microsoft.AspNetCore.Components.Authorization
 @inject AuthenticationStateProvider Auth
@@ -58,7 +59,7 @@
 
     private async Task Logout()
     {
-        await AuthService.SignOutAsync(CancellationToken.None);
+        await AuthService.LogoutAsync();
         Navigation.NavigateTo("/login", true);
     }
 }

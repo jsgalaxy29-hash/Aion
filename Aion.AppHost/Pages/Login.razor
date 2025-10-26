@@ -1,41 +1,163 @@
-@page "/"
-@page "/login"
-@using Microsoft.AspNetCore.Components.Forms
-@using Microsoft.Extensions.Logging
-@inject NavigationManager Nav
-@inject Aion.AppHost.Services.IAuthService Auth
-@inject ILogger<Login> Log
+﻿@page "/login"
+@using Aion.AppHost.Services
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
 
-<FluentCard style="max-width:420px;margin:4rem auto;padding:1.25rem">
-    <h3>Connexion</h3>
-    <EditForm Model="@_model" OnValidSubmit="OnSubmit">
-        <DataAnnotationsValidator />
-        <FluentTextField @bind-Value="_model.Login"
-                         Placeholder="Identifiant" />
-        <FluentTextField @bind-Value="_model.Password" 
-                        Placeholder="Mot de passe" class="mt-2" />
-        <FluentButton Appearance="Appearance.Accent" class="mt-3" Type="ButtonType.Submit">Se connecter</FluentButton>
-    </EditForm>
-    @if (!string.IsNullOrEmpty(_error))
-    {
-        <FluentBadge Appearance="Appearance.Neutral" class="mt-2">@_error</FluentBadge>
+<PageTitle>Connexion - Aion</PageTitle>
+
+<div class="login-container">
+    <FluentCard Class="login-card">
+        <div class="login-header">
+            <!-- Icône retirée pour fiabiliser la compilation -->
+            <h1>Aion ERP</h1>
+            <p class="text-muted">Connectez-vous à votre compte</p>
+        </div>
+
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <FluentMessageBar Intent="MessageIntent.Error" Class="mb-3">
+                @_errorMessage
+            </FluentMessageBar>
+        }
+
+        <EditForm Model="_model" OnValidSubmit="HandleLogin">
+            <DataAnnotationsValidator />
+
+            <FluentStack Orientation="Orientation.Vertical" VerticalGap="16">
+                <FluentTextField @bind-Value="_model.Username"
+                                 Label="Nom d'utilisateur"
+                                 Required="true"
+                                 Style="width: 100%;"
+                                 Placeholder="admin">
+                    <!-- Icône retirée -->
+                </FluentTextField>
+
+                <FluentTextField @bind-Value="_model.Password"
+                                 Label="Mot de passe"
+                                 TextFieldType="TextFieldType.Password"
+                                 Required="true"
+                                 Style="width: 100%;"
+                                 Placeholder="••••••••">
+                    <!-- Icône retirée -->
+                </FluentTextField>
+
+                <FluentNumberField @bind-Value="_model.TenantId"
+                                   Label="Tenant"
+                                   Required="true"
+                                   Style="width: 100%;">
+                </FluentNumberField>
+
+                <FluentCheckbox @bind-Checked="_model.RememberMe">
+                    Se souvenir de moi
+                </FluentCheckbox>
+
+                <FluentButton Appearance="Appearance.Accent"
+                              Type="ButtonType.Submit"
+                              Disabled="_isLoading"
+                              Style="width: 100%;">
+                    @if (_isLoading)
+                    {
+                        <span>Connexion…</span>
+                    }
+                    else
+                    {
+                        <span>Se connecter</span>
+                    }
+                </FluentButton>
+            </FluentStack>
+        </EditForm>
+
+        <div class="login-footer">
+            <small class="text-muted">
+                © @DateTime.Now.Year — Aion
+            </small>
+        </div>
+    </FluentCard>
+</div>
+
+<style>
+    .login-container {
+        display: grid;
+        place-items: center;
+        min-height: 100dvh;
+        padding: 1.5rem;
     }
-</FluentCard>
+
+    .login-card {
+        width: min(480px, 100%);
+        padding: 2rem;
+    }
+
+    .login-header {
+        text-align: center;
+        margin-bottom: 1.25rem;
+    }
+
+    .text-muted {
+        color: var(--neutral-foreground-hint);
+    }
+
+    .login-footer {
+        margin-top: 2rem;
+        text-align: center;
+        padding-top: 1rem;
+        border-top: 1px solid var(--neutral-stroke-rest);
+    }
+
+    .mb-3 {
+        margin-bottom: 1rem;
+    }
+</style>
 
 @code {
-    private LoginVm _model = new();
-    private string? _error;
+    private LoginModel _model = new();
+    private string? _errorMessage;
+    private bool _isLoading;
 
-    private async Task OnSubmit()
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    public string? ReturnUrl { get; set; }
+
+    private async Task HandleLogin()
     {
-        var ok = await Auth.SignInAsync(_model.Login, _model.Password);
-        if (ok) Nav.NavigateTo("/dashboard", true);
-        else _error = "Identifiants invalides.";
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            var result = await AuthService.LoginAsync(
+                _model.Username,
+                _model.Password,
+                _model.TenantId,
+                _model.RememberMe);
+
+            if (result)
+            {
+                // Redirection
+                var target = string.IsNullOrWhiteSpace(ReturnUrl) ? "/" : ReturnUrl;
+                Navigation.NavigateTo(target, forceLoad: true);
+                return;
+            } else
+            {
+                _errorMessage = "Échec de la connexion.";
+            }
+
+            
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Erreur : {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
     }
 
-    public class LoginVm
+    private class LoginModel
     {
-        public string Login { get; set; } = string.Empty;
-        public string Password { get; set; } = string.Empty;
+        public string Username { get; set; } = "admin";
+        public string Password { get; set; } = "admin";
+        public int TenantId { get; set; } = 1;
+        public bool RememberMe { get; set; }
     }
 }
