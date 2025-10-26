@@ -1,5 +1,10 @@
 ﻿using Aion.AppHost;
+using Aion.AppHost.Components;
 using Aion.AppHost.Services;
+using Aion.DataEngine.Interfaces;
+using Aion.DataEngine.Providers;
+using Aion.DataEngine.Services;
+using Aion.Domain.Contracts;
 using Aion.Infrastructure;
 using Aion.Infrastructure.Services;
 using Aion.Infrastructure.Startup;
@@ -7,9 +12,6 @@ using Aion.Security;
 using Aion.Security.Authentication;
 using Aion.Security.Authorization;
 using Aion.Security.Services;
-using Aion.Domain.Contracts;
-using Aion.DataEngine.Interfaces;
-using Aion.DataEngine.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
@@ -36,8 +38,10 @@ builder.Services.AddDbContext<SecurityDbContext>(opt =>
 
 // ===== Data Provider (pour AionProvisioningService) =====
 // TODO: Implémenter votre IDataProvider concret
-// builder.Services.AddScoped<IDataProvider, SqlServerDataProvider>();
-// builder.Services.AddSingleton<IClock, SystemClock>();
+builder.Services.AddScoped<IDataProvider>(_ =>
+    new SqlServerDataProvider(connectionString));
+
+builder.Services.AddSingleton<IClock, Aion.DataEngine.Interfaces.SystemClock>();
 
 // ===== Authentication & Authorization =====
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -73,9 +77,9 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IMenuProvider, MenuProvider>();
 builder.Services.AddScoped<IAionThemeService, AionThemeService>();
 
-// Provisioning (si IDataProvider implémenté)
-// builder.Services.AddScoped<IAionProvisioningService, AionProvisioningService>();
-// builder.Services.AddScoped<StartupOrchestrator>();
+// Provisioning
+builder.Services.AddScoped<IAionProvisioningService, AionProvisioningService>();
+builder.Services.AddScoped<StartupOrchestrator>();
 
 // ===== Build Application =====
 var app = builder.Build();
@@ -102,7 +106,7 @@ using (var scope = app.Services.CreateScope())
     try
     {
         // Option 1 : Avec AionProvisioningService (si IDataProvider implémenté)
-        // await StartupOrchestrator.InitializeDatabaseAsync(app.Services);
+        await StartupOrchestrator.InitializeDatabaseAsync(app.Services);
 
         // Option 2 : EF Core seulement (si pas de IDataProvider)
         logger.LogInformation("🔄 Initialisation de la base de données...");
@@ -129,6 +133,8 @@ using (var scope = app.Services.CreateScope())
 // ===== Mapping =====
 app.MapRazorComponents<App>()
    .AddInteractiveServerRenderMode();
+
+app.MapFallbackToPage("/_Host");
 
 app.MapRazorPages();
 

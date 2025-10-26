@@ -1,11 +1,19 @@
 ﻿@page "/login"
+@layout MainLayout
 @using Aion.AppHost.Services
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.FluentUI
+@using Microsoft.FluentUI.AspNetCore.Components
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
+@inherits LayoutComponentBase
+@attribute [AllowAnonymous]
+@rendermode RenderMode.InteractiveServer
 
 <PageTitle>Connexion - Aion</PageTitle>
 
 <div class="login-container">
+
     <FluentCard Class="login-card">
         <div class="login-header">
             <!-- Icône retirée pour fiabiliser la compilation -->
@@ -36,7 +44,7 @@
                                  Label="Mot de passe"
                                  TextFieldType="TextFieldType.Password"
                                  Required="true"
-                                 Style="width: 100%;"
+                                 Style="width: 150px;"
                                  Placeholder="••••••••">
                     <!-- Icône retirée -->
                 </FluentTextField>

@@ -12,7 +12,8 @@ namespace Aion.Infrastructure
 
         private readonly IUserContext _userContext;
 
-        // DbContextOptions<AionDbContext> options, IUserContext userContext)
+        
+        //DbContextOptions<AionDbContext> options, IUserContext userContext)
         //_userContext = userContext; 
 
         // System DbSets (unifiés)
@@ -39,23 +40,6 @@ namespace Aion.Infrastructure
         {
             base.OnModelCreating(modelBuilder); 
             
-            modelBuilder.Entity<SUser>(e =>
-            {
-                e.ToTable("SUser");
-                e.HasKey(x => x.Id);
-                e.Property(x => x.UserName).HasMaxLength(128).IsRequired();
-                e.HasIndex(x => x.UserName).IsUnique();
-                e.Property(x => x.PasswordHash).HasMaxLength(128).IsRequired();
-            });
-
-            modelBuilder.Entity<SUser>().HasData(new SUser
-            {
-                UserName = "admin",
-                PasswordHash = Sha256("admin"),
-                IsActive = true,
-            });
-
-            
             // Filtres multi-tenant basés sur IUserContext
             modelBuilder.Entity<Aion.DataEngine.Entities.SMenu>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
             modelBuilder.Entity<Aion.DataEngine.Entities.SModule>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
@@ -74,64 +58,6 @@ namespace Aion.Infrastructure
             modelBuilder.Entity<Aion.DataEngine.Entities.SHistoChange>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
             modelBuilder.Entity<Aion.DataEngine.Entities.STenant>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
         }
-
-
-        // ===== Méthode de seed (à externaliser dans un service dédié) =====
-        /*
-        async Task SeedSecurityData(SecurityDbContext db)
-        {
-            if (await db.SUser.AnyAsync()) return; // Déjà seedé
-
-            // Création tenant par défaut
-            var tenant = new STenant { Id = 1, Name = "Default" };
-
-            // Création groupe admin
-            var adminGroup = new SGroup 
-            { 
-                Name = "Administrateurs", 
-                Description = "Groupe administrateur système",
-                IsSystem = true,
-                TenantId = 1
-            };
-            db.SGroup.Add(adminGroup);
-            await db.SaveChangesAsync();
-
-            // Création utilisateur admin
-            var admin = new SUser
-            {
-                UserName = "admin",
-                NormalizedUserName = "ADMIN",
-                Email = "admin@aion.local",
-                NormalizedEmail = "ADMIN@AION.LOCAL",
-                PasswordHash = "admin", // À CHANGER avec BCrypt !
-                FullName = "Administrateur",
-                IsActive = true,
-                TenantId = 1
-            };
-            db.SUser.Add(admin);
-            await db.SaveChangesAsync();
-
-            // Association admin au groupe
-            db.SUserGroup.Add(new SUserGroup
-            {
-                UserId = admin.Id,
-                GroupId = adminGroup.Id,
-                IsLinkActive = true,
-                TenantId = 1
-            });
-
-            // Création types de droits
-            var rightTypes = new[]
-            {
-                new SRightType { Code = "Menu", Name = "Droits sur menus", DataSource = "SMenu", Right1Name = "Voir", TenantId = 1 },
-                new SRightType { Code = "Module", Name = "Droits sur modules", DataSource = "SModule", Right1Name = "Lire", Right2Name = "Écrire", Right3Name = "Supprimer", TenantId = 1 },
-                new SRightType { Code = "Table", Name = "Droits sur tables", DataSource = "STable", Right1Name = "Lire", Right2Name = "Écrire", Right3Name = "Supprimer", TenantId = 1 },
-                new SRightType { Code = "Action", Name = "Droits sur actions", DataSource = "SAction", Right1Name = "Exécuter", TenantId = 1 }
-            };
-            db.SRightType.AddRange(rightTypes);
-            await db.SaveChangesAsync();
-        }
-        */
 
         public static string Sha256(string input)
         {

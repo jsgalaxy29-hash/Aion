@@ -500,10 +500,9 @@ BEGIN
   
   BEGIN TRY
     EXEC sp_executesql @sql;
-    PRINT ''Colonnes BaseEntity ajoutées à '' + @t;
   END TRY
   BEGIN CATCH
-    PRINT ''Erreur sur '' + @t + '': '' + ERROR_MESSAGE();
+    PRINT ERROR_MESSAGE();
   END CATCH
   
   FETCH NEXT FROM cur INTO @t;

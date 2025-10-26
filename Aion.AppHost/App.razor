@@ -1,24 +1,13 @@
-@using Microsoft.FluentUI.AspNetCore.Components
-@using Microsoft.AspNetCore.Components.Authorization
-@inject Aion.AppHost.Services.IAionThemeService ThemeSvc
-
-<HeadContent>
-    <link href="_content/Microsoft.FluentUI.AspNetCore.Components/css/reboot.css" rel="stylesheet" />
-    <link href="Aion.AppHost.styles.css" rel="stylesheet" />
-    <link rel="icon" type="image/x-icon" href="favicon.ico" />
-</HeadContent>
-
-<FluentProvider Theme="ThemeSvc.Current">
-    <CascadingAuthenticationState>
-        <Router AppAssembly="typeof(App).Assembly">
-            <Found Context="routeData">
-                <RouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)" />
-            </Found>
-            <NotFound>
-                <LayoutView Layout="typeof(MainLayout)">
-                    <p>Page introuvable.</p>
-                </LayoutView>
-            </NotFound>
-        </Router>
-    </CascadingAuthenticationState>
-</FluentProvider>
+@* App.razor *@
+<Router AppAssembly="@typeof(App).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+    </Found>
+    <NotFound>
+        <FluentCard Style="max-width:680px;margin:40px auto;padding:24px;">
+            <h2>Page introuvable</h2>
+            <p>La ressource demandée n’existe pas.</p>
+            <FluentButton Appearance="Appearance.Accent" href="/">Retour à l’accueil</FluentButton>
+        </FluentCard>
+    </NotFound>
+</Router>
