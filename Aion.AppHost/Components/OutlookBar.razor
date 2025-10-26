@@ -1,6 +1,6 @@
-@using Aion.DataEngine.Entities
 @using Aion.Domain.UI
 @using Aion.Domain.Contracts
+@using Aion.DataEngine.Entities
 @using Microsoft.AspNetCore.Components.Authorization
 @inject IMenuProvider MenuProvider
 @inject ITabService Tabs
@@ -70,7 +70,7 @@ else
 
             // Récupération des menus autorisés (filtrage RBAC côté serveur)
             _menus = await MenuProvider.GetAuthorizedMenuAsync(tenantId, userId, default);
-
+            
             BuildTree();
         }
         catch (Exception ex)
@@ -97,13 +97,13 @@ else
         {
             if (!Children.ContainsKey(m.ParentId))
                 Children[m.ParentId] = new List<SMenu>();
-
+            
             Children[m.ParentId].Add(m);
         }
 
         // Noeuds racines
         _rootNodes = query
-            .Where(x => x.ParentId <= 0)
+            .Where(x => x.ParentId  <= 0)
             .OrderBy(x => x.Order)
             .ToList();
     }

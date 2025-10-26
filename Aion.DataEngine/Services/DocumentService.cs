@@ -23,7 +23,7 @@ namespace Aion.DataEngine.Services
             var uid = _user.UserId;
 
             var id = await _db.ExecuteScalarAsync(@"
-                INSERT INTO dbo.F_Document(TableName, RecID, Categorie, [Path], Extension,
+                INSERT INTO dbo.FDocument(TableName, RecID, Categorie, [Path], Extension,
                                            Actif, Doc, Deleted, DtCreation, UsrCreationId)
                 VALUES(@t,@r,@c,@p,@e, 1, 0, 0, @now, @uid);
                 SELECT CAST(SCOPE_IDENTITY() AS INT);",
@@ -40,7 +40,7 @@ namespace Aion.DataEngine.Services
             var now = _clock.UtcNow;
             var uid = _user.UserId;
 
-            var dt = await _db.ExecuteQueryAsync("SELECT TableName, RecID FROM dbo.F_Document WHERE ID=@id",
+            var dt = await _db.ExecuteQueryAsync("SELECT TableName, RecID FROM dbo.FDocument WHERE ID=@id",
                 new Dictionary<string, object?> { ["@id"]=docId });
             if (dt.Rows.Count == 0) return;
 
@@ -48,11 +48,11 @@ namespace Aion.DataEngine.Services
             var recId = Convert.ToInt32(dt.Rows[0]["RecID"]);
 
             await _db.ExecuteNonQueryAsync(
-                "UPDATE dbo.F_Document SET Deleted=1, DtSuppression=@now, UsrSuppressionId=@uid WHERE ID=@id",
+                "UPDATE dbo.FDocument SET Deleted=1, DtSuppression=@now, UsrSuppressionId=@uid WHERE ID=@id",
                 new Dictionary<string, object?> { ["@id"]=docId, ["@now"]=now, ["@uid"]=uid });
 
             var remain = await _db.ExecuteScalarAsync(
-                "SELECT COUNT(1) FROM dbo.F_Document WHERE TableName=@t AND RecID=@r AND Deleted=0",
+                "SELECT COUNT(1) FROM dbo.FDocument WHERE TableName=@t AND RecID=@r AND Deleted=0",
                 new Dictionary<string, object?> { ["@t"]=table, ["@r"]=recId });
 
             if (Convert.ToInt32(remain) == 0)
@@ -65,7 +65,7 @@ namespace Aion.DataEngine.Services
 
         public async Task<IEnumerable<FDocument>> GetAsync(string tableName, int recId, bool withDeleted = false)
         {
-            var sql = "SELECT * FROM dbo.F_Document WHERE TableName=@t AND RecID=@r";
+            var sql = "SELECT * FROM dbo.FDocument WHERE TableName=@t AND RecID=@r";
             if (!withDeleted) sql += " AND Deleted=0";
 
             var dt = await _db.ExecuteQueryAsync(sql, new Dictionary<string, object?> { ["@t"]=tableName, ["@r"]=recId });

@@ -7,6 +7,10 @@ using Aion.DataEngine.Interfaces;
 
 namespace Aion.DataEngine.Services
 {
+    /// <summary>
+    /// Service de provisioning Aion - Crée la structure SQL de base.
+    /// Version corrigée et compatible avec le nouveau schéma de sécurité.
+    /// </summary>
     public sealed class AionProvisioningService : IAionProvisioningService
     {
         private readonly IDataProvider _db;
@@ -14,129 +18,116 @@ namespace Aion.DataEngine.Services
 
         public AionProvisioningService(IDataProvider db, IClock clock)
         {
-            _db = db; _clock = clock;
+            _db = db;
+            _clock = clock;
         }
 
         public async Task EnsureDatabaseReadyAsync()
         {
-            // 1) Core: security + catalogs + regex + metadata + documents + base-entity columns
+            Console.WriteLine("🔧 AionProvisioningService : Création de la structure SQL...");
+
+            // 1) Tables de sécurité
             await _db.ExecuteNonQueryAsync(SqlSecurityCreate());
+            Console.WriteLine("   ✅ Tables de sécurité créées");
+
+            // 2) Tables catalogues (Menu, Module, Action, Report)
             await _db.ExecuteNonQueryAsync(SqlCreateCatalogs());
-            await _db.ExecuteNonQueryAsync(SqlCreateRegex());
+            Console.WriteLine("   ✅ Tables catalogues créées");
+
+            // 3) Tables métadonnées (STable, SField)
             await _db.ExecuteNonQueryAsync(SqlCreateMetaTables());
+            Console.WriteLine("   ✅ Tables métadonnées créées");
+
+            // 4) Table Regex
+            await _db.ExecuteNonQueryAsync(SqlCreateRegex());
+            Console.WriteLine("   ✅ Table Regex créée");
+
+            // 5) Table Documents
             await _db.ExecuteNonQueryAsync(SqlCreateFDocument());
+            Console.WriteLine("   ✅ Table Documents créée");
+
+            // 6) Ajout colonnes BaseEntity aux tables système
             await _db.ExecuteNonQueryAsync(SqlAddBaseEntityColumnsMacro());
+            Console.WriteLine("   ✅ Colonnes BaseEntity ajoutées");
 
-            // 2) Seed Admin group/user + right types
-            var adminGroupId = await EnsureAdminGroupAsync();
-            var adminUserId = await EnsureAdminUserAsync();
-            await EnsureRightTypesAsync();
-
-            // 3) Populate S_TABLE/S_CHAMP from INFORMATION_SCHEMA if empty or missing rows
-            await PopulateMetadataAsync();
-
-            // 4) Grant default rights (Menu/Table/Module/Action/Report) to Admin and to all members of Administrateur
-            await GrantAdminDefaultsAsync(adminUserId);
-            await GrantGroupDefaultsAsync("Administrateur");
-
-            // 5) Detect new F_* tables and ensure Admin rights
-            await GrantAdminForNewFTablesAsync(adminUserId);
+            Console.WriteLine("✅ Structure SQL complète créée");
         }
 
-        #region SQL builders
+        #region SQL Builders
 
         private static string SqlSecurityCreate() => @"
-IF OBJECT_ID('dbo.SGroupe','U') IS NULL
-BEGIN
-  CREATE TABLE dbo.SGroupe(
-    ID INT IDENTITY(1,1) PRIMARY KEY,
-    Nom NVARCHAR(128) NOT NULL UNIQUE,
-    Actif BIT NOT NULL DEFAULT(1),
-    Deleted BIT NOT NULL DEFAULT(0),
-    DtCreation DATETIME NOT NULL DEFAULT(GETUTCDATE())
-  );
-END;
+-- ===== TABLES DE SÉCURITÉ (nouveau schéma) =====
 
+-- Table SGroup (groupes d'utilisateurs)
+IF OBJECT_ID('dbo.SGroup','U') IS NULL
+BEGIN
+  CREATE TABLE dbo.SGroup(
+    ID INT IDENTITY(1,1) PRIMARY KEY,
+    Name NVARCHAR(128) NOT NULL,
+    Description NVARCHAR(500) NULL,
+    IsSystem BIT NOT NULL DEFAULT(0),
+    TenantId INT NOT NULL DEFAULT(1),
+    Actif BIT NOT NULL DEFAULT(1),
+    Doc BIT NOT NULL DEFAULT(0),
+    Deleted BIT NOT NULL DEFAULT(0),
+    DtCreation DATETIME NOT NULL DEFAULT(GETUTCDATE()),
+    DtModification DATETIME NULL,
+    DtSuppression DATETIME NULL,
+    UsrCreationId INT NULL,
+    UsrModificationId INT NULL,
+    UsrSuppressionId INT NULL,
+    RowVersion ROWVERSION,
+    CONSTRAINT UQ_SGroup_Name_Tenant UNIQUE(Name, TenantId)
+  );
+  PRINT 'Table SGroup créée';
+END
+ELSE
+  PRINT 'Table SGroup existe déjà';
+
+-- Table SUser (utilisateurs)
 IF OBJECT_ID('dbo.SUser','U') IS NULL
 BEGIN
   CREATE TABLE dbo.SUser(
     ID INT IDENTITY(1,1) PRIMARY KEY,
-    Login NVARCHAR(128) NOT NULL UNIQUE,
-    PasswordHash NVARCHAR(256) NOT NULL,
+    UserName NVARCHAR(128) NOT NULL,
+    NormalizedUserName NVARCHAR(128) NULL,
+    Email NVARCHAR(256) NULL,
+    NormalizedEmail NVARCHAR(256) NULL,
+    PasswordHash NVARCHAR(512) NOT NULL,
+    FullName NVARCHAR(256) NULL,
+    IsActive BIT NOT NULL DEFAULT(1),
+    LastLoginDate DATETIME NULL,
+    AccessFailedCount INT NOT NULL DEFAULT(0),
+    LockoutEnd DATETIME NULL,
+    TenantId INT NOT NULL DEFAULT(1),
     Actif BIT NOT NULL DEFAULT(1),
+    Doc BIT NOT NULL DEFAULT(0),
     Deleted BIT NOT NULL DEFAULT(0),
-    DtCreation DATETIME NOT NULL DEFAULT(GETUTCDATE())
+    DtCreation DATETIME NOT NULL DEFAULT(GETUTCDATE()),
+    DtModification DATETIME NULL,
+    DtSuppression DATETIME NULL,
+    UsrCreationId INT NULL,
+    UsrModificationId INT NULL,
+    UsrSuppressionId INT NULL,
+    RowVersion ROWVERSION,
+    CONSTRAINT UQ_SUser_NormalizedUserName UNIQUE(NormalizedUserName)
   );
-END;
+  CREATE INDEX IX_SUser_Email ON dbo.SUser(NormalizedEmail);
+  CREATE INDEX IX_SUser_Tenant ON dbo.SUser(TenantId, Deleted);
+  PRINT 'Table SUser créée';
+END
+ELSE
+  PRINT 'Table SUser existe déjà';
 
-IF OBJECT_ID('dbo.SUserGroupe','U') IS NULL
+-- Table SUserGroup (association user-groupe)
+IF OBJECT_ID('dbo.SUserGroup','U') IS NULL
 BEGIN
-  CREATE TABLE dbo.SUserGroupe(
+  CREATE TABLE dbo.SUserGroup(
     ID INT IDENTITY(1,1) PRIMARY KEY,
     UserId INT NOT NULL,
-    GroupeId INT NOT NULL,
-    CONSTRAINT FK_SUG_User FOREIGN KEY(UserId) REFERENCES dbo.SUser(ID),
-    CONSTRAINT FK_SUG_Groupe FOREIGN KEY(GroupeId) REFERENCES dbo.SGroupe(ID),
-    CONSTRAINT UQ_SUG UNIQUE(UserId, GroupeId)
-  );
-END;
-
-IF OBJECT_ID('dbo.SRightType','U') IS NULL
-BEGIN
-  CREATE TABLE dbo.SRightType(
-    ID INT IDENTITY(1,1) PRIMARY KEY,
-    Code NVARCHAR(32) NOT NULL UNIQUE,
-    Libelle NVARCHAR(128) NOT NULL
-  );
-END;
-
-IF OBJECT_ID('dbo.SRight','U') IS NULL
-BEGIN
-  CREATE TABLE dbo.SRight(
-    ID INT IDENTITY(1,1) PRIMARY KEY,
-    UserId INT NOT NULL,
-    SubjectType NVARCHAR(32) NOT NULL,  -- MENU, TABLE, MODULE, ACTION, REPORT
-    SubjectId INT NOT NULL,
-    Droit1 BIT NOT NULL DEFAULT(0),
-    Droit2 BIT NULL,
-    Droit3 BIT NULL,
-    CONSTRAINT UQ_SRight UNIQUE(UserId, SubjectType, SubjectId),
-    CONSTRAINT FK_SR_User FOREIGN KEY(UserId) REFERENCES dbo.SUser(ID)
-  );
-END;
-";
-
-        private static string SqlCreateCatalogs() => @"
-IF OBJECT_ID('dbo.SMenu','U') IS NULL
-  CREATE TABLE dbo.SMenu(ID INT IDENTITY(1,1) PRIMARY KEY, Code NVARCHAR(128) NOT NULL UNIQUE);
-IF OBJECT_ID('dbo.SModule','U') IS NULL
-  CREATE TABLE dbo.SModule(ID INT IDENTITY(1,1) PRIMARY KEY, Code NVARCHAR(128) NOT NULL UNIQUE);
-IF OBJECT_ID('dbo.SAction','U') IS NULL
-  CREATE TABLE dbo.SAction(ID INT IDENTITY(1,1) PRIMARY KEY, Code NVARCHAR(128) NOT NULL UNIQUE);
-IF OBJECT_ID('dbo.SReport','U') IS NULL
-  CREATE TABLE dbo.SReport(ID INT IDENTITY(1,1) PRIMARY KEY, Code NVARCHAR(128) NOT NULL UNIQUE);
-";
-
-        private static string SqlCreateRegex() => @"
-IF OBJECT_ID('dbo.R_REGEX','U') IS NULL
-BEGIN
-  CREATE TABLE dbo.R_REGEX(
-    ID INT IDENTITY(1,1) PRIMARY KEY,
-    Code NVARCHAR(100) NOT NULL UNIQUE,
-    Pattern NVARCHAR(4000) NOT NULL,
-    Description NVARCHAR(400) NULL
-  );
-END;
-";
-
-        private static string SqlCreateMetaTables() => @"
-IF OBJECT_ID('dbo.S_TABLE','U') IS NULL
-BEGIN
-  CREATE TABLE dbo.S_TABLE(
-    ID INT IDENTITY(1,1) PRIMARY KEY,
-    Nom NVARCHAR(255) NOT NULL UNIQUE,   -- table name
-    Libelle NVARCHAR(255) NULL,
-    IsHistorise BIT NOT NULL DEFAULT(0),
+    GroupId INT NOT NULL,
+    IsLinkActive BIT NOT NULL DEFAULT(1),
+    TenantId INT NOT NULL DEFAULT(1),
     Actif BIT NOT NULL DEFAULT(1),
     Doc BIT NOT NULL DEFAULT(0),
     Deleted BIT NOT NULL DEFAULT(0),
@@ -148,21 +139,35 @@ BEGIN
     UsrSuppressionId INT NULL,
     RowVersion ROWVERSION
   );
-END;
+  
+  -- Contraintes FK (ajoutées après création des tables)
+  IF OBJECT_ID('dbo.SUser', 'U') IS NOT NULL
+    ALTER TABLE dbo.SUserGroup ADD CONSTRAINT FK_SUG_User FOREIGN KEY(UserId) REFERENCES dbo.SUser(ID) ON DELETE CASCADE;
+  IF OBJECT_ID('dbo.SGroup', 'U') IS NOT NULL
+    ALTER TABLE dbo.SUserGroup ADD CONSTRAINT FK_SUG_Group FOREIGN KEY(GroupId) REFERENCES dbo.SGroup(ID) ON DELETE CASCADE;
+  
+  CREATE UNIQUE INDEX UQ_SUserGroup ON dbo.SUserGroup(UserId, GroupId, TenantId);
+  PRINT 'Table SUserGroup créée';
+END
+ELSE
+  PRINT 'Table SUserGroup existe déjà';
 
-IF OBJECT_ID('dbo.S_CHAMP','U') IS NULL
+-- Table SRightType (types de droits)
+IF OBJECT_ID('dbo.SRightType','U') IS NULL
 BEGIN
-  CREATE TABLE dbo.S_CHAMP(
+  CREATE TABLE dbo.SRightType(
     ID INT IDENTITY(1,1) PRIMARY KEY,
-    TableId INT NOT NULL,
-    Nom NVARCHAR(255) NOT NULL,          -- column name
-    TypeSql NVARCHAR(100) NOT NULL,
-    Longueur INT NULL,
-    Precision INT NULL,
-    Echelle INT NULL,
-    Nullable BIT NOT NULL DEFAULT(1),
-    IsHistorise BIT NOT NULL DEFAULT(0),
-    RegexId INT NULL,
+    Code NVARCHAR(32) NOT NULL,
+    Name NVARCHAR(128) NOT NULL,
+    DataSource NVARCHAR(255) NOT NULL DEFAULT(''),
+    Right1Name NVARCHAR(128) NOT NULL DEFAULT(''),
+    Right2Name NVARCHAR(128) NOT NULL DEFAULT(''),
+    Right3Name NVARCHAR(128) NOT NULL DEFAULT(''),
+    Right4Name NVARCHAR(128) NOT NULL DEFAULT(''),
+    Right5Name NVARCHAR(128) NOT NULL DEFAULT(''),
+    [Order] INT NOT NULL DEFAULT(0),
+    IsActive BIT NOT NULL DEFAULT(1),
+    TenantId INT NOT NULL DEFAULT(1),
     Actif BIT NOT NULL DEFAULT(1),
     Doc BIT NOT NULL DEFAULT(0),
     Deleted BIT NOT NULL DEFAULT(0),
@@ -173,269 +178,342 @@ BEGIN
     UsrModificationId INT NULL,
     UsrSuppressionId INT NULL,
     RowVersion ROWVERSION,
-    CONSTRAINT FK_SCH_Table FOREIGN KEY(TableId) REFERENCES dbo.S_TABLE(ID)
+    CONSTRAINT UQ_SRightType_Code_Tenant UNIQUE(Code, TenantId)
   );
-  CREATE UNIQUE INDEX UX_SCH_Table_Col ON dbo.S_CHAMP(TableId, Nom);
-END;
+  PRINT 'Table SRightType créée';
+END
+ELSE
+  PRINT 'Table SRightType existe déjà';
+
+-- Table SRight (droits par groupe)
+IF OBJECT_ID('dbo.SRight','U') IS NULL
+BEGIN
+  CREATE TABLE dbo.SRight(
+    ID INT IDENTITY(1,1) PRIMARY KEY,
+    GroupId INT NOT NULL,
+    Target NVARCHAR(32) NOT NULL,        -- Menu, Module, Table, Action, Report
+    SubjectId INT NOT NULL,              -- ID de la ressource
+    Right1 BIT NULL,
+    Right2 BIT NULL,
+    Right3 BIT NULL,
+    Right4 BIT NULL,
+    Right5 BIT NULL,
+    TenantId INT NOT NULL DEFAULT(1),
+    Actif BIT NOT NULL DEFAULT(1),
+    Doc BIT NOT NULL DEFAULT(0),
+    Deleted BIT NOT NULL DEFAULT(0),
+    DtCreation DATETIME NOT NULL DEFAULT(GETUTCDATE()),
+    DtModification DATETIME NULL,
+    DtSuppression DATETIME NULL,
+    UsrCreationId INT NULL,
+    UsrModificationId INT NULL,
+    UsrSuppressionId INT NULL,
+    RowVersion ROWVERSION
+  );
+  
+  -- Contrainte FK
+  IF OBJECT_ID('dbo.SGroup', 'U') IS NOT NULL
+    ALTER TABLE dbo.SRight ADD CONSTRAINT FK_SR_Group FOREIGN KEY(GroupId) REFERENCES dbo.SGroup(ID) ON DELETE CASCADE;
+  
+  CREATE UNIQUE INDEX UQ_SRight ON dbo.SRight(GroupId, Target, SubjectId, TenantId);
+  CREATE INDEX IX_SRight_Target ON dbo.SRight(Target, SubjectId);
+  PRINT 'Table SRight créée';
+END
+ELSE
+  PRINT 'Table SRight existe déjà';
+";
+
+        private static string SqlCreateCatalogs() => @"
+-- ===== TABLES CATALOGUES =====
+
+IF OBJECT_ID('dbo.SMenu','U') IS NULL
+BEGIN
+  CREATE TABLE dbo.SMenu(
+    ID INT IDENTITY(1,1) PRIMARY KEY,
+    Code NVARCHAR(128) NOT NULL,
+    Libelle NVARCHAR(255) NOT NULL,
+    Route NVARCHAR(500) NULL,
+    ParentId INT NULL,
+    IsLeaf BIT NOT NULL DEFAULT(0),
+    Icon NVARCHAR(100) NULL,
+    [Order] INT NOT NULL DEFAULT(0),
+    IsActive BIT NOT NULL DEFAULT(1),
+    TenantId INT NOT NULL DEFAULT(1),
+    Actif BIT NOT NULL DEFAULT(1),
+    Doc BIT NOT NULL DEFAULT(0),
+    Deleted BIT NOT NULL DEFAULT(0),
+    DtCreation DATETIME NOT NULL DEFAULT(GETUTCDATE()),
+    DtModification DATETIME NULL,
+    DtSuppression DATETIME NULL,
+    UsrCreationId INT NULL,
+    UsrModificationId INT NULL,
+    UsrSuppressionId INT NULL,
+    RowVersion ROWVERSION,
+    CONSTRAINT UQ_SMenu_Code UNIQUE(Code)
+  );
+  
+  -- FK auto-référence
+  ALTER TABLE dbo.SMenu ADD CONSTRAINT FK_SMenu_Parent FOREIGN KEY(ParentId) REFERENCES dbo.SMenu(ID);
+  PRINT 'Table SMenu créée';
+END
+ELSE
+  PRINT 'Table SMenu existe déjà';
+
+IF OBJECT_ID('dbo.SModule','U') IS NULL
+BEGIN
+  CREATE TABLE dbo.SModule(
+    ID INT IDENTITY(1,1) PRIMARY KEY,
+    Code NVARCHAR(128) NOT NULL,
+    Name NVARCHAR(255) NOT NULL,
+    Description NVARCHAR(500) NULL,
+    Icon NVARCHAR(100) NULL,
+    Color NVARCHAR(20) NULL,
+    [Order] INT NOT NULL DEFAULT(0),
+    IsActive BIT NOT NULL DEFAULT(1),
+    TenantId INT NOT NULL DEFAULT(1),
+    Actif BIT NOT NULL DEFAULT(1),
+    Doc BIT NOT NULL DEFAULT(0),
+    Deleted BIT NOT NULL DEFAULT(0),
+    DtCreation DATETIME NOT NULL DEFAULT(GETUTCDATE()),
+    CONSTRAINT UQ_Module_Code UNIQUE(Code)
+  );
+  PRINT 'Table SModule créée';
+END
+ELSE
+  PRINT 'Table SModule existe déjà';
+
+IF OBJECT_ID('dbo.SAction','U') IS NULL
+BEGIN
+  CREATE TABLE dbo.SAction(
+    ID INT IDENTITY(1,1) PRIMARY KEY,
+    Code NVARCHAR(128) NOT NULL,
+    Name NVARCHAR(255) NOT NULL,
+    Description NVARCHAR(500) NULL,
+    Type NVARCHAR(50) NULL,
+    TenantId INT NOT NULL DEFAULT(1),
+    Actif BIT NOT NULL DEFAULT(1),
+    Doc BIT NOT NULL DEFAULT(0),
+    Deleted BIT NOT NULL DEFAULT(0),
+    DtCreation DATETIME NOT NULL DEFAULT(GETUTCDATE()),
+    CONSTRAINT UQ_Action_Code UNIQUE(Code)
+  );
+  PRINT 'Table SAction créée';
+END
+ELSE
+  PRINT 'Table SAction existe déjà';
+
+IF OBJECT_ID('dbo.SReport','U') IS NULL
+BEGIN
+  CREATE TABLE dbo.SReport(
+    ID INT IDENTITY(1,1) PRIMARY KEY,
+    Code NVARCHAR(128) NOT NULL,
+    Name NVARCHAR(255) NOT NULL,
+    Description NVARCHAR(500) NULL,
+    Category NVARCHAR(100) NULL,
+    TenantId INT NOT NULL DEFAULT(1),
+    Actif BIT NOT NULL DEFAULT(1),
+    Doc BIT NOT NULL DEFAULT(0),
+    Deleted BIT NOT NULL DEFAULT(0),
+    DtCreation DATETIME NOT NULL DEFAULT(GETUTCDATE()),
+    CONSTRAINT UQ_Report_Code UNIQUE(Code)
+  );
+  PRINT 'Table SReport créée';
+END
+ELSE
+  PRINT 'Table SReport existe déjà';
+";
+
+        private static string SqlCreateMetaTables() => @"
+-- ===== TABLES MÉTADONNÉES =====
+
+IF OBJECT_ID('dbo.STable','U') IS NULL
+BEGIN
+  CREATE TABLE dbo.STable(
+    ID INT IDENTITY(1,1) PRIMARY KEY,
+    Nom NVARCHAR(255) NOT NULL,
+    Libelle NVARCHAR(255) NULL,
+    IsHistorise BIT NOT NULL DEFAULT(0),
+    TenantId INT NOT NULL DEFAULT(1),
+    Actif BIT NOT NULL DEFAULT(1),
+    Doc BIT NOT NULL DEFAULT(0),
+    Deleted BIT NOT NULL DEFAULT(0),
+    DtCreation DATETIME NOT NULL DEFAULT(GETUTCDATE()),
+    DtModification DATETIME NULL,
+    DtSuppression DATETIME NULL,
+    UsrCreationId INT NULL,
+    UsrModificationId INT NULL,
+    UsrSuppressionId INT NULL,
+    RowVersion ROWVERSION,
+    CONSTRAINT UQ_STable_Nom UNIQUE(Nom)
+  );
+  PRINT 'Table STable créée';
+END
+ELSE
+  PRINT 'Table STable existe déjà';
+
+IF OBJECT_ID('dbo.SField','U') IS NULL
+BEGIN
+  CREATE TABLE dbo.SField(
+    ID INT IDENTITY(1,1) PRIMARY KEY,
+    TableId INT NOT NULL,
+    Nom NVARCHAR(255) NOT NULL,
+    TypeSql NVARCHAR(100) NOT NULL,
+    Longueur INT NULL,
+    [Precision] INT NULL,
+    Echelle INT NULL,
+    Nullable BIT NOT NULL DEFAULT(1),
+    IsHistorise BIT NOT NULL DEFAULT(0),
+    RegexId INT NULL,
+    TenantId INT NOT NULL DEFAULT(1),
+    Actif BIT NOT NULL DEFAULT(1),
+    Doc BIT NOT NULL DEFAULT(0),
+    Deleted BIT NOT NULL DEFAULT(0),
+    DtCreation DATETIME NOT NULL DEFAULT(GETUTCDATE()),
+    DtModification DATETIME NULL,
+    DtSuppression DATETIME NULL,
+    UsrCreationId INT NULL,
+    UsrModificationId INT NULL,
+    UsrSuppressionId INT NULL,
+    RowVersion ROWVERSION
+  );
+  
+  -- FK vers STable
+  IF OBJECT_ID('dbo.STable', 'U') IS NOT NULL
+    ALTER TABLE dbo.SField ADD CONSTRAINT FK_SField_Table FOREIGN KEY(TableId) REFERENCES dbo.STable(ID);
+  
+  CREATE UNIQUE INDEX UX_SField_Table_Col ON dbo.SField(TableId, Nom);
+  PRINT 'Table SField créée';
+END
+ELSE
+  PRINT 'Table SField existe déjà';
+";
+
+        private static string SqlCreateRegex() => @"
+-- ===== TABLE REGEX =====
+
+IF OBJECT_ID('dbo.RRegex','U') IS NULL
+BEGIN
+  CREATE TABLE dbo.RRegex(
+    ID INT IDENTITY(1,1) PRIMARY KEY,
+    Code NVARCHAR(100) NOT NULL,
+    Pattern NVARCHAR(4000) NOT NULL,
+    Description NVARCHAR(400) NULL,
+    TenantId INT NOT NULL DEFAULT(1),
+    Actif BIT NOT NULL DEFAULT(1),
+    Doc BIT NOT NULL DEFAULT(0),
+    Deleted BIT NOT NULL DEFAULT(0),
+    DtCreation DATETIME NOT NULL DEFAULT(GETUTCDATE()),
+    DtModification DATETIME NULL,
+    DtSuppression DATETIME NULL,
+    UsrCreationId INT NULL,
+    UsrModificationId INT NULL,
+    UsrSuppressionId INT NULL,
+    RowVersion ROWVERSION,
+    CONSTRAINT UQ_Regex_Code UNIQUE(Code)
+  );
+  PRINT 'Table RRegex créée';
+END
+ELSE
+  PRINT 'Table RRegex existe déjà';
 ";
 
         private static string SqlCreateFDocument() => @"
-IF OBJECT_ID('dbo.F_Document','U') IS NULL
+-- ===== TABLE DOCUMENTS =====
+
+IF OBJECT_ID('dbo.FDocument','U') IS NULL
 BEGIN
-  CREATE TABLE dbo.F_Document(
-      ID INT IDENTITY(1,1) PRIMARY KEY,
-      TableName VARCHAR(255) NOT NULL,
-      RecID INT NOT NULL,
-      Categorie VARCHAR(100) NULL,
-      [Path] VARCHAR(2000) NOT NULL,
-      Extension VARCHAR(20) NULL,
-      Actif BIT NOT NULL DEFAULT(1),
-      Doc BIT NOT NULL DEFAULT(0),
-      Deleted BIT NOT NULL DEFAULT(0),
-      DtCreation DATETIME NOT NULL DEFAULT (GETUTCDATE()),
-      DtModification DATETIME NULL,
-      DtSuppression DATETIME NULL,
-      UsrCreationId INT NULL,
-      UsrModificationId INT NULL,
-      UsrSuppressionId INT NULL,
-      RowVersion ROWVERSION
+  CREATE TABLE dbo.FDocument(
+    ID INT IDENTITY(1,1) PRIMARY KEY,
+    TableName NVARCHAR(255) NOT NULL,
+    RecID INT NOT NULL,
+    Categorie NVARCHAR(100) NULL,
+    [Path] NVARCHAR(2000) NOT NULL,
+    Extension NVARCHAR(20) NULL,
+    TenantId INT NOT NULL DEFAULT(1),
+    Actif BIT NOT NULL DEFAULT(1),
+    Doc BIT NOT NULL DEFAULT(0),
+    Deleted BIT NOT NULL DEFAULT(0),
+    DtCreation DATETIME NOT NULL DEFAULT(GETUTCDATE()),
+    DtModification DATETIME NULL,
+    DtSuppression DATETIME NULL,
+    UsrCreationId INT NULL,
+    UsrModificationId INT NULL,
+    UsrSuppressionId INT NULL,
+    RowVersion ROWVERSION
   );
-END;
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_FDocument_Table_Rec' AND object_id=OBJECT_ID('dbo.F_Document'))
-  CREATE INDEX IX_FDocument_Table_Rec ON dbo.F_Document(TableName, RecID) INCLUDE (Deleted);
+  
+  CREATE INDEX IX_FDocument_Table_Rec ON dbo.FDocument(TableName, RecID) INCLUDE (Deleted);
+  PRINT 'Table FDocument créée';
+END
+ELSE
+  PRINT 'Table FDocument existe déjà';
 ";
 
         private static string SqlAddBaseEntityColumnsMacro() => @"
-DECLARE @targets TABLE(Name sysname);
-INSERT INTO @targets(Name)
-VALUES ('dbo.S_TABLE'),
-       ('dbo.S_CHAMP'),
-       ('dbo.R_REGEX'),
-       ('dbo.S_SOURCE_EXTERNE'),
-       ('dbo.S_SOURCE_BINDING'),
-       ('dbo.S_HISTO_VERSION'),
-       ('dbo.S_HISTO_CHANGE');
+-- ===== AJOUT COLONNES BaseEntity AUX TABLES SYSTÈME =====
 
-DECLARE @t sysname, @sql nvarchar(max);
-DECLARE cur CURSOR LOCAL FAST_FORWARD FOR SELECT Name FROM @targets;
-OPEN cur; FETCH NEXT FROM cur INTO @t;
+DECLARE @targets TABLE(Name NVARCHAR(255));
+INSERT INTO @targets(Name)
+VALUES 
+  ('dbo.STable'),
+  ('dbo.SField'),
+  ('dbo.RRegex'),
+  ('dbo.SMenu'),
+  ('dbo.SModule'),
+  ('dbo.SAction'),
+  ('dbo.SReport');
+
+DECLARE @t NVARCHAR(255), @sql NVARCHAR(MAX);
+DECLARE cur CURSOR LOCAL FAST_FORWARD FOR 
+  SELECT Name FROM @targets 
+  WHERE EXISTS(SELECT 1 FROM sys.objects WHERE object_id=OBJECT_ID(Name) AND type='U');
+
+OPEN cur; 
+FETCH NEXT FROM cur INTO @t;
+
 WHILE @@FETCH_STATUS = 0
 BEGIN
   SET @sql = N'
-    IF COL_LENGTH('''+@t+''',''Actif'') IS NULL    ALTER TABLE '+@t+' ADD Actif BIT NOT NULL DEFAULT(1);
-    IF COL_LENGTH('''+@t+''',''Doc'') IS NULL      ALTER TABLE '+@t+' ADD Doc BIT NOT NULL DEFAULT(0);
-    IF COL_LENGTH('''+@t+''',''Deleted'') IS NULL  ALTER TABLE '+@t+' ADD Deleted BIT NOT NULL DEFAULT(0);
-    IF COL_LENGTH('''+@t+''',''DtCreation'') IS NULL     ALTER TABLE '+@t+' ADD DtCreation DATETIME NOT NULL DEFAULT (GETUTCDATE());
-    IF COL_LENGTH('''+@t+''',''DtModification'') IS NULL ALTER TABLE '+@t+' ADD DtModification DATETIME NULL;
-    IF COL_LENGTH('''+@t+''',''DtSuppression'') IS NULL  ALTER TABLE '+@t+' ADD DtSuppression DATETIME NULL;
-    IF COL_LENGTH('''+@t+''',''UsrCreationId'') IS NULL  ALTER TABLE '+@t+' ADD UsrCreationId INT NULL;
-    IF COL_LENGTH('''+@t+''',''UsrModificationId'') IS NULL ALTER TABLE '+@t+' ADD UsrModificationId INT NULL;
-    IF COL_LENGTH('''+@t+''',''UsrSuppressionId'') IS NULL  ALTER TABLE '+@t+' ADD UsrSuppressionId INT NULL;
-    IF COL_LENGTH('''+@t+''',''RowVersion'') IS NULL ALTER TABLE '+@t+' ADD RowVersion ROWVERSION;
+    IF COL_LENGTH(''' + @t + ''',''TenantId'') IS NULL 
+      ALTER TABLE ' + @t + ' ADD TenantId INT NOT NULL DEFAULT(1);
+    IF COL_LENGTH(''' + @t + ''',''Actif'') IS NULL 
+      ALTER TABLE ' + @t + ' ADD Actif BIT NOT NULL DEFAULT(1);
+    IF COL_LENGTH(''' + @t + ''',''Doc'') IS NULL 
+      ALTER TABLE ' + @t + ' ADD Doc BIT NOT NULL DEFAULT(0);
+    IF COL_LENGTH(''' + @t + ''',''Deleted'') IS NULL 
+      ALTER TABLE ' + @t + ' ADD Deleted BIT NOT NULL DEFAULT(0);
+    IF COL_LENGTH(''' + @t + ''',''DtCreation'') IS NULL 
+      ALTER TABLE ' + @t + ' ADD DtCreation DATETIME NOT NULL DEFAULT(GETUTCDATE());
+    IF COL_LENGTH(''' + @t + ''',''DtModification'') IS NULL 
+      ALTER TABLE ' + @t + ' ADD DtModification DATETIME NULL;
+    IF COL_LENGTH(''' + @t + ''',''DtSuppression'') IS NULL 
+      ALTER TABLE ' + @t + ' ADD DtSuppression DATETIME NULL;
+    IF COL_LENGTH(''' + @t + ''',''UsrCreationId'') IS NULL 
+      ALTER TABLE ' + @t + ' ADD UsrCreationId INT NULL;
+    IF COL_LENGTH(''' + @t + ''',''UsrModificationId'') IS NULL 
+      ALTER TABLE ' + @t + ' ADD UsrModificationId INT NULL;
+    IF COL_LENGTH(''' + @t + ''',''UsrSuppressionId'') IS NULL 
+      ALTER TABLE ' + @t + ' ADD UsrSuppressionId INT NULL;
+    IF COL_LENGTH(''' + @t + ''',''RowVersion'') IS NULL 
+      ALTER TABLE ' + @t + ' ADD RowVersion ROWVERSION;
   ';
-  EXEC sp_executesql @sql;
+  
+  BEGIN TRY
+    EXEC sp_executesql @sql;
+    PRINT ''Colonnes BaseEntity ajoutées à '' + @t;
+  END TRY
+  BEGIN CATCH
+    PRINT ''Erreur sur '' + @t + '': '' + ERROR_MESSAGE();
+  END CATCH
+  
   FETCH NEXT FROM cur INTO @t;
 END
-CLOSE cur; DEALLOCATE cur;
+
+CLOSE cur; 
+DEALLOCATE cur;
+
+PRINT 'Ajout colonnes BaseEntity terminé';
 ";
-
-        #endregion
-
-        #region Seeding helpers
-
-        private async Task<int> EnsureAdminGroupAsync()
-        {
-            var idObj = await _db.ExecuteScalarAsync("SELECT ID FROM dbo.SGroupe WHERE Nom=@n", new Dictionary<string, object?> { ["@n"]="Administrateur" });
-            if (idObj is int id) return id;     
-            var newId = await _db.ExecuteScalarAsync(
-                "INSERT INTO dbo.SGroupe(Nom) VALUES(@n); SELECT CAST(SCOPE_IDENTITY() AS INT);",
-                new Dictionary<string, object?> { ["@n"]="Administrateur" });
-            return Convert.ToInt32(newId);
-        }
-
-        private async Task<int> EnsureAdminUserAsync()
-        {
-            var idObj = await _db.ExecuteScalarAsync("SELECT ID FROM dbo.SUser WHERE Name=@l", new Dictionary<string, object?> { ["@l"]="Admin" });
-            int uid;
-            if (idObj is int id) uid = id;
-            else
-            {
-                // Default password 'Admin' hashed with SHA-256 (replace later by stronger hash).
-                var hash = SimpleSha256("Admin");
-                var newId = await _db.ExecuteScalarAsync(
-                    "INSERT INTO dbo.SUser(Name, PasswordHash) VALUES(@l,@p); SELECT CAST(SCOPE_IDENTITY() AS INT);",
-                    new Dictionary<string, object?> { ["@l"]="Admin", ["@p"]=hash });
-                uid = Convert.ToInt32(newId);
-            }
-
-            var gid = await _db.ExecuteScalarAsync("SELECT ID FROM dbo.SGroupe WHERE Name=@n", new Dictionary<string, object?> { ["@n"]="Administrateur" });
-            if (gid is int groupId)
-            {
-                await _db.ExecuteNonQueryAsync(
-                    "IF NOT EXISTS(SELECT 1 FROM dbo.SUserGroupe WHERE UserId=@u AND GroupeId=@g) INSERT INTO dbo.SUserGroupe(UserId,GroupeId) VALUES(@u,@g);",
-                    new Dictionary<string, object?> { ["@u"]=uid, ["@g"]=groupId });
-            }
-            return uid;
-        }
-
-        private static string SimpleSha256(string s)
-        {
-            using var sha = System.Security.Cryptography.SHA256.Create();
-            var bytes = System.Text.Encoding.UTF8.GetBytes(s);
-            return Convert.ToHexString(sha.ComputeHash(bytes));
-        }
-
-        private async Task EnsureRightTypesAsync()
-        {
-            async Task Seed(string code, string lib,string r1n, string r2n, string r3n)
-            {
-                var exists = await _db.ExecuteScalarAsync("SELECT 1 FROM dbo.SRightType WHERE Code=@c", new Dictionary<string, object?> { ["@c"]=code });
-                if (exists == null)
-                    await _db.ExecuteNonQueryAsync("INSERT INTO dbo.SRightType(Code, Libelle, Right1Name,Right2Name,Right3Name) VALUES(@c,@l)", new Dictionary<string, object?> { ["@c"]=code, ["@l"]=lib });
-            }
-            await Seed("MENU",   "Accès menu (Autorisé)", "Autorisé", "", "");
-            await Seed("TABLE",  "Accès table (Lecture/Ecriture/Suppression)", "Lecture", "Ecriture", "Suppression");
-            await Seed("MODULE", "Accès module (Autorisé)", "Autorisé", "","");
-            await Seed("ACTION", "Accès action (Autorisé)", "Autorisé", "", "");
-            await Seed("REPORT", "Accès rapport (Autorisé)", "Autorisé", "", "");
-        }
-
-        #endregion
-
-        #region Metadata population
-
-        private async Task PopulateMetadataAsync()
-        {
-            // Insert S_TABLE rows for all user tables not yet present
-            var tables = await _db.ExecuteQueryAsync(@"
-                SELECT s.name AS SchemaName, t.name AS TableName
-                FROM sys.tables t
-                JOIN sys.schemas s ON t.schema_id = s.schema_id
-                WHERE s.name = 'dbo';", null);
-
-            foreach (DataRow tr in tables.Rows)
-            {
-                var tableName = (string)tr["TableName"];
-                // Ensure S_TABLE entry
-                var exists = await _db.ExecuteScalarAsync("SELECT ID FROM dbo.STable WHERE Libelle=@n", new Dictionary<string, object?> { ["@n"]=tableName });
-                int tableId;
-                if (exists is int id) tableId = id;
-                else
-                {
-                    var newId = await _db.ExecuteScalarAsync(
-                        "INSERT INTO dbo.STable(Nom, Libelle, IsHistorise) VALUES(@n,@l,0); SELECT CAST(SCOPE_IDENTITY() AS INT);",
-                        new Dictionary<string, object?> { ["@n"]=tableName, ["@l"]=tableName });
-                    tableId = Convert.ToInt32(newId);
-                }
-
-                // Ensure S_CHAMP entries for each column
-                var cols = await _db.ExecuteQueryAsync(@"
-                    SELECT c.name AS ColName, ty.name AS TypeName, c.max_length, c.precision, c.scale, c.is_nullable
-                    FROM sys.columns c
-                    JOIN sys.types ty ON c.user_type_id = ty.user_type_id
-                    WHERE c.object_id = OBJECT_ID(@full);",
-                    new Dictionary<string, object?> { ["@full"] = "dbo."+tableName });
-
-                foreach (DataRow cr in cols.Rows)
-                {
-                    var col = (string)cr["ColName"];
-                    var present = await _db.ExecuteScalarAsync(
-                        "SELECT ID FROM dbo.SChamp WHERE TableId=@tid AND Nom=@c",
-                        new Dictionary<string, object?> { ["@tid"]=tableId, ["@c"]=col });
-                    if (present != null) continue;
-
-                    await _db.ExecuteNonQueryAsync(
-                        @"INSERT INTO dbo.SChamp(TableId, Nom, TypeSql, Taille, Nullable, IsHistorise)
-                          VALUES(@tid,@n,@t,@len,@prec,@scale,@nulls, 0);",
-                        new Dictionary<string, object?> {
-                            ["@tid"]=tableId,
-                            ["@n"]=col,
-                            ["@t"]= (string)cr["TypeName"],
-                            ["@len"]= Convert.ToInt32(cr["max_length"]),
-                            ["@nulls"]= Convert.ToBoolean(cr["is_nullable"])
-                        });
-                }
-            }
-        }
-
-        #endregion
-
-        #region Rights assignment
-
-        private async Task GrantAdminDefaultsAsync(int adminUserId)
-        {
-            await GrantAllOfAsync("SMenu",   "MENU",   adminUserId, d1:true);
-            await GrantAllOfAsync("S_TABLE", "TABLE",  adminUserId, d1:true, d2:true, d3:true);
-            await GrantAllOfAsync("SModule", "MODULE", adminUserId, d1:true);
-            await GrantAllOfAsync("SAction", "ACTION", adminUserId, d1:true);
-            await GrantAllOfAsync("SReport", "REPORT", adminUserId, d1:true);
-        }
-
-        private async Task GrantGroupDefaultsAsync(string groupName)
-        {
-            var gidObj = await _db.ExecuteScalarAsync("SELECT ID FROM dbo.SGroupe WHERE Nom=@n", new Dictionary<string, object?> { ["@n"]=groupName });
-            if (gidObj is not int gid) return;
-            var users = await _db.ExecuteQueryAsync("SELECT u.ID FROM dbo.SUser u JOIN dbo.SUserGroupe ug ON ug.UserId=u.ID AND ug.GroupeId=@g", new Dictionary<string, object?> { ["@g"]=gid });
-            foreach (DataRow r in users.Rows)
-            {
-                int uid = Convert.ToInt32(r["ID"]);
-                await GrantAdminDefaultsAsync(uid);
-            }
-        }
-
-        private async Task GrantAdminForNewFTablesAsync(int adminUserId)
-        {
-            // Any dbo.F_* table: ensure S_TABLE exists + rights
-            var ftables = await _db.ExecuteQueryAsync(@"
-                SELECT t.name AS TableName
-                FROM sys.tables t JOIN sys.schemas s ON s.schema_id=t.schema_id
-                WHERE s.name='dbo' AND t.name LIKE 'F[_]%';", null);
-
-            foreach (DataRow tr in ftables.Rows)
-            {
-                var tableName = (string)tr["TableName"];
-                var stexists = await _db.ExecuteScalarAsync("SELECT ID FROM dbo.S_TABLE WHERE Nom=@n", new Dictionary<string, object?> { ["@n"]=tableName });
-                if (stexists == null)
-                {
-                    var tid = await _db.ExecuteScalarAsync(
-                        "INSERT INTO dbo.S_TABLE(Nom, Libelle, IsHistorise) VALUES(@n,@l,0); SELECT CAST(SCOPE_IDENTITY() AS INT);",
-                        new Dictionary<string, object?> { ["@n"]=tableName, ["@l"]=tableName });
-                    // also populate S_CHAMP for this table
-                    // (PopulateMetadataAsync will fill missing; we can call it again or rely on the next run.)
-                }
-
-                // Rights for Admin on this table
-                await GrantAllOfAsync("S_TABLE", "TABLE", adminUserId, d1:true, d2:true, d3:true);
-            }
-        }
-
-        private async Task GrantAllOfAsync(string table, string subjectType, int userId, bool? d1=null, bool? d2=null, bool? d3=null)
-        {
-            // If table doesn't exist, skip
-            var exists = await _db.ExecuteScalarAsync(
-                "SELECT 1 FROM sys.objects WHERE object_id=OBJECT_ID(@t) AND type='U'",
-                new Dictionary<string, object?> { ["@t"]="dbo."+table });
-            if (exists == null) return;
-
-            var dt = await _db.ExecuteQueryAsync($"SELECT ID FROM dbo.{table}", null);
-            foreach (DataRow r in dt.Rows)
-            {
-                var subjectId = Convert.ToInt32(r["ID"]);
-                var already = await _db.ExecuteScalarAsync(
-                    "SELECT 1 FROM dbo.SRight WHERE UserId=@u AND SubjectType=@st AND SubjectId=@sid",
-                    new Dictionary<string, object?> { ["@u"]=userId, ["@st"]=subjectType, ["@sid"]=subjectId });
-                if (already != null) continue;
-
-                await _db.ExecuteNonQueryAsync(
-                    "INSERT INTO dbo.SRight(UserId, SubjectType, SubjectId, Droit1, Droit2, Droit3) VALUES(@u,@st,@sid,@d1,@d2,@d3)",
-                    new Dictionary<string, object?> {
-                        ["@u"]=userId, ["@st"]=subjectType, ["@sid"]=subjectId,
-                        ["@d1"]= (object?) d1 ?? false,
-                        ["@d2"]= (object?) d2 ?? DBNull.Value,
-                        ["@d3"]= (object?) d3 ?? DBNull.Value
-                    });
-            }
-        }
 
         #endregion
     }

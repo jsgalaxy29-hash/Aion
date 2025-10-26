@@ -26,7 +26,7 @@ namespace Aion.DataEngine.Interfaces
         /// </summary>
         /// <param name="table">The table definition.</param>
         /// <param name="fields">The collection of field definitions.</param>
-        Task CreatePhysicalTableAsync(STable table, IEnumerable<SChamp> fields);
+        Task CreatePhysicalTableAsync(STable table, IEnumerable<SField> fields);
 
         /// <summary>
         /// Retrieves all records from a user‑defined table.

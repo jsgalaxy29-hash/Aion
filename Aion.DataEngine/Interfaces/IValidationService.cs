@@ -18,6 +18,6 @@ namespace Aion.DataEngine.Interfaces
         /// <param name="table">The table definition.</param>
         /// <param name="fields">The collection of field definitions.</param>
         /// <param name="values">The values to validate.</param>
-        Task ValidateAsync(STable table, IEnumerable<SChamp> fields, IDictionary<string, object?> values);
+        Task ValidateAsync(STable table, IEnumerable<SField> fields, IDictionary<string, object?> values);
     }
 }

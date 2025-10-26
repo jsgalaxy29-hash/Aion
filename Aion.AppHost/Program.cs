@@ -1,12 +1,15 @@
-using Aion.AppHost;
+Ôªøusing Aion.AppHost;
 using Aion.AppHost.Services;
 using Aion.Infrastructure;
 using Aion.Infrastructure.Services;
+using Aion.Infrastructure.Startup;
 using Aion.Security;
 using Aion.Security.Authentication;
 using Aion.Security.Authorization;
 using Aion.Security.Services;
 using Aion.Domain.Contracts;
+using Aion.DataEngine.Interfaces;
+using Aion.DataEngine.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
@@ -22,11 +25,19 @@ builder.Services.AddFluentUIComponents();
 builder.Services.AddRazorPages();
 
 // ===== Database Contexts =====
+var connectionString = builder.Configuration.GetConnectionString("AionDb")
+    ?? "Server=localhost;Database=AionDb;Trusted_Connection=True;TrustServerCertificate=True;";
+
 builder.Services.AddDbContext<AionDbContext>(opt =>
-    opt.UseSqlServer(builder.Configuration.GetConnectionString("AionDb")));
+    opt.UseSqlServer(connectionString));
 
 builder.Services.AddDbContext<SecurityDbContext>(opt =>
-    opt.UseSqlServer(builder.Configuration.GetConnectionString("AionDb")));
+    opt.UseSqlServer(connectionString));
+
+// ===== Data Provider (pour AionProvisioningService) =====
+// TODO: Impl√©menter votre IDataProvider concret
+// builder.Services.AddScoped<IDataProvider, SqlServerDataProvider>();
+// builder.Services.AddSingleton<IClock, SystemClock>();
 
 // ===== Authentication & Authorization =====
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -41,21 +52,20 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
 builder.Services.AddAuthorization(options =>
 {
-    // Policy par dÈfaut : authentifiÈ
     options.FallbackPolicy = new AuthorizationPolicyBuilder()
         .RequireAuthenticatedUser()
         .Build();
 });
 
-// Claims Transformation (charge les droits)
+// Claims Transformation
 builder.Services.AddScoped<IClaimsTransformation, AionClaimsTransformation>();
 
-// Policy Provider dynamique pour les droits
+// Policy Provider
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, RightPolicyProvider>();
 builder.Services.AddScoped<IAuthorizationHandler, RightHandler>();
 
 // ===== Services Aion =====
-builder.Services.AddMemoryCache(); // Pour cache des droits
+builder.Services.AddMemoryCache();
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddScoped<IRightService, RightService>();
@@ -63,9 +73,14 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IMenuProvider, MenuProvider>();
 builder.Services.AddScoped<IAionThemeService, AionThemeService>();
 
-// ===== Build & Configuration =====
+// Provisioning (si IDataProvider impl√©ment√©)
+// builder.Services.AddScoped<IAionProvisioningService, AionProvisioningService>();
+// builder.Services.AddScoped<StartupOrchestrator>();
+
+// ===== Build Application =====
 var app = builder.Build();
 
+// ===== Configuration Pipeline =====
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/error");
@@ -82,76 +97,43 @@ app.UseAntiforgery();
 // ===== Database Initialization =====
 using (var scope = app.Services.CreateScope())
 {
-    var aionDb = scope.ServiceProvider.GetRequiredService<AionDbContext>();
-    var securityDb = scope.ServiceProvider.GetRequiredService<SecurityDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
-    aionDb.Database.EnsureCreated();
-    securityDb.Database.EnsureCreated();
+    try
+    {
+        // Option 1 : Avec AionProvisioningService (si IDataProvider impl√©ment√©)
+        // await StartupOrchestrator.InitializeDatabaseAsync(app.Services);
 
-    // Seed donnÈes de base (‡ dÈcommenter aprËs crÈation du seeder)
-    // await SeedSecurityData(securityDb);
+        // Option 2 : EF Core seulement (si pas de IDataProvider)
+        logger.LogInformation("üîÑ Initialisation de la base de donn√©es...");
+
+        var aionDb = scope.ServiceProvider.GetRequiredService<AionDbContext>();
+        var securityDb = scope.ServiceProvider.GetRequiredService<SecurityDbContext>();
+
+        // Cr√©er les bases si elles n'existent pas
+        await aionDb.Database.EnsureCreatedAsync();
+        await securityDb.Database.EnsureCreatedAsync();
+
+        // Seed des donn√©es de s√©curit√©
+        await Aion.Infrastructure.Seeders.SecuritySeeder.SeedAsync(securityDb);
+
+        logger.LogInformation("‚úÖ Base de donn√©es initialis√©e");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "‚ùå Erreur lors de l'initialisation de la base");
+        throw;
+    }
 }
 
+// ===== Mapping =====
 app.MapRazorComponents<App>()
    .AddInteractiveServerRenderMode();
 
 app.MapRazorPages();
 
+// ===== D√©marrage =====
+app.Logger.LogInformation("üöÄ Aion d√©marr√© sur {Urls}", string.Join(", ", app.Urls));
+app.Logger.LogInformation("üîë Connexion par d√©faut : admin / admin (TenantId: 1)");
+
 app.Run();
-
-// ===== MÈthode de seed (‡ externaliser dans un service dÈdiÈ) =====
-/*
-async Task SeedSecurityData(SecurityDbContext db)
-{
-    if (await db.SUser.AnyAsync()) return; // DÈj‡ seedÈ
-
-    // CrÈation tenant par dÈfaut
-    var tenant = new STenant { Id = 1, Name = "Default" };
-    
-    // CrÈation groupe admin
-    var adminGroup = new SGroup 
-    { 
-        Name = "Administrateurs", 
-        Description = "Groupe administrateur systËme",
-        IsSystem = true,
-        TenantId = 1
-    };
-    db.SGroup.Add(adminGroup);
-    await db.SaveChangesAsync();
-
-    // CrÈation utilisateur admin
-    var admin = new SUser
-    {
-        UserName = "admin",
-        NormalizedUserName = "ADMIN",
-        Email = "admin@aion.local",
-        NormalizedEmail = "ADMIN@AION.LOCAL",
-        PasswordHash = "admin", // ¿ CHANGER avec BCrypt !
-        FullName = "Administrateur",
-        IsActive = true,
-        TenantId = 1
-    };
-    db.SUser.Add(admin);
-    await db.SaveChangesAsync();
-
-    // Association admin au groupe
-    db.SUserGroup.Add(new SUserGroup
-    {
-        UserId = admin.Id,
-        GroupId = adminGroup.Id,
-        IsLinkActive = true,
-        TenantId = 1
-    });
-
-    // CrÈation types de droits
-    var rightTypes = new[]
-    {
-        new SRightType { Code = "Menu", Name = "Droits sur menus", DataSource = "SMenu", Right1Name = "Voir", TenantId = 1 },
-        new SRightType { Code = "Module", Name = "Droits sur modules", DataSource = "S_Module", Right1Name = "Lire", Right2Name = "…crire", Right3Name = "Supprimer", TenantId = 1 },
-        new SRightType { Code = "Table", Name = "Droits sur tables", DataSource = "STable", Right1Name = "Lire", Right2Name = "…crire", Right3Name = "Supprimer", TenantId = 1 },
-        new SRightType { Code = "Action", Name = "Droits sur actions", DataSource = "S_Action", Right1Name = "ExÈcuter", TenantId = 1 }
-    };
-    db.SRightType.AddRange(rightTypes);
-    await db.SaveChangesAsync();
-}
-*/

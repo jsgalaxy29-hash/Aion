@@ -6,12 +6,13 @@ namespace Aion.DataEngine.Entities
     /// <summary>Common system fields. All Aion entities inherit this base.</summary>
     public abstract class BaseEntity
     {
+
+
+        public int Id { get; set; }
         /// <summary>
         /// Identifiant du locataire (tenant). 1 = DefaultTenant.
         /// </summary>
         public int TenantId { get; set; } = 1;
-
-        public int Id { get; set; }
         public bool Actif { get; set; } = true;
         public bool Doc { get; set; } = false;
         public bool Deleted { get; set; } = false;

@@ -20,7 +20,7 @@ namespace Aion.DataEngine.Services
     {
         /// <summary>
         /// Container for variables exposed to validation scripts.  When
-        /// evaluating a <see cref="SChamp.ValidationScript"/> this class
+        /// evaluating a <see cref="SField.ValidationScript"/> this class
         /// provides access to the current value, the full record dictionary,
         /// the column definition and the table definition.  Scripts can
         /// reference these properties to perform custom checks.
@@ -40,7 +40,7 @@ namespace Aion.DataEngine.Services
             /// <summary>
             /// The column definition associated with this value.
             /// </summary>
-            public SChamp Field { get; set; } = default!;
+            public SField Field { get; set; } = default!;
 
             /// <summary>
             /// The table definition associated with this value.
@@ -48,7 +48,7 @@ namespace Aion.DataEngine.Services
             public STable Table { get; set; } = default!;
         }
         /// <inheritdoc />
-        public async Task ValidateAsync(STable table, IEnumerable<SChamp> fields, IDictionary<string, object?> values)
+        public async Task ValidateAsync(STable table, IEnumerable<SField> fields, IDictionary<string, object?> values)
         {
             if (table == null) throw new ArgumentNullException(nameof(table));
             if (fields == null) throw new ArgumentNullException(nameof(fields));

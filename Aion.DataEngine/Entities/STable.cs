@@ -63,6 +63,6 @@ namespace Aion.DataEngine.Entities
         /// <summary>
         /// The collection of fields (columns) associated with this table.
         /// </summary>
-        public IList<SChamp> Champs { get; set; } = new List<SChamp>();
+        public IList<SField> Champs { get; set; } = new List<SField>();
     }
 }

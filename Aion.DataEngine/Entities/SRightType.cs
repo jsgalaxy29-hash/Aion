@@ -18,7 +18,7 @@
 
         /// <summary>
         /// Source de données (table, vue) contenant les sujets de ce type.
-        /// Ex: "SMenu", "S_Module", "STable"
+        /// Ex: "SMenu", "SModule", "STable"
         /// </summary>
         public string DataSource { get; set; } = string.Empty;
 

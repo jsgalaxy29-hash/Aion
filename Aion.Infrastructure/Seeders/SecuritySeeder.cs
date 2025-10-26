@@ -8,183 +8,160 @@ using Aion.DataEngine.Entities;
 namespace Aion.Infrastructure.Seeders
 {
     /// <summary>
-    /// Seed les données de sécurité initiales (utilisateur admin, groupes, types de droits).
+    /// Seed les données de sécurité initiales via EF Core.
+    /// Complémentaire à AionProvisioningService qui gère la structure SQL.
     /// </summary>
     public static class SecuritySeeder
     {
+        /// <summary>
+        /// Seed utilisateur admin, groupe et types de droits.
+        /// Version EF Core compatible avec AionProvisioningService.
+        /// </summary>
         public static async Task SeedAsync(SecurityDbContext db)
         {
-            // Vérification si déjà seedé
-            if (await db.SUser.AnyAsync())
+            Console.WriteLine("🔍 Vérification des données de sécurité...");
+
+            // Vérifier si admin existe déjà (créé par AionProvisioningService)
+            var adminExists = await db.SUser.AnyAsync(u => u.UserName == "admin" || u.UserName == "Admin");
+            var groupExists = await db.SGroup.AnyAsync(g => g.Name == "Administrateurs" || g.Name == "Administrateur");
+
+            if (adminExists && groupExists)
+            {
+                Console.WriteLine("✅ Données de sécurité déjà présentes (via AionProvisioningService)");
                 return;
+            }
 
-            Console.WriteLine("🌱 Seed des données de sécurité...");
+            Console.WriteLine("🌱 Création des données de sécurité via EF Core...");
 
-            // 1. Création groupe administrateurs
-            var adminGroup = new SGroup
+            // 1. Groupe Administrateurs (si n'existe pas)
+            var adminGroup = await db.SGroup.FirstOrDefaultAsync(g => g.Name == "Administrateurs" || g.Name == "Administrateur");
+            if (adminGroup == null)
             {
-                Id = 1,
-                Name = "Administrateurs",
-                Description = "Groupe administrateur système avec tous les droits",
-                IsSystem = true,
-                TenantId = 1,
-                Actif = true,
-                Doc = false,
-                Deleted = false,
-                DtCreation = DateTime.UtcNow
-            };
-            db.SGroup.Add(adminGroup);
-            await db.SaveChangesAsync();
+                adminGroup = new SGroup
+                {
+                    Name = "Administrateurs",
+                    Description = "Groupe administrateur système avec tous les droits",
+                    IsSystem = true,
+                    TenantId = 1,
+                    Actif = true,
+                    Doc = false,
+                    Deleted = false,
+                    DtCreation = DateTime.UtcNow
+                };
+                db.SGroup.Add(adminGroup);
+                await db.SaveChangesAsync();
+                Console.WriteLine($"   ✅ Groupe créé: {adminGroup.Name} (ID: {adminGroup.Id})");
+            }
 
-            // 2. Création utilisateur admin
-            var admin = new SUser
+            // 2. Utilisateur admin (si n'existe pas)
+            var admin = await db.SUser.FirstOrDefaultAsync(u => u.UserName == "admin" || u.UserName == "Admin");
+            if (admin == null)
             {
-                Id = 1,
-                UserName = "admin",
-                NormalizedUserName = "ADMIN",
-                Email = "admin@aion.local",
-                NormalizedEmail = "ADMIN@AION.LOCAL",
-                PasswordHash = "admin", // ⚠️ À REMPLACER par BCrypt en production !
-                FullName = "Administrateur Système",
-                IsActive = true,
-                TenantId = 1,
-                Actif = true,
-                Doc = false,
-                Deleted = false,
-                DtCreation = DateTime.UtcNow
-            };
-            db.SUser.Add(admin);
-            await db.SaveChangesAsync();
+                admin = new SUser
+                {
+                    UserName = "admin",
+                    NormalizedUserName = "ADMIN",
+                    Email = "admin@aion.local",
+                    NormalizedEmail = "ADMIN@AION.LOCAL",
+                    PasswordHash = "admin", // ⚠️ À REMPLACER par BCrypt !
+                    FullName = "Administrateur Système",
+                    IsActive = true,
+                    TenantId = 1,
+                    Actif = true,
+                    Doc = false,
+                    Deleted = false,
+                    DtCreation = DateTime.UtcNow
+                };
+                db.SUser.Add(admin);
+                await db.SaveChangesAsync();
+                Console.WriteLine($"   ✅ Utilisateur créé: {admin.UserName} (ID: {admin.Id})");
+            }
 
-            // 3. Association admin au groupe
-            var userGroup = new SUserGroup
+            // 3. Association user-groupe (si n'existe pas)
+            var linkExists = await db.SUserGroup.AnyAsync(ug => ug.UserId == admin.Id && ug.GroupId == adminGroup.Id);
+            if (!linkExists)
             {
-                UserId = admin.Id,
-                GroupId = adminGroup.Id,
-                IsLinkActive = true,
-                TenantId = 1,
-                Actif = true,
-                Doc = false,
-                Deleted = false,
-                DtCreation = DateTime.UtcNow
-            };
-            db.SUserGroup.Add(userGroup);
-            await db.SaveChangesAsync();
+                var userGroup = new SUserGroup
+                {
+                    UserId = admin.Id,
+                    GroupId = adminGroup.Id,
+                    IsLinkActive = true,
+                    TenantId = 1,
+                    Actif = true,
+                    Doc = false,
+                    Deleted = false,
+                    DtCreation = DateTime.UtcNow
+                };
+                db.SUserGroup.Add(userGroup);
+                await db.SaveChangesAsync();
+                Console.WriteLine($"   ✅ Association créée: User {admin.Id} → Groupe {adminGroup.Id}");
+            }
 
-            // 4. Création types de droits
-            var rightTypes = new[]
-            {
-                new SRightType
-                {
-                    Code = "Menu",
-                    Name = "Droits sur menus",
-                    DataSource = "SMenu",
-                    Right1Name = "Voir",
-                    Right2Name = "",
-                    Right3Name = "",
-                    Right4Name = "",
-                    Right5Name = "",
-                    Order = 1,
-                    IsActive = true,
-                    TenantId = 1,
-                    Actif = true,
-                    Doc = false,
-                    Deleted = false,
-                    DtCreation = DateTime.UtcNow
-                },
-                new SRightType
-                {
-                    Code = "Module",
-                    Name = "Droits sur modules",
-                    DataSource = "S_Module",
-                    Right1Name = "Lire",
-                    Right2Name = "Écrire",
-                    Right3Name = "Supprimer",
-                    Right4Name = "Exporter",
-                    Right5Name = "Administrer",
-                    Order = 2,
-                    IsActive = true,
-                    TenantId = 1,
-                    Actif = true,
-                    Doc = false,
-                    Deleted = false,
-                    DtCreation = DateTime.UtcNow
-                },
-                new SRightType
-                {
-                    Code = "Table",
-                    Name = "Droits sur tables",
-                    DataSource = "STable",
-                    Right1Name = "Lire",
-                    Right2Name = "Créer",
-                    Right3Name = "Modifier",
-                    Right4Name = "Supprimer",
-                    Right5Name = "Exporter",
-                    Order = 3,
-                    IsActive = true,
-                    TenantId = 1,
-                    Actif = true,
-                    Doc = false,
-                    Deleted = false,
-                    DtCreation = DateTime.UtcNow
-                },
-                new SRightType
-                {
-                    Code = "Action",
-                    Name = "Droits sur actions",
-                    DataSource = "S_Action",
-                    Right1Name = "Exécuter",
-                    Right2Name = "",
-                    Right3Name = "",
-                    Right4Name = "",
-                    Right5Name = "",
-                    Order = 4,
-                    IsActive = true,
-                    TenantId = 1,
-                    Actif = true,
-                    Doc = false,
-                    Deleted = false,
-                    DtCreation = DateTime.UtcNow
-                },
-                new SRightType
-                {
-                    Code = "Report",
-                    Name = "Droits sur rapports",
-                    DataSource = "S_Report",
-                    Right1Name = "Voir",
-                    Right2Name = "Générer",
-                    Right3Name = "",
-                    Right4Name = "",
-                    Right5Name = "",
-                    Order = 5,
-                    IsActive = true,
-                    TenantId = 1,
-                    Actif = true,
-                    Doc = false,
-                    Deleted = false,
-                    DtCreation = DateTime.UtcNow
-                }
-            };
+            // 4. Types de droits (complète si manquant)
+            await EnsureRightTypesAsync(db);
 
-            db.SRightType.AddRange(rightTypes);
-            await db.SaveChangesAsync();
-
-            Console.WriteLine("✅ Seed terminé :");
-            Console.WriteLine($"   - Utilisateur : admin / admin (TenantId: 1)");
-            Console.WriteLine($"   - Groupe : Administrateurs");
-            Console.WriteLine($"   - {rightTypes.Length} types de droits créés");
-            Console.WriteLine("⚠️  ATTENTION : Changez le mot de passe admin en production !");
+            Console.WriteLine("✅ Seed de sécurité terminé");
+            Console.WriteLine($"   🔑 Connexion : admin / admin (TenantId: 1)");
+            Console.WriteLine("   ⚠️  IMPORTANT : Changez le mot de passe en production !");
         }
 
         /// <summary>
-        /// Donne tous les droits au groupe administrateurs sur tous les menus existants.
+        /// S'assure que tous les types de droits existent.
+        /// </summary>
+        private static async Task EnsureRightTypesAsync(SecurityDbContext db)
+        {
+            var rightTypes = new[]
+            {
+                new { Code = "Menu", Name = "Droits sur menus", DataSource = "SMenu", R1 = "Voir", R2 = "", R3 = "", R4 = "", R5 = "" },
+                new { Code = "Module", Name = "Droits sur modules", DataSource = "SModule", R1 = "Lire", R2 = "Écrire", R3 = "Supprimer", R4 = "Exporter", R5 = "Administrer" },
+                new { Code = "Table", Name = "Droits sur tables", DataSource = "STable", R1 = "Lire", R2 = "Créer", R3 = "Modifier", R4 = "Supprimer", R5 = "Exporter" },
+                new { Code = "Action", Name = "Droits sur actions", DataSource = "SAction", R1 = "Exécuter", R2 = "", R3 = "", R4 = "", R5 = "" },
+                new { Code = "Report", Name = "Droits sur rapports", DataSource = "SReport", R1 = "Voir", R2 = "Générer", R3 = "", R4 = "", R5 = "" }
+            };
+
+            foreach (var rt in rightTypes)
+            {
+                var exists = await db.SRightType.AnyAsync(r => r.Code == rt.Code);
+                if (!exists)
+                {
+                    db.SRightType.Add(new SRightType
+                    {
+                        Code = rt.Code,
+                        Name = rt.Name,
+                        DataSource = rt.DataSource,
+                        Right1Name = rt.R1,
+                        Right2Name = rt.R2,
+                        Right3Name = rt.R3,
+                        Right4Name = rt.R4,
+                        Right5Name = rt.R5,
+                        Order = rightTypes.ToList().IndexOf(rt) + 1,
+                        IsActive = true,
+                        TenantId = 1,
+                        Actif = true,
+                        Doc = false,
+                        Deleted = false,
+                        DtCreation = DateTime.UtcNow
+                    });
+                }
+            }
+
+            await db.SaveChangesAsync();
+        }
+
+        /// <summary>
+        /// Donne tous les droits Menu au groupe Administrateurs.
         /// À appeler après création des menus.
         /// </summary>
-        public static async Task GrantAdminRightsAsync(SecurityDbContext securityDb, DbContext aionDb, int[] menuIds)
+        public static async Task GrantAdminMenuRightsAsync(SecurityDbContext securityDb, int[] menuIds)
         {
-            var adminGroup = await securityDb.SGroup.FirstOrDefaultAsync(g => g.Name == "Administrateurs");
+            var adminGroup = await securityDb.SGroup
+                .FirstOrDefaultAsync(g => g.Name == "Administrateurs" || g.Name == "Administrateur");
+
             if (adminGroup == null)
+            {
+                Console.WriteLine("⚠️  Groupe Administrateurs introuvable, impossible de donner les droits menus");
                 return;
+            }
 
             foreach (var menuId in menuIds)
             {
@@ -211,6 +188,7 @@ namespace Aion.Infrastructure.Seeders
             }
 
             await securityDb.SaveChangesAsync();
+            Console.WriteLine($"✅ Droits Menu accordés au groupe Administrateurs ({menuIds.Length} menus)");
         }
     }
 }

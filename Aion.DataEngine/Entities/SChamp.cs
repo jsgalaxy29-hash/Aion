@@ -7,7 +7,7 @@ namespace Aion.DataEngine.Entities
     /// Represents a field (column) definition stored in the system catalog (S_CHAMP).
     /// Each record defines metadata for a column belonging to a user‑defined table.
     /// </summary>
-    public class SChamp : BaseEntity
+    public class SField : BaseEntity
     {
         // BaseEntity provides the primary key and system fields (Id, Doc, Actif,
         // Deleted, DtCreation, DtModification, DtSuppression, UsrCreationId,
