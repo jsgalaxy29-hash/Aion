@@ -1,0 +1,77 @@
+﻿@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons
+@inherits LayoutComponentBase
+
+<FluentLayout>
+    <FluentHeader>
+        <div class="header-content">
+            <h2>🚀 Aion ERP</h2>
+            <AuthorizeView>
+                <Authorized>
+                    <div class="user-info">
+                        <span>Bienvenue, @context.User.Identity?.Name</span>
+                        <FluentButton Appearance="Appearance.Lightweight" OnClick="Logout">
+                            Déconnexion
+                        </FluentButton>
+                    </div>
+                </Authorized>
+            </AuthorizeView>
+        </div>
+    </FluentHeader>
+
+    <FluentStack Class="main-layout" Orientation="Orientation.Horizontal" Width="100%">
+        <AuthorizeView>
+            <Authorized>
+                <FluentNavMenu  Title="Navigation">
+                    <FluentNavLink Href="/" Icon="@(new Icons.Regular.Size20.Home())">
+                        Accueil
+                    </FluentNavLink>
+                    <FluentNavLink Href="/debug/rights" Icon="@(new Icons.Regular.Size20.Shield())">
+                        Debug Droits
+                    </FluentNavLink>
+                </FluentNavMenu>
+            </Authorized>
+        </AuthorizeView>
+
+        <FluentBodyContent>
+            <div class="page-content">
+                @Body
+            </div>
+        </FluentBodyContent>
+    </FluentStack>
+</FluentLayout>
+
+<style>
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 2rem;
+        width: 100%;
+    }
+
+    .user-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .main-layout {
+        height: calc(100vh - 60px);
+    }
+
+    .page-content {
+        padding: 2rem;
+        width: 100%;
+    }
+</style>
+
+@code {
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private IAuthService AuthService { get; set; } = default!;
+
+    private async Task Logout()
+    {
+        await AuthService.LogoutAsync();
+        Navigation.NavigateTo("/login", forceLoad: true);
+    }
+}

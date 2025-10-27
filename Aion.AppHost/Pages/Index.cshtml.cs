@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Aion.AppHost.Pages
 {
-    public class _HostModel : PageModel
+    public class IndexModel : PageModel
     {
         public void OnGet()
         {

@@ -1,0 +1,31 @@
+﻿@page "/"
+
+<PageTitle>Accueil - Aion ERP</PageTitle>
+
+<FluentStack Orientation="Orientation.Vertical" VerticalGap="20">
+    <h1>Bienvenue dans Aion ERP 🚀</h1>
+
+    <FluentCard>
+        <h3>✅ Système opérationnel</h3>
+        <p>Vous êtes connecté avec succès !</p>
+        <FluentDivider />
+        <p>
+            <strong>Fonctionnalités disponibles :</strong>
+        </p>
+        <ul>
+            <li>🔐 Système d'authentification RBAC</li>
+            <li>👥 Gestion des utilisateurs et groupes</li>
+            <li>📊 Moteur de métadonnées dynamiques</li>
+            <li>🎨 Interface Fluent UI moderne</li>
+        </ul>
+    </FluentCard>
+
+    <FluentCard>
+        <h3>📍 Navigation</h3>
+        <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="10">
+            <FluentButton Appearance="Appearance.Accent" Href="/debug/rights">
+                Voir mes droits
+            </FluentButton>
+        </FluentStack>
+    </FluentCard>
+</FluentStack>

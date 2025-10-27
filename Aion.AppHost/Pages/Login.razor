@@ -1,4 +1,207 @@
 ﻿@page "/login"
+@using Aion.AppHost.Services
+@using System.ComponentModel.DataAnnotations
+@using Aion.Domain.Contracts
+@using Microsoft.AspNetCore.Authorization
+@attribute [AllowAnonymous]
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Connexion - Aion ERP</PageTitle>
+
+<div class="login-page">
+    <div class="login-container">
+        <FluentCard Class="login-card">
+            <div class="login-header">
+                <h1>🔐 Aion ERP</h1>
+                <p>Connectez-vous à votre compte</p>
+            </div>
+
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <FluentMessageBar Intent="MessageIntent.Error" Class="mb-3">
+                    @_errorMessage
+                </FluentMessageBar>
+            }
+
+            <EditForm Model="_model" OnValidSubmit="HandleLogin">
+                <DataAnnotationsValidator />
+                
+                <div class="form-group">
+                    <FluentTextField 
+                        @bind-Value="_model.Username"
+                        Label="Nom d'utilisateur"
+                        Required="true"
+                        Style="width: 100%;"
+                        Placeholder="admin"
+                        Disabled="_isLoading" />
+                </div>
+
+                <div class="form-group">
+                    <FluentTextField 
+                        @bind-Value="_model.Password"
+                        Label="Mot de passe"
+                        TextFieldType="TextFieldType.Password"
+                        Required="true"
+                        Style="width: 100%;"
+                        Placeholder="••••••••"
+                        Disabled="_isLoading" />
+                </div>
+
+                <div class="form-group">
+                    <FluentNumberField 
+                        @bind-Value="_model.TenantId"
+                        Label="Tenant ID"
+                        Required="true"
+                        Style="width: 100%;"
+                        Placeholder="1"
+                        Disabled="_isLoading" />
+                </div>
+
+                <div class="form-group">
+                    <FluentCheckbox @bind-Value="_model.RememberMe" Label="Se souvenir de moi" Disabled="_isLoading" />
+                </div>
+
+                <div class="form-group">
+                    <FluentButton 
+                        Type="ButtonType.Submit" 
+                        Appearance="Appearance.Accent"
+                        Loading="_isLoading"
+                        Style="width: 100%;">
+                        @if (_isLoading)
+                        {
+                            <span>Connexion en cours...</span>
+                        }
+                        else
+                        {
+                            <span>Se connecter</span>
+                        }
+                    </FluentButton>
+                </div>
+            </EditForm>
+
+            <div class="login-footer">
+                <small>
+                    <strong>Compte par défaut :</strong> admin / admin (Tenant: 1)<br/>
+                    <span style="color: red;">⚠️ Changez ce mot de passe en production !</span>
+                </small>
+            </div>
+        </FluentCard>
+    </div>
+</div>
+
+<style>
+    .login-page {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 1rem;
+    }
+
+    .login-container {
+        width: 100%;
+        max-width: 420px;
+    }
+
+    .login-card {
+        padding: 2.5rem 2rem;
+    }
+
+    .login-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .login-header h1 {
+        margin: 0.5rem 0;
+        font-size: 2rem;
+        font-weight: 600;
+    }
+
+    .login-header p {
+        margin: 0.5rem 0 0 0;
+        color: #666;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .login-footer {
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid #e0e0e0;
+        text-align: center;
+        font-size: 0.9rem;
+    }
+
+    .mb-3 {
+        margin-bottom: 1rem;
+    }
+</style>
+
+@code {
+    private LoginModel _model = new();
+    private string? _errorMessage;
+    private bool _isLoading = false;
+
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    public string? ReturnUrl { get; set; }
+
+    private async Task HandleLogin()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            var success = await AuthService.LoginAsync(
+                _model.Username, 
+                _model.Password, 
+                _model.TenantId, 
+                _model.RememberMe);
+
+            if (success)
+            {
+                var redirect = !string.IsNullOrEmpty(ReturnUrl) ? ReturnUrl : "/";
+                Navigation.NavigateTo(redirect, forceLoad: true);
+            }
+            else
+            {
+                _errorMessage = "Identifiants incorrects ou compte verrouillé.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Erreur : {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private class LoginModel
+    {
+        [Required(ErrorMessage = "Le nom d'utilisateur est requis")]
+        public string Username { get; set; } = "admin";
+
+        [Required(ErrorMessage = "Le mot de passe est requis")]
+        public string Password { get; set; } = "admin";
+
+        [Required(ErrorMessage = "Le Tenant ID est requis")]
+        [Range(1, int.MaxValue, ErrorMessage = "Le Tenant ID doit être supérieur à 0")]
+        public int TenantId { get; set; } = 1;
+
+        public bool RememberMe { get; set; } = false;
+    }
+}
+
+@* @page "/login"
 @layout MainLayout
 @using Aion.AppHost.Services
 @using Aion.Domain.Contracts
@@ -170,3 +373,4 @@
         public bool RememberMe { get; set; }
     }
 }
+ *@
