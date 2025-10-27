@@ -1,22 +1,14 @@
-using System;
-using System.Linq;
-using System.Security.Claims;
-using System.Threading.Tasks;
+using Aion.DataEngine.Entities;
+using Aion.Domain.Contracts;
+using Aion.Security;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Aion.Security;
-using Aion.DataEngine.Entities;
+using System.Security.Claims;
 
 namespace Aion.AppHost.Services
 {
-    public interface IAuthService
-    {
-        Task<bool> LoginAsync(string username, string password, int tenantId, bool rememberMe = false);
-        Task LogoutAsync();
-        Task<SUser?> GetCurrentUserAsync();
-    }
 
     /// <summary>
     /// Service d'authentification Aion.
@@ -114,6 +106,26 @@ namespace Aion.AppHost.Services
             // EN PRODUCTION : utiliser BCrypt.Net-Next
             // return BCrypt.Net.BCrypt.Verify(password, hash);
             return password == hash; // À REMPLACER !
+        }
+
+        public Task<SignInResult> SignInAsync(string login, string password, CancellationToken ct = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SignOutAsync(CancellationToken ct = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<bool> LoginAsync(string login, string password, int tenantId, bool rememberMe, CancellationToken ct = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task LogoutAsync(CancellationToken ct = default)
+        {
+            throw new NotImplementedException();
         }
     }
 }
