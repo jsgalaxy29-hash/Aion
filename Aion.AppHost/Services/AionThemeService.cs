@@ -7,42 +7,43 @@ namespace Aion.AppHost.Services
         FluentDesignTheme Current { get; }
         void UseLight();
         void UseDark();
-        void SetAccent(string primaryHex, string? secondaryHex = null);
+        /// <summary>
+        /// Définit la couleur d’accent (hex, rgb/rgba, etc.). Optionnellement la base neutre.
+        /// </summary>
+        void SetAccent(string accentCssColor, string? neutralBaseCssColor = null);
     }
 
     public class AionThemeService : IAionThemeService
     {
-        private readonly FluentDesignTheme  _light = new FluentDesignTheme();
-        private readonly FluentDesignTheme _dark  = new FluentDesignTheme();
+        private readonly FluentDesignTheme _light = new() { Mode = DesignThemeModes.Light };
+        private readonly FluentDesignTheme _dark = new() { Mode = DesignThemeModes.Dark };
 
         public FluentDesignTheme Current { get; private set; }
 
         public AionThemeService()
         {
-            _light.Mode = DesignThemeModes.Light;
-            _dark.Mode = DesignThemeModes.Dark;
-
-            Current = CreateAionTheme(_light);
+            Current = CloneFrom(_light);
         }
 
-        public void UseLight() => Current = CreateAionTheme(_light);
-        public void UseDark()  => Current = CreateAionTheme(_dark);
+        public void UseLight() => Current = CloneFrom(_light);
+        public void UseDark() => Current = CloneFrom(_dark);
 
-        public void SetAccent(string primaryHex, string? secondaryHex = null)
+        public void SetAccent(string accentCssColor, string? neutralBaseCssColor = null)
         {
-            //Current.PrimaryColor = primaryHex;
-            //if (!string.IsNullOrWhiteSpace(secondaryHex))
-            //    Current.SecondaryColor = secondaryHex;
-            throw new NotImplementedException();
+            // En v4.x, on utilise CustomColor / NeutralBaseColor (pas Primary/Secondary).
+            Current.CustomColor = accentCssColor;          // ex: "#0f6cbd" ou "rgb(15,108,189)"
+            if (!string.IsNullOrWhiteSpace(neutralBaseCssColor))
+                Current.NeutralBaseColor = neutralBaseCssColor; // optionnel
         }
 
-        private FluentDesignTheme CreateAionTheme(FluentDesignTheme baseTheme)
-        {
-            var theme = new FluentDesignTheme
+        private static FluentDesignTheme CloneFrom(FluentDesignTheme baseTheme)
+            => new()
             {
-                Mode= DesignThemeModes.System,
+                Mode = baseTheme.Mode,
+                CustomColor = baseTheme.CustomColor,
+                NeutralBaseColor = baseTheme.NeutralBaseColor,
+                OfficeColor = baseTheme.OfficeColor,
+                StorageName = baseTheme.StorageName
             };
-            return theme;
-        }
     }
 }
