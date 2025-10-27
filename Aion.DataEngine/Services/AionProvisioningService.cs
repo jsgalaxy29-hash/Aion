@@ -51,6 +51,10 @@ namespace Aion.DataEngine.Services
             Console.WriteLine("   ✅ Colonnes BaseEntity ajoutées");
 
             Console.WriteLine("✅ Structure SQL complète créée");
+
+            // Catalogue des tables existantes dans STable et SField
+
+
         }
 
         #region SQL Builders
@@ -411,6 +415,92 @@ BEGIN
     RowVersion ROWVERSION,
     CONSTRAINT UQ_Regex_Code UNIQUE(Code)
   );
+
+    -- =====================================================================
+    -- Insertion des Regex utiles pour un ERP
+    -- =====================================================================
+    INSERT INTO RRegex (Code, Pattern, Description)
+    VALUES
+    (
+        'EMAIL_STD',
+        '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+        'Adresse email standard. Valide la structure générale nom@domaine.extension.'
+    ),
+    (
+        'TEL_FR_SIMPLE',
+        '^(?:(?:\+|00)33|0)\s*[1-9](?:[\s.-]*\d{2}){4}$',
+        'Numéro de téléphone français (fixe ou mobile). Accepte les formats 0X, +33 X, 0033 X avec espaces, points ou tirets.'
+    ),
+    (
+        'CP_FR',
+        '^[0-9]{5}$',
+        'Code Postal français. Exactement 5 chiffres.'
+    ),
+    (
+        'CP_FR_DEP',
+        '^(?:0[1-9]|[1-8]\d|9[0-57-8])\d{3}$',
+        'Code Postal français (plus strict). Valide les numéros de départements métropolitains (01-95) et DOM (97, 98).'
+    ),
+    (
+        'TVA_UE_GENERIC',
+        '^((AT)U\d{8}|(BE)0\d{9}|(BG)\d{9,10}|(CY)\d{8}[A-Z]|(CZ)\d{8,10}|(DE)\d{9}|(DK)\d{8}|(EE)\d{9}|(EL|GR)\d{9}|(ES)[A-Z0-9]\d{7}[A-Z0-9]|(FI)\d{8}|(FR)[A-Z0-9]{2}\d{9}|(HR)\d{11}|(HU)\d{8}|(IE)[A-Z0-9]{7}[A-Z]|[A-Z0-9]{7}[A-Z]{2}|(IT)\d{11}|(LT)\d{9,12}|(LU)\d{8}|(LV)\d{11}|(MT)\d{8}|(NL)\d{9}B\d{2}|(PL)\d{10}|(PT)\d{9}|(RO)\d{2,10}|(SE)\d{12}|(SI)\d{8}|(SK)\d{10})$',
+        'Numéro de TVA intracommunautaire européen. Valide le format par pays (préfixe + structure).'
+    ),
+    (
+        'IBAN_GENERIC',
+        '^[A-Z]{2}[0-9]{2}[A-Z0-9]{1,30}$',
+        'IBAN (International Bank Account Number). Valide la structure générique (2 lettres pays, 2 chiffres clé, 1-30 alphanumériques).'
+    ),
+    (
+        'SKU_SIMPLE',
+        '^[A-Z0-9-]{3,20}$',
+        'Code article (SKU) simple. Accepte 3 à 20 caractères alphanumériques majuscules et tirets.'
+    ),
+    (
+        'SKU_FORMATTE',
+        '^[A-Z]{3}-\d{5}$',
+        'Code article (SKU) formaté. Exemple : 3 lettres, un tiret, 5 chiffres (ex: ABC-12345).'
+    ),
+    (
+        'NUM_COMMANDE',
+        '^CMD-[0-9]{4}-[0-9]{5}$',
+        'Numéro de commande. Exemple : préfixe CMD-, 4 chiffres (année), 5 chiffres (séquence).'
+    ),
+    (
+        'DATE_ISO',
+        '^\d{4}-\d{2}-\d{2}$',
+        'Date au format ISO 8601 (YYYY-MM-DD).'
+    ),
+    (
+        'HEURE_24H',
+        '^([01]\d|2[0-3]):([0-5]\d)$',
+        'Heure au format 24h (HH:MM). Valide de 00:00 à 23:59.'
+    ),
+    (
+        'CODE_ANALYTIQUE',
+        '^[A-Z]{2,5}-\d{3,6}$',
+        'Code analytique / Centre de coût. Exemple : 2-5 lettres, tiret, 3-6 chiffres.'
+    ),
+    (
+        'PASSWORD_STRONG',
+        '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$',
+        'Mot de passe fort. Requis d''au moins 8 caractères, 1 minuscule, 1 majuscule, 1 chiffre et 1 caractère spécial.'
+    ),
+    (
+        'NUMERIQUE_SEUL',
+        '^\d+$',
+        'Numérique uniquement. Accepte un ou plusieurs chiffres, sans signe.'
+    ),
+    (
+        'DECIMAL_VIRGULE',
+        '^\d+([,]\d{1,2})?$',
+        'Nombre décimal (max 2 décimales) avec virgule comme séparateur. (Ex: 123 ou 123,45)'
+    ),
+    (
+        'DECIMAL_POINT',
+        '^\d+([.]\d{1,2})?$',
+        'Nombre décimal (max 2 décimales) avec point comme séparateur. (Ex: 123 ou 123.45)'
+    );
   PRINT 'Table RRegex créée';
 END
 ELSE
