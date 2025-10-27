@@ -8,7 +8,6 @@ using System.Security.Claims;
 
 namespace Aion.AppHost.Services
 {
-   
 
     /// <summary>
     /// Service d'authentification Aion.
