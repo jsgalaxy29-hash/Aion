@@ -12,6 +12,14 @@ namespace Aion.DataEngine.Interfaces
     /// </summary>
     public interface IDataEngine
     {
+
+        /// <summary>
+        /// Scans the underlying database for existing tables and columns and
+        /// synchronises them into the catalog tables (S_TABLE, S_CHAMP).  
+        /// This operation populates metadata for existing legacy tables.
+        /// </summary>
+        Task SynchronizeSystemCatalogAsync();
+
         /// <summary>
         /// Scans the underlying database for existing tables and columns and
         /// synchronises them into the catalog tables (S_TABLE, S_CHAMP).  

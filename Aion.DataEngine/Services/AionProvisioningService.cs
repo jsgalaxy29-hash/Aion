@@ -53,7 +53,8 @@ namespace Aion.DataEngine.Services
             Console.WriteLine("✅ Structure SQL complète créée");
 
             // Catalogue des tables existantes dans STable et SField
-
+            DataEngine dataEngine = new(_db, _clock);
+            await dataEngine.SynchronizeSystemCatalogAsync();
 
         }
 

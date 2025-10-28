@@ -29,6 +29,11 @@ namespace Aion.DataEngine.Services
         /// </summary>
         private const string ChampsCacheKeyPrefix = "Aion.DataEngine.Fields.";
 
+        public DataEngine(IDataProvider db, IClock clock)
+        {
+            _db = db ?? throw new ArgumentNullException(nameof(db)); ;
+            _clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        }
 
         public DataEngine(IDataProvider db, IUserContext user, IClock clock, IValidationService validator, IHistorizationService historizer, ICacheService cache)
         {
@@ -39,6 +44,100 @@ namespace Aion.DataEngine.Services
             _historizer = historizer ?? throw new ArgumentNullException(nameof(historizer));
             _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         }
+
+        /// <summary>
+        /// Catalogs the database schema into the STable and SField metadata tables.
+        /// </summary>
+        /// <returns></returns>
+        public async Task SynchronizeSystemCatalogAsync()
+        {
+            // Retrieve all user tables from the database excluding system tables and the catalog itself.
+            const string tablesQuery = @"
+                SELECT name
+                FROM sys.tables
+                WHERE type = 'U' AND name LIKE 'S%'";
+            var tables = await _db.ExecuteQueryAsync(tablesQuery).ConfigureAwait(false);
+
+            foreach (DataRow row in tables.Rows)
+            {
+                var tableName = row["name"].ToString()!;
+
+                // Insert table metadata into STable if it does not already exist.
+                // Use an upsert pattern: first check for existence.
+                const string checkTableExistsSql = "SELECT Id FROM STable WHERE Libelle = @name";
+                var existing = await _db.ExecuteQueryAsync(checkTableExistsSql, new Dictionary<string, object?> { ["@name"] = tableName }).ConfigureAwait(false);
+                int tableId;
+                if (existing.Rows.Count == 0)
+                {
+                    const string insertTableSql = @"
+                        INSERT INTO STable (
+                            Libelle, Description, Parent, ParentLiaison, ReferentielLibelle, Type)
+                        VALUES (@libelle, @description, NULL, NULL, NULL, 'F')
+                        );
+                        SELECT CAST(SCOPE_IDENTITY() AS INT);";
+                    var param = new Dictionary<string, object?> { ["@libelle"] = tableName, ["@description"] = (object?)null };
+                    var dt = await _db.ExecuteQueryAsync(insertTableSql, param).ConfigureAwait(false);
+                    tableId = Convert.ToInt32(dt.Rows[0][0]);
+                }
+                else
+                {
+                    tableId = Convert.ToInt32(existing.Rows[0][0]);
+                }
+
+                // Synchronize columns for this table.
+                const string columnsQuery = @"
+                    SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, IS_NULLABLE
+                    FROM INFORMATION_SCHEMA.COLUMNS
+                    WHERE TABLE_NAME = @tableName";
+                var columns = await _db.ExecuteQueryAsync(columnsQuery, new Dictionary<string, object?> { ["@tableName"] = tableName }).ConfigureAwait(false);
+
+                foreach (DataRow colRow in columns.Rows)
+                {
+                    var colName = colRow["COLUMN_NAME"].ToString()!;
+                    var dataType = colRow["DATA_TYPE"].ToString()!;
+                    var maxLengthObj = colRow["CHARACTER_MAXIMUM_LENGTH"];
+                    var maxLength = maxLengthObj != DBNull.Value ? Convert.ToInt32(maxLengthObj) : 0;
+                    var isNullable = string.Equals(colRow["IS_NULLABLE"].ToString(), "YES", StringComparison.OrdinalIgnoreCase);
+
+                    const string checkColumnSql = "SELECT Id FROM SField WHERE TableId = @tableId AND LIBELLE = @colName";
+                    var exists = await _db.ExecuteQueryAsync(checkColumnSql, new Dictionary<string, object?>
+                    {
+                        ["@tableId"] = tableId,
+                        ["@colName"] = colName
+                    }).ConfigureAwait(false);
+                    if (exists.Rows.Count == 0)
+                    {
+                        // Insert column metadata.  We assume no primary key or unique constraints for discovered columns.
+                        const string insertColSql = @"
+                            INSERT INTO S_CHAMP (
+                                TableId, Libelle, Alias, DataType,
+                                IsClePrimaire, IsUnique, Taille, Referentiel,
+                                ReferentielWhereClause, Defaut, IsNulleable,
+                                )
+                            VALUES (
+                                @tableId, @libelle, @alias, @dataType,
+                                0, 0, @taille, NULL,
+                                NULL, NULL, @isNullable
+                            );
+                        SELECT CAST(SCOPE_IDENTITY() AS INT);";
+                        var colParams = new Dictionary<string, object?>
+                        {
+                            ["@tableId"] = tableId,
+                            ["@libelle"] = colName,
+                            ["@alias"] = (object?)null,
+                            ["@dataType"] = dataType,
+                            ["@taille"] = maxLength,
+                            ["@isNullable"] = isNullable ? 1 : 0
+                        };
+                        await _db.ExecuteQueryAsync(insertColSql, colParams).ConfigureAwait(false);
+                    }
+                }
+            }
+
+            // Invalidate cached metadata.
+            await _cache.SetAsync(TablesCacheKey, (IList<STable>?)null!, TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+        }
+
 
         /// <summary>
         /// Catalogs the database schema into the STable and SField metadata tables.

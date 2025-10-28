@@ -8,11 +8,16 @@ using Aion.Security;
 using Aion.Security.Authentication;
 using Aion.Security.Authorization;
 using Aion.Security.Services;
+using Aion.Module.CRM;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.FluentUI.AspNetCore.Components;
+using Aion.DataEngine.Interfaces;
+using Aion.DataEngine.Services;
+using Aion.Infrastructure.Data;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,6 +40,12 @@ builder.Services.AddDbContext<AionDbContext>(opt =>
 
 builder.Services.AddDbContext<SecurityDbContext>(opt =>
     opt.UseSqlServer(connectionString));
+
+// ===== DataEngine Services =====
+builder.Services.AddSingleton<IDataProvider, SqlDataProvider>();
+builder.Services.AddSingleton<IClock, Aion.Infrastructure.Services.SystemClock>();
+builder.Services.AddScoped<IAionProvisioningService, AionProvisioningService>();
+
 
 // ===== Authentication & Authorization =====
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -67,6 +78,7 @@ builder.Services.AddScoped<IRightService, RightService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IMenuProvider, MenuProvider>();
 
+
 // ===== Build Application =====
 var app = builder.Build();
 
@@ -85,6 +97,9 @@ app.UseAuthorization();
 
 app.UseAntiforgery();
 
+// modules
+new CrmBootstrapper().Register();
+
 // ===== Database Initialization =====
 using (var scope = app.Services.CreateScope())
 {
@@ -92,10 +107,15 @@ using (var scope = app.Services.CreateScope())
 
     try
     {
+
+        // 1. Provisioning de la structure SQL
+        logger.LogInformation("📊 Provisioning de la base de données...");
+        var provisioning = scope.ServiceProvider.GetRequiredService<IAionProvisioningService>();
+        await provisioning.EnsureDatabaseReadyAsync();
+
         logger.LogInformation("🔄 Initialisation de la base de données...");
 
         var securityDb = scope.ServiceProvider.GetRequiredService<SecurityDbContext>();
-
         // Créer la base si elle n'existe pas
         await securityDb.Database.EnsureCreatedAsync();
 

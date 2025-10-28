@@ -1,85 +1,87 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using Microsoft.Data.SqlClient;
 using System.Threading.Tasks;
-using Aion.DataEngine.Interfaces;
+using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
 
-namespace Aion.DataEngine.Providers
+namespace Aion.Infrastructure.Data
 {
     /// <summary>
-    /// Implementation of <see cref="IDataProvider"/> for SQL Server.
-    /// Uses ADO.NET's <see cref="SqlConnection"/> and <see cref="SqlCommand"/> to
-    /// execute SQL statements.  Instances of this provider are intended to be
-    /// short‑lived and thread‑safe.
+    /// Implémentation de IDataProvider pour SQL Server.
     /// </summary>
-    public class SqlServerDataProvider : IDataProvider
+    public class SqlDataProvider : DataEngine.Interfaces.IDataProvider
     {
-        /// <summary>
-        /// Initializes a new instance of the provider with the specified
-        /// connection string.
-        /// </summary>
-        /// <param name="connectionString">The SQL Server connection string.</param>
-        public SqlServerDataProvider(string connectionString)
+        private readonly string _connectionString;
+
+        public SqlDataProvider(IConfiguration configuration)
         {
-            ConnectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
+            _connectionString = configuration.GetConnectionString("AionDb")
+                ?? throw new InvalidOperationException("Connection string 'AionDb' not found");
         }
 
-        /// <inheritdoc />
-        public string ConnectionString { get; }
-
-        /// <inheritdoc />
-        public async Task<int> ExecuteNonQueryAsync(string commandText, IDictionary<string, object?>? parameters = null)
+        public async Task<int> ExecuteNonQueryAsync(string sql, IDictionary<string, object?>? parameters = null)
         {
-            await using var connection = new SqlConnection(ConnectionString);
-            await connection.OpenAsync().ConfigureAwait(false);
-            await using var command = new SqlCommand(commandText, connection);
-            AddParameters(command, parameters);
-            return await command.ExecuteNonQueryAsync().ConfigureAwait(false);
-        }
+            using var connection = new SqlConnection(_connectionString);
+            await connection.OpenAsync();
 
-        /// <inheritdoc />
-        public async Task<DataTable> ExecuteQueryAsync(string commandText, IDictionary<string, object?>? parameters = null)
-        {
-            await using var connection = new SqlConnection(ConnectionString);
-            await connection.OpenAsync().ConfigureAwait(false);
-            await using var command = new SqlCommand(commandText, connection);
-            AddParameters(command, parameters);
-            await using var reader = await command.ExecuteReaderAsync().ConfigureAwait(false);
-            var table = new DataTable();
-            table.Load(reader);
-            return table;
-        }
+            using var command = new SqlCommand(sql, connection);
+            command.CommandTimeout = 120; // 2 minutes pour les scripts complexes
 
-        /// <inheritdoc />
-        public async Task<IDbTransaction> BeginTransactionAsync()
-        {
-            var connection = new SqlConnection(ConnectionString);
-            await connection.OpenAsync().ConfigureAwait(false);
-            return await Task.FromResult(connection.BeginTransaction()).ConfigureAwait(false);
-        }
-
-        /// <summary>
-        /// Adds parameters to the provided SqlCommand.
-        /// </summary>
-        /// <param name="command">The command.</param>
-        /// <param name="parameters">The parameters.</param>
-        private static void AddParameters(SqlCommand command, IDictionary<string, object?>? parameters)
-        {
-            if (parameters == null) return;
-            foreach (var kvp in parameters)
+            if (parameters != null)
             {
-                command.Parameters.AddWithValue(kvp.Key, kvp.Value ?? DBNull.Value);
+                foreach (var param in parameters)
+                {
+                    command.Parameters.AddWithValue(param.Key, param.Value ?? DBNull.Value);
+                }
             }
+
+            int result = await command.ExecuteNonQueryAsync();
+
+            return result;
         }
 
         public async Task<object?> ExecuteScalarAsync(string sql, IDictionary<string, object?>? parameters = null)
         {
-            await using var connection = new SqlConnection(ConnectionString);
-            await connection.OpenAsync().ConfigureAwait(false);
-            await using var command = new SqlCommand(sql, connection);
-            AddParameters(command, parameters);
-            return await command.ExecuteScalarAsync().ConfigureAwait(false);
+            using var connection = new SqlConnection(_connectionString);
+            await connection.OpenAsync();
+
+            using var command = new SqlCommand(sql, connection);
+            command.CommandTimeout = 120;
+
+            if (parameters != null)
+            {
+                foreach (var param in parameters)
+                {
+                    command.Parameters.AddWithValue(param.Key, param.Value ?? DBNull.Value);
+                }
+            }
+
+            var result = await command.ExecuteScalarAsync();
+            return result == DBNull.Value ? null : result;
+        }
+
+        public async Task<DataTable> ExecuteQueryAsync(string sql, IDictionary<string, object?>? parameters = null)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            await connection.OpenAsync();
+
+            using var command = new SqlCommand(sql, connection);
+            command.CommandTimeout = 120;
+
+            if (parameters != null)
+            {
+                foreach (var param in parameters)
+                {
+                    command.Parameters.AddWithValue(param.Key, param.Value ?? DBNull.Value);
+                }
+            }
+
+            var dataTable = new DataTable();
+            using var adapter = new SqlDataAdapter(command);
+            adapter.Fill(dataTable);
+
+            return dataTable;
         }
     }
 }
