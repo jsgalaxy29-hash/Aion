@@ -1,0 +1,23 @@
+﻿.aion-shell {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    grid-template-rows: 100vh;
+    overflow: hidden;
+}
+
+.aion-nav {
+    background: var(--aion-nav-bg, #1f1f1f);
+    color: var(--aion-nav-fg, #fff);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    overflow-y: auto;
+}
+
+.aion-content {
+    background: var(--aion-content-bg, #f7f8fa);
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.aion-content-inner {
+    padding: 1.5rem;
+}

@@ -7,22 +7,19 @@ using Aion.DataEngine.Entities;
 
 namespace Aion.Infrastructure
 {
-    public class AionDbContext(DbContextOptions<AionDbContext> options) : DbContext(options)
+    // 1. Ajoutez IUserContext userContext aux paramètres du constructeur principal
+    public class AionDbContext(DbContextOptions<AionDbContext> options, IUserContext userContext) : DbContext(options)
     {
-
-        private readonly IUserContext _userContext;
-
-        
-        //DbContextOptions<AionDbContext> options, IUserContext userContext)
-        //_userContext = userContext; 
+        // 2. Initialisez le champ _userContext avec le paramètre injecté
+        private readonly IUserContext _userContext = userContext;
 
         // System DbSets (unifiés)
-        public DbSet<SUser> Users => Set<SUser>();
+        public DbSet<SUser> Users => Set<SUser>(); // Gardé 'Users'
         public DbSet<SMenu> SMenu => Set<SMenu>();
         public DbSet<SModule> SModule => Set<SModule>();
         public DbSet<SAction> SAction => Set<SAction>();
         public DbSet<SReport> SReport => Set<SReport>();
-        public DbSet<SUser> SUser => Set<SUser>();
+        // public DbSet<SUser> SUser => Set<SUser>(); // <-- 3. Supprimé car doublon de 'Users'
         public DbSet<SGroup> SGroup => Set<SGroup>();
         public DbSet<SUserGroup> SUserGroup => Set<SUserGroup>();
         public DbSet<SRightType> SRightType => Set<SRightType>();
@@ -38,9 +35,10 @@ namespace Aion.Infrastructure
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            base.OnModelCreating(modelBuilder); 
-            
-            // Filtres multi-tenant basés sur IUserContext
+            base.OnModelCreating(modelBuilder);
+
+            // Ces filtres fonctionneront maintenant car _userContext sera initialisé
+            // (à condition que IUserContext soit enregistré comme Scoped, voir note ci-dessous)
             modelBuilder.Entity<Aion.DataEngine.Entities.SMenu>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
             modelBuilder.Entity<Aion.DataEngine.Entities.SModule>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
             modelBuilder.Entity<Aion.DataEngine.Entities.SAction>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
@@ -68,7 +66,4 @@ namespace Aion.Infrastructure
             return sb.ToString();
         }
     }
-
-
-
 }

@@ -235,6 +235,11 @@ IF OBJECT_ID('dbo.SMenu','U') IS NULL
 BEGIN
   CREATE TABLE dbo.SMenu(
     ID INT IDENTITY(1,1) PRIMARY KEY,
+    ModuleId INT NULL,
+    Path NVARCHAR(500) NULL,
+    Title NVARCHAR(255) NOT NULL,
+    RequiredPermissionsCsv NVARCHAR(500) NOT NULL,
+    RouteParamsSchemaJson NVARCHAR(500) NOT NULL,
     Code NVARCHAR(128) NOT NULL,
     Libelle NVARCHAR(255) NOT NULL,
     Route NVARCHAR(500) NULL,

@@ -31,6 +31,7 @@ namespace Aion.Infrastructure.Services
             if (!authorizedIds.Any())
                 return new List<SMenu>();
 
+
             // Récupération des menus depuis la base (table S_Menu ou équivalent)
             // ADAPTATION : Remplacer par votre table réelle
             var menus = await _db.Set<SMenu>() // Supposé que MenuEntity est mappé

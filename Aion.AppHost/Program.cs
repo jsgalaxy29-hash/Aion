@@ -1,5 +1,6 @@
 ﻿using Aion.AppHost;
 using Aion.AppHost.Services;
+using Aion.DataEngine.Interfaces;
 using Aion.Domain.Contracts;
 using Aion.Infrastructure;
 using Aion.Infrastructure.Seeders;
@@ -69,9 +70,11 @@ builder.Services.AddMemoryCache();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddCascadingAuthenticationState();
 
+builder.Services.AddScoped<IUserContext, HttpContextUserContext>();
 builder.Services.AddScoped<IRightService, RightService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IMenuProvider, MenuProvider>();
+builder.Services.AddScoped<ITabService, TabService>();
 
 // ===== Build Application =====
 var app = builder.Build();

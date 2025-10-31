@@ -1,4 +1,28 @@
-﻿@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons
+﻿@inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components.Authorization
+@inject NavigationManager Nav
+
+<CascadingAuthenticationState>
+    <div class="aion-shell">
+        <!-- Zone de navigation principale -->
+        <aside class="aion-nav">
+            <OutlookBar />
+        </aside>
+
+        <!-- Zone de contenu modules -->
+        <main class="aion-content">
+            <div class="aion-content-inner">
+                @Body
+            </div>
+        </main>
+    </div>
+</CascadingAuthenticationState>
+
+@code {
+    // Rien à charger ici : OutlookBar s’autogère (Option A)
+}
+
+@* @using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons
 @inherits LayoutComponentBase
 
 <FluentLayout>
@@ -74,4 +98,4 @@
         await AuthService.LogoutAsync();
         Navigation.NavigateTo("/login", forceLoad: true);
     }
-}
+} *@
