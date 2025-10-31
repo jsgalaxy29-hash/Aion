@@ -72,8 +72,7 @@ namespace Aion.DataEngine.Services
                     const string insertTableSql = @"
                         INSERT INTO STable (
                             Libelle, Description, Parent, ParentLiaison, ReferentielLibelle, Type)
-                        VALUES (@libelle, @description, NULL, NULL, NULL, 'F')
-                        );
+                        VALUES (@libelle, @description, NULL, NULL, NULL, 'F');
                         SELECT CAST(SCOPE_IDENTITY() AS INT);";
                     var param = new Dictionary<string, object?> { ["@libelle"] = tableName, ["@description"] = (object?)null };
                     var dt = await _db.ExecuteQueryAsync(insertTableSql, param).ConfigureAwait(false);
