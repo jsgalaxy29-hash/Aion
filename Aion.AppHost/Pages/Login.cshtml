@@ -175,44 +175,40 @@
             </div>
         }
 
-        <form method="post">
+        <form method="post" asp-antiforgery="true">
+            @Html.AntiForgeryToken()
+
             <div class="form-group">
-                <label for="Username">Nom d'utilisateur</label>
-                <input type="text"
-                       id="Username"
-                       name="Input.Username"
-                       value="@Model.Input.Username"
+                <label asp-for="Input.Username">Nom d'utilisateur</label>
+                <input asp-for="Input.Username"
+                       type="text"
                        placeholder="admin"
                        required
                        autofocus />
+                <span asp-validation-for="Input.Username" class="text-danger"></span>
             </div>
 
             <div class="form-group">
-                <label for="Password">Mot de passe</label>
-                <input type="password"
-                       id="Password"
-                       name="Input.Password"
-                       value="@Model.Input.Password"
+                <label asp-for="Input.Password">Mot de passe</label>
+                <input asp-for="Input.Password"
+                       type="password"
                        placeholder="••••••••"
                        required />
+                <span asp-validation-for="Input.Password" class="text-danger"></span>
             </div>
 
             <div class="form-group">
-                <label for="TenantId">Tenant ID</label>
-                <input type="number"
-                       id="TenantId"
-                       name="Input.TenantId"
-                       value="@Model.Input.TenantId"
+                <label asp-for="Input.TenantId">Tenant ID</label>
+                <input asp-for="Input.TenantId"
+                       type="number"
                        placeholder="1"
                        required />
+                <span asp-validation-for="Input.TenantId" class="text-danger"></span>
             </div>
 
             <div class="checkbox-group">
-                <input type="checkbox"
-                       id="RememberMe"
-                       name="Input.RememberMe"
-                       @(Model.Input.RememberMe ? "checked" : "") />
-                <label for="RememberMe">Se souvenir de moi</label>
+                <input asp-for="Input.RememberMe" type="checkbox" />
+                <label asp-for="Input.RememberMe">Se souvenir de moi</label>
             </div>
 
             <button type="submit" class="btn-login">
@@ -225,5 +221,9 @@
             <span class="warning">⚠️ Changez ce mot de passe en production !</span>
         </div>
     </div>
+
+    @section Scripts {
+        <partial name="_ValidationScriptsPartial" />
+    }
 </body>
 </html>
