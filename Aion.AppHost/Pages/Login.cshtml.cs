@@ -139,7 +139,7 @@ namespace Aion.AppHost.Pages
                 _ = Task.Run(() => UpdateLastLoginAsync(user.Id));
 
                 // Redirection
-                return LocalRedirect(returnUrl ?? "/");
+                return LocalRedirect("/Dashboard");
             }
             catch (Exception ex)
             {
