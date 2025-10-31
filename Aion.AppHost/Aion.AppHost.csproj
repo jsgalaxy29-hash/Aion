@@ -12,6 +12,9 @@
     <None Remove="Layouts\**" />
   </ItemGroup>
   <ItemGroup>
+    <Content Remove="Pages\Logout.cshtml" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Aion.Infrastructure\Aion.Infrastructure.csproj" />
     <ProjectReference Include="..\Aion.Domain\Aion.Domain.csproj" />
     <ProjectReference Include="..\Aion.Module.CRM\Aion.Module.CRM.csproj" />

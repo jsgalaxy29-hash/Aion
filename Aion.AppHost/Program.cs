@@ -8,28 +8,23 @@ using Aion.Security;
 using Aion.Security.Authentication;
 using Aion.Security.Authorization;
 using Aion.Security.Services;
-using Aion.Module.CRM;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.FluentUI.AspNetCore.Components;
-using Aion.DataEngine.Interfaces;
-using Aion.DataEngine.Services;
-using Aion.Infrastructure.Data;
-
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ===== Fluent UI - DOIT ÊTRE AJOUTÉ AVANT AddRazorComponents =====
+// ===== Fluent UI =====
 builder.Services.AddFluentUIComponents();
 
-// ===== Services Blazor =====
+// ===== Services Blazor + Razor Pages =====
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+builder.Services.AddRazorPages(); // IMPORTANT pour Login.cshtml
 builder.Services.AddHttpClient();
-builder.Services.AddRazorPages();
 
 // ===== Database Contexts =====
 var connectionString = builder.Configuration.GetConnectionString("AionDb")
@@ -40,12 +35,6 @@ builder.Services.AddDbContext<AionDbContext>(opt =>
 
 builder.Services.AddDbContext<SecurityDbContext>(opt =>
     opt.UseSqlServer(connectionString));
-
-// ===== DataEngine Services =====
-builder.Services.AddSingleton<IDataProvider, SqlDataProvider>();
-builder.Services.AddSingleton<IClock, Aion.Infrastructure.Services.SystemClock>();
-builder.Services.AddScoped<IAionProvisioningService, AionProvisioningService>();
-
 
 // ===== Authentication & Authorization =====
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -60,7 +49,13 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         o.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
     });
 
-builder.Services.AddAuthorizationBuilder();
+builder.Services.AddAuthorization(options =>
+{
+    // Policy par défaut : authentifié (sauf routes explicitement [AllowAnonymous])
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+});
 
 // Claims Transformation
 builder.Services.AddScoped<IClaimsTransformation, AionClaimsTransformation>();
@@ -77,7 +72,6 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IRightService, RightService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IMenuProvider, MenuProvider>();
-
 
 // ===== Build Application =====
 var app = builder.Build();
@@ -97,9 +91,6 @@ app.UseAuthorization();
 
 app.UseAntiforgery();
 
-// modules
-new CrmBootstrapper().Register();
-
 // ===== Database Initialization =====
 using (var scope = app.Services.CreateScope())
 {
@@ -107,19 +98,11 @@ using (var scope = app.Services.CreateScope())
 
     try
     {
-
-        // 1. Provisioning de la structure SQL
-        logger.LogInformation("📊 Provisioning de la base de données...");
-        var provisioning = scope.ServiceProvider.GetRequiredService<IAionProvisioningService>();
-        await provisioning.EnsureDatabaseReadyAsync();
-
         logger.LogInformation("🔄 Initialisation de la base de données...");
 
         var securityDb = scope.ServiceProvider.GetRequiredService<SecurityDbContext>();
-        // Créer la base si elle n'existe pas
-        await securityDb.Database.EnsureCreatedAsync();
 
-        // Seed des données de sécurité
+        await securityDb.Database.EnsureCreatedAsync();
         await SecuritySeeder.SeedAsync(securityDb);
 
         logger.LogInformation("✅ Base de données initialisée");
@@ -134,10 +117,11 @@ using (var scope = app.Services.CreateScope())
 app.MapRazorComponents<App>()
    .AddInteractiveServerRenderMode();
 
-app.MapRazorPages();
+app.MapRazorPages(); // IMPORTANT pour /login
 
 // ===== Démarrage =====
 app.Logger.LogInformation("🚀 Aion démarré");
-app.Logger.LogInformation("🔑 Connexion : admin / admin (TenantId: 1)");
+app.Logger.LogInformation("🔑 Connexion : https://localhost:5001/login");
+app.Logger.LogInformation("   User: admin / Pass: admin / Tenant: 1");
 
 app.Run();
