@@ -2,6 +2,7 @@
 using Aion.AppHost.Services;
 using Aion.DataEngine.Interfaces;
 using Aion.Domain.Contracts;
+using Aion.Module.CRM;
 using Aion.Infrastructure;
 using Aion.Infrastructure.Seeders;
 using Aion.Infrastructure.Services;
@@ -14,6 +15,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.FluentUI.AspNetCore.Components;
+using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -75,6 +77,7 @@ builder.Services.AddScoped<IRightService, RightService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IMenuProvider, MenuProvider>();
 builder.Services.AddScoped<ITabService, TabService>();
+builder.Services.AddSingleton<IModuleBootstrapper, CrmBootstrapper>();
 
 // ===== Build Application =====
 var app = builder.Build();
@@ -98,6 +101,24 @@ app.UseAntiforgery();
 using (var scope = app.Services.CreateScope())
 {
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    try
+    {
+        logger.LogInformation("🔧 Initialisation des modules...");
+
+        var bootstrappers = scope.ServiceProvider.GetServices<IModuleBootstrapper>();
+
+        foreach (var bootstrapper in bootstrappers)
+        {
+            bootstrapper.Register();
+        }
+
+        logger.LogInformation("✅ Modules initialisés");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "❌ Erreur lors de l'initialisation des modules");
+    }
 
     try
     {
