@@ -24,8 +24,14 @@ namespace Aion.Security.Extensions
         /// </summary>
         public static int? GetTenantId(this ClaimsPrincipal principal)
         {
-            var claim = principal.FindFirst("tenant");
-            return claim != null && int.TryParse(claim.Value, out var id) ? id : null;
+            if (principal != null)
+            {
+                var claim = principal.FindFirst("tenant");
+                return claim != null && int.TryParse(claim.Value, out var id) ? id : null;
+            } else
+            {
+                return null;
+            }
         }
 
         /// <summary>

@@ -15,11 +15,13 @@ namespace Aion.DataEngine.Services
     {
         private readonly IDataProvider _db;
         private readonly IClock _clock;
+        private readonly IUserContext _userContext;
 
-        public AionProvisioningService(IDataProvider db, IClock clock)
+        public AionProvisioningService(IDataProvider db, IUserContext userContext, IClock clock)
         {
             _db = db;
             _clock = clock;
+            _userContext = userContext;
         }
 
         public async Task EnsureDatabaseReadyAsync()
@@ -53,7 +55,7 @@ namespace Aion.DataEngine.Services
             Console.WriteLine("✅ Structure SQL complète créée");
 
             // Catalogue des tables existantes dans STable et SField
-            DataEngine dataEngine = new(_db, _clock);
+            DataEngine dataEngine = new(_db, _userContext, _clock);
             await dataEngine.SynchronizeSystemCatalogAsync();
 
         }

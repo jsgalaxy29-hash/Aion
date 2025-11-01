@@ -85,7 +85,7 @@ builder.Services.AddScoped<IDataQueryResolver, DataQueryResolver>();
 builder.Services.AddScoped<IWidgetService, WidgetServiceEf>();
 builder.Services.AddScoped<IDataProvider, SqlDataProvider>();
 builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
-builder.Services.AddSingleton<IClock, SystemClock>();
+builder.Services.AddSingleton<IClock, Aion.Infrastructure.Services.SystemClock>();
 builder.Services.AddScoped<IValidationService, SimpleValidationService>();
 builder.Services.AddScoped<IHistorizationService, NoOpHistorizationService>();
 builder.Services.AddScoped<IDataEngine, DataEngine>();

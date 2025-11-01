@@ -99,7 +99,7 @@ else
                             </label>
                         </div>
                         <div class="mt-3 d-flex flex-wrap gap-2">
-                            <FluentButton Appearance="Appearance.Accent" Type="submit">Enregistrer la table</FluentButton>
+                            <FluentButton Appearance="Appearance.Accent" Type="ButtonType.Submit">Enregistrer la table</FluentButton>
                             @if (_currentTable.Id > 0)
                             {
                                 <FluentButton Appearance="Appearance.Stealth" OnClick="MaterializeAsync">Créer la table physique</FluentButton>
@@ -220,7 +220,7 @@ else
                                     </label>
                                 </div>
                                 <div class="mt-3 d-flex gap-2">
-                                    <FluentButton Appearance="Appearance.Accent" Type="submit">Enregistrer le champ</FluentButton>
+                                    <FluentButton Appearance="Appearance.Accent" Type="ButtonType.Submit">Enregistrer le champ</FluentButton>
                                     <FluentButton Appearance="Appearance.Stealth" OnClick="CancelFieldEdit">Annuler</FluentButton>
                                 </div>
                             </fieldset>
@@ -262,20 +262,6 @@ else
         font-weight: 600;
     }
 
-    @media (max-width: 992px) {
-        .catalog-layout {
-            flex-direction: column;
-        }
-
-        .catalog-sidebar {
-            position: static;
-            width: 100%;
-        }
-
-        .form-grid {
-            grid-template-columns: 1fr;
-        }
-    }
 </style>
 
 @code {
