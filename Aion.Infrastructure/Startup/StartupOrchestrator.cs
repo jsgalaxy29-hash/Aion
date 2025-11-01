@@ -1,10 +1,13 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Aion.DataEngine.Interfaces;
-using Aion.Security;
 using Aion.Infrastructure.Seeders;
+using Aion.Security;
+using InfrastructureDbContext = Aion.Infrastructure.AionDbContext;
 
 namespace Aion.Infrastructure.Startup
 {
@@ -16,15 +19,18 @@ namespace Aion.Infrastructure.Startup
     {
         private readonly ILogger<StartupOrchestrator> _logger;
         private readonly IAionProvisioningService _provisioning;
+        private readonly InfrastructureDbContext _appDb;
         private readonly SecurityDbContext _securityDb;
 
         public StartupOrchestrator(
             ILogger<StartupOrchestrator> logger,
             IAionProvisioningService provisioning,
+            InfrastructureDbContext appDb,
             SecurityDbContext securityDb)
         {
             _logger = logger;
             _provisioning = provisioning;
+            _appDb = appDb;
             _securityDb = securityDb;
         }
 
@@ -40,6 +46,8 @@ namespace Aion.Infrastructure.Startup
                 // ====== PHASE 1 : Structure SQL via AionProvisioningService ======
                 _logger.LogInformation("📊 Phase 1 : Création de la structure SQL...");
                 await _provisioning.EnsureDatabaseReadyAsync();
+                await _appDb.Database.EnsureCreatedAsync();
+                await _securityDb.Database.EnsureCreatedAsync();
                 _logger.LogInformation("✅ Structure SQL créée");
 
                 // ====== PHASE 2 : Données de sécurité via EF Core ======
@@ -49,6 +57,7 @@ namespace Aion.Infrastructure.Startup
 
                 // ====== PHASE 3 : Droits par défaut sur les menus ======
                 _logger.LogInformation("🔑 Phase 3 : Attribution des droits par défaut...");
+                await SecuritySeeder.EnsureSystemMenusAsync(_appDb);
                 await GrantDefaultMenuRightsAsync();
                 _logger.LogInformation("✅ Droits par défaut attribués");
 
@@ -67,13 +76,17 @@ namespace Aion.Infrastructure.Startup
         /// </summary>
         private async Task GrantDefaultMenuRightsAsync()
         {
-            // Récupérer les IDs de menus depuis la table SMenu
-            // (créée par AionProvisioningService)
-            var menuIds = new[] { 1, 2, 3, 4 }; // IDs des menus du YAML
+            var menuIds = await _appDb.SMenu
+                .IgnoreQueryFilters()
+                .Where(m => m.Actif && !m.Deleted)
+                .Select(m => m.Id)
+                .ToArrayAsync();
 
-            // TODO: Récupérer dynamiquement depuis la base
-            // var menuIds = await _securityDb.Database.SqlQuery<int>(
-            //     "SELECT ID FROM dbo.SMenu").ToListAsync();
+            if (menuIds.Length == 0)
+            {
+                _logger.LogWarning("⚠️  Aucun menu système détecté, droits administrateur non attribués");
+                return;
+            }
 
             await SecuritySeeder.GrantAdminMenuRightsAsync(_securityDb, menuIds);
         }
