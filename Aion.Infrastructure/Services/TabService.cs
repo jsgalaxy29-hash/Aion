@@ -26,7 +26,7 @@ namespace Aion.Infrastructure.Services
         }
         public void Activate(Guid id)
         {
-            //foreach (var t in _tabs) t.IsActive = (t.Id == id);
+            foreach (var t in _tabs) t.IsActive = (t.Id == id);
             TabsChanged?.Invoke();
         }
 
