@@ -5,8 +5,8 @@ using Aion.Domain.Contracts;
 using Aion.Module.CRM;
 using Aion.Module.SystemCatalog;
 using Aion.Infrastructure;
-using Aion.Infrastructure.Seeders;
 using Aion.Infrastructure.Services;
+using Aion.Infrastructure.Startup;
 using Aion.Security;
 using Aion.Security.Authentication;
 using Aion.Security.Authorization;
@@ -84,6 +84,7 @@ builder.Services.AddScoped<ITabService, TabService>();
 builder.Services.AddScoped<IDataQueryResolver, DataQueryResolver>();
 builder.Services.AddScoped<IWidgetService, WidgetServiceEf>();
 builder.Services.AddScoped<IDataProvider, SqlDataProvider>();
+builder.Services.AddScoped<IAionProvisioningService, AionProvisioningService>();
 builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
 builder.Services.AddSingleton<IClock, SystemClock>();
 builder.Services.AddScoped<IValidationService, SimpleValidationService>();
@@ -91,6 +92,7 @@ builder.Services.AddScoped<IHistorizationService, NoOpHistorizationService>();
 builder.Services.AddScoped<IDataEngine, DataEngine>();
 builder.Services.AddSingleton<IModuleBootstrapper, CrmBootstrapper>();
 builder.Services.AddSingleton<IModuleBootstrapper, SystemCatalogBootstrapper>();
+builder.Services.AddScoped<StartupOrchestrator>();
 
 // ===== Build Application =====
 var app = builder.Build();
@@ -136,25 +138,8 @@ using (var scope = app.Services.CreateScope())
     try
     {
         logger.LogInformation("🔄 Initialisation de la base de données...");
-
-        var appDb = scope.ServiceProvider.GetRequiredService<AionDbContext>();
-        var securityDb = scope.ServiceProvider.GetRequiredService<SecurityDbContext>();
-
-        await appDb.Database.EnsureCreatedAsync();
-        await securityDb.Database.EnsureCreatedAsync();
-        await SecuritySeeder.SeedAsync(securityDb);
-        await SecuritySeeder.EnsureSystemMenusAsync(appDb);
-
-        var menuIds = await appDb.SMenu
-            .Where(m => !m.Deleted)
-            .Select(m => m.Id)
-            .ToArrayAsync();
-
-        if (menuIds.Length > 0)
-        {
-            await SecuritySeeder.GrantAdminMenuRightsAsync(securityDb, menuIds);
-        }
-
+        var orchestrator = scope.ServiceProvider.GetRequiredService<StartupOrchestrator>();
+        await orchestrator.InitializeAsync();
         logger.LogInformation("✅ Base de données initialisée");
     }
     catch (Exception ex)

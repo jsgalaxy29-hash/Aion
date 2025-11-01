@@ -22,7 +22,7 @@ namespace Aion.AppHost.Services
             get
             {
                 var user = _httpContextAccessor.HttpContext?.User;
-                return (int)(user.GetUserId());
+                return (int?)(user?.GetUserId()) ?? 1;
             }
         }
 
@@ -31,7 +31,7 @@ namespace Aion.AppHost.Services
             get
             {
                 var user = _httpContextAccessor.HttpContext?.User;
-                return (int)user.GetTenantId();
+                return (int?)(user?.GetTenantId()) ?? 1;
             }
         }
 
@@ -40,7 +40,7 @@ namespace Aion.AppHost.Services
             get
             {
                 var user = _httpContextAccessor.HttpContext?.User;
-                return user?.Identity?.Name;
+                return user?.Identity?.Name ?? "System";
             }
         }
 
