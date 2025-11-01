@@ -12,6 +12,7 @@ namespace Aion.Infrastructure.Services
     /// </summary>
     public sealed class TabService : ITabService
     {
+        public event Action? TabsChanged;
         private readonly List<TabDescriptor> _tabs = new();
         public IReadOnlyList<TabDescriptor> Tabs => _tabs;
 
@@ -20,7 +21,13 @@ namespace Aion.Infrastructure.Services
             var tab = new TabDescriptor(Guid.NewGuid(), title, route,
                 parameters is null ? null : new Dictionary<string, object?>(parameters), false);
             _tabs.Add(tab);
+            TabsChanged?.Invoke(); 
             return Task.FromResult(tab);
+        }
+        public void Activate(Guid id)
+        {
+            //foreach (var t in _tabs) t.IsActive = (t.Id == id);
+            TabsChanged?.Invoke();
         }
 
         public Task CloseAsync(Guid tabId, CancellationToken ct)

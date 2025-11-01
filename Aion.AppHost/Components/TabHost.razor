@@ -25,12 +25,17 @@
 
     protected override void OnInitialized()
     {
+        Tabs.TabsChanged += OnTabsChanged;
         if (Tabs.Tabs.Count > 0)
         {
             _active = Tabs.Tabs[^1];
             _activeId = _active.Id;
         }
     }
+
+
+    void OnTabsChanged() => InvokeAsync(StateHasChanged);
+    public void Dispose() => Tabs.TabsChanged -= OnTabsChanged;
 
     private Task OnTabChanged(Microsoft.FluentUI.AspNetCore.Components.TabChangeEventArgs e)
     {

@@ -11,6 +11,7 @@ namespace Aion.Domain.Contracts
     /// </summary>
     public interface ITabService
     {
+        public event Action? TabsChanged;
         IReadOnlyList<TabDescriptor> Tabs { get; }
         Task<TabDescriptor> OpenAsync(string title, string route, IDictionary<string, object?>? parameters, bool activate, CancellationToken ct);
         Task CloseAsync(Guid tabId, CancellationToken ct);
