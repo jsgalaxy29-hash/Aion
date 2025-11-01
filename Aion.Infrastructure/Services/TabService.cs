@@ -33,6 +33,7 @@ namespace Aion.Infrastructure.Services
         public Task CloseAsync(Guid tabId, CancellationToken ct)
         {
             _tabs.RemoveAll(t => t.Id == tabId);
+            TabsChanged?.Invoke();
             return Task.CompletedTask;
         }
     }
