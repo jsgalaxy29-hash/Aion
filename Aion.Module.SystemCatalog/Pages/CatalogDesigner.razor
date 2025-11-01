@@ -1,0 +1,691 @@
+@page "/admin/catalog"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@inject Aion.Infrastructure.AionDbContext Db
+@inject IDataEngine DataEngine
+@inject IUserContext UserContext
+
+<PageTitle>Designer de métadonnées</PageTitle>
+
+<h1 class="mb-3">Designer de métadonnées</h1>
+
+@if (!string.IsNullOrEmpty(_errorMessage))
+{
+    <div class="alert alert-danger" role="alert">@_errorMessage</div>
+}
+@if (!string.IsNullOrEmpty(_statusMessage))
+{
+    <div class="alert alert-success" role="status">@_statusMessage</div>
+}
+
+@if (_isLoading)
+{
+    <div class="d-flex align-items-center gap-2">
+        <FluentProgressRing />
+        <span>Chargement des métadonnées...</span>
+    </div>
+}
+else
+{
+    <div class="catalog-layout">
+        <div class="catalog-sidebar">
+            <FluentButton Appearance="Appearance.Accent" Icon="Add16Filled" OnClick="StartCreateTable" class="w-100 mb-2">
+                Nouvelle table
+            </FluentButton>
+
+            @if (_tables.Count == 0)
+            {
+                <div class="text-muted small">Aucune table définie pour le moment.</div>
+            }
+            else
+            {
+                @foreach (var table in _tables)
+                {
+                    var isSelected = _currentTable?.Id == table.Id;
+                    <FluentButton class="w-100 mb-1"
+                                  Appearance="@(isSelected ? Appearance.Accent : Appearance.Stealth)"
+                                  OnClick="() => OnSelectTableAsync(table.Id)">
+                        @table.Label
+                    </FluentButton>
+                }
+            }
+        </div>
+        <div class="catalog-content">
+            @if (_currentTable is null)
+            {
+                <div class="text-muted">
+                    Sélectionnez une table à gauche ou créez-en une nouvelle pour commencer.
+                </div>
+            }
+            else
+            {
+                <EditForm Model="_currentTable" OnValidSubmit="SaveTableAsync">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <fieldset class="mb-4">
+                        <legend>Table</legend>
+                        <div class="form-grid">
+                            <label>Nom interne *</label>
+                            <InputText @bind-Value="_currentTable.Libelle" class="form-control" />
+                            <ValidationMessage For="() => _currentTable.Libelle" />
+
+                            <label>Description</label>
+                            <InputTextArea @bind-Value="_currentTable.Description" class="form-control" />
+
+                            <label>Type</label>
+                            <InputText @bind-Value="_currentTable.Type" class="form-control" />
+
+                            <label>Table parente</label>
+                            <InputText @bind-Value="_currentTable.Parent" class="form-control" />
+
+                            <label>Champ de liaison parent</label>
+                            <InputText @bind-Value="_currentTable.ParentLiaison" class="form-control" />
+
+                            <label>Libellé référentiel</label>
+                            <InputText @bind-Value="_currentTable.ReferentielLibelle" class="form-control" />
+                        </div>
+                        <div class="mt-3 d-flex flex-wrap gap-3">
+                            <label class="form-check">
+                                <InputCheckbox @bind-Value="_currentTable.IsHistorise" class="form-check-input" />
+                                <span class="form-check-label">Historiser les changements</span>
+                            </label>
+                            <label class="form-check">
+                                <InputCheckbox @bind-Value="_currentTable.Actif" class="form-check-input" />
+                                <span class="form-check-label">Actif</span>
+                            </label>
+                            <label class="form-check">
+                                <InputCheckbox @bind-Value="_currentTable.Doc" class="form-check-input" />
+                                <span class="form-check-label">Documents liés</span>
+                            </label>
+                        </div>
+                        <div class="mt-3 d-flex flex-wrap gap-2">
+                            <FluentButton Appearance="Appearance.Accent" Type="submit">Enregistrer la table</FluentButton>
+                            @if (_currentTable.Id > 0)
+                            {
+                                <FluentButton Appearance="Appearance.Stealth" OnClick="MaterializeAsync">Créer la table physique</FluentButton>
+                                <FluentButton Appearance="Appearance.Outline" OnClick="DeleteTableAsync">Supprimer</FluentButton>
+                            }
+                        </div>
+                    </fieldset>
+                </EditForm>
+
+                <section>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h2 class="h5 mb-0">Champs</h2>
+                        <FluentButton Appearance="Appearance.Accent" Icon="Add16Filled" OnClick="StartCreateField" Disabled="@(_currentTable.Id == 0)">
+                            Nouveau champ
+                        </FluentButton>
+                    </div>
+
+                    @if (_currentTable.Id == 0)
+                    {
+                        <div class="alert alert-info">Enregistrez la table avant d'ajouter des champs.</div>
+                    }
+                    else if (_fields.Count == 0)
+                    {
+                        <div class="text-muted">Aucun champ défini pour cette table.</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Nom</th>
+                                        <th>Type</th>
+                                        <th>Nullable</th>
+                                        <th>PK</th>
+                                        <th>Unique</th>
+                                        <th>Visible</th>
+                                        <th>Ordre</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                @foreach (var field in _fields)
+                                {
+                                    <tr>
+                                        <td>@field.Libelle</td>
+                                        <td>@field.DataType</td>
+                                        <td>@(field.IsNulleable ? "Oui" : "Non")</td>
+                                        <td>@(field.IsClePrimaire ? "Oui" : "Non")</td>
+                                        <td>@(field.IsUnique ? "Oui" : "Non")</td>
+                                        <td>@(field.IsVisible ? "Oui" : "Non")</td>
+                                        <td>@field.Ordre</td>
+                                        <td class="text-end">
+                                            <FluentButton Appearance="Appearance.Stealth" OnClick="() => EditField(field)">Modifier</FluentButton>
+                                            <FluentButton Appearance="Appearance.Outline" OnClick="() => DeleteFieldAsync(field.Id)">Supprimer</FluentButton>
+                                        </td>
+                                    </tr>
+                                }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+
+                    @if (_currentField is not null)
+                    {
+                        <EditForm Model="_currentField" OnValidSubmit="SaveFieldAsync">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary />
+                            <fieldset class="mt-3">
+                                <legend>@(_currentField.Id == 0 ? "Nouveau champ" : $"Champ {_currentField.Libelle}")</legend>
+                                <div class="form-grid">
+                                    <label>Nom interne *</label>
+                                    <InputText @bind-Value="_currentField.Libelle" class="form-control" />
+                                    <ValidationMessage For="() => _currentField.Libelle" />
+
+                                    <label>Alias</label>
+                                    <InputText @bind-Value="_currentField.Alias" class="form-control" />
+
+                                    <label>Type SQL *</label>
+                                    <InputText @bind-Value="_currentField.DataType" class="form-control" />
+                                    <ValidationMessage For="() => _currentField.DataType" />
+
+                                    <label>Taille</label>
+                                    <InputNumber @bind-Value="_currentField.Taille" class="form-control" />
+
+                                    <label>Valeur par défaut</label>
+                                    <InputText @bind-Value="_currentField.Defaut" class="form-control" />
+
+                                    <label>Ordre</label>
+                                    <InputNumber @bind-Value="_currentField.Ordre" class="form-control" />
+
+                                    <label>Format</label>
+                                    <InputText @bind-Value="_currentField.Format" class="form-control" />
+
+                                    <label>Masque</label>
+                                    <InputText @bind-Value="_currentField.Masque" class="form-control" />
+                                </div>
+                                <div class="mt-3 d-flex flex-wrap gap-3">
+                                    <label class="form-check">
+                                        <InputCheckbox @bind-Value="_currentField.IsNulleable" class="form-check-input" />
+                                        <span class="form-check-label">Nullable</span>
+                                    </label>
+                                    <label class="form-check">
+                                        <InputCheckbox @bind-Value="_currentField.IsClePrimaire" class="form-check-input" />
+                                        <span class="form-check-label">Clé primaire</span>
+                                    </label>
+                                    <label class="form-check">
+                                        <InputCheckbox @bind-Value="_currentField.IsUnique" class="form-check-input" />
+                                        <span class="form-check-label">Unique</span>
+                                    </label>
+                                    <label class="form-check">
+                                        <InputCheckbox @bind-Value="_currentField.IsVisible" class="form-check-input" />
+                                        <span class="form-check-label">Visible</span>
+                                    </label>
+                                    <label class="form-check">
+                                        <InputCheckbox @bind-Value="_currentField.IsHistorise" class="form-check-input" />
+                                        <span class="form-check-label">Historiser</span>
+                                    </label>
+                                </div>
+                                <div class="mt-3 d-flex gap-2">
+                                    <FluentButton Appearance="Appearance.Accent" Type="submit">Enregistrer le champ</FluentButton>
+                                    <FluentButton Appearance="Appearance.Stealth" OnClick="CancelFieldEdit">Annuler</FluentButton>
+                                </div>
+                            </fieldset>
+                        </EditForm>
+                    }
+                </section>
+            }
+        </div>
+    </div>
+}
+
+<style>
+    .catalog-layout {
+        display: flex;
+        gap: 1.5rem;
+        align-items: flex-start;
+    }
+
+    .catalog-sidebar {
+        width: 260px;
+        position: sticky;
+        top: 1rem;
+        align-self: flex-start;
+    }
+
+    .catalog-content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: minmax(140px, 220px) 1fr;
+        gap: 0.5rem 1rem;
+        align-items: center;
+    }
+
+    .form-grid label {
+        font-weight: 600;
+    }
+
+    @media (max-width: 992px) {
+        .catalog-layout {
+            flex-direction: column;
+        }
+
+        .catalog-sidebar {
+            position: static;
+            width: 100%;
+        }
+
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+@code {
+    private readonly List<TableSummary> _tables = new();
+    private TableEditor? _currentTable;
+    private List<FieldEditor> _fields = new();
+    private FieldEditor? _currentField;
+    private bool _isLoading = true;
+    private string? _statusMessage;
+    private string? _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTablesAsync();
+    }
+
+    private async Task LoadTablesAsync(int? selectId = null)
+    {
+        _isLoading = true;
+        _tables.Clear();
+        try
+        {
+            var rows = await Db.STable.AsNoTracking()
+                .OrderBy(t => t.Libelle)
+                .Select(t => new { t.Id, t.Libelle })
+                .ToListAsync();
+
+            foreach (var row in rows)
+            {
+                var label = string.IsNullOrWhiteSpace(row.Libelle) ? $"Table {row.Id}" : row.Libelle;
+                _tables.Add(new TableSummary(row.Id, label));
+            }
+
+            var targetId = selectId ?? _tables.FirstOrDefault()?.Id;
+            if (targetId.HasValue)
+            {
+                await SelectTableInternalAsync(targetId.Value);
+            }
+            else
+            {
+                _currentTable = null;
+                _fields = new List<FieldEditor>();
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private Task OnSelectTableAsync(int id) => SelectTableInternalAsync(id);
+
+    private async Task SelectTableInternalAsync(int id)
+    {
+        try
+        {
+            var entity = await Db.STable
+                .Include(t => t.Champs)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t => t.Id == id);
+
+            if (entity == null)
+            {
+                _errorMessage = $"Table {id} introuvable.";
+                return;
+            }
+
+            _currentTable = TableEditor.FromEntity(entity);
+            _fields = entity.Champs
+                .OrderBy(f => f.Ordre ?? int.MaxValue)
+                .ThenBy(f => f.Libelle)
+                .Select(FieldEditor.FromEntity)
+                .ToList();
+            _currentField = null;
+            _statusMessage = null;
+            _errorMessage = null;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private void StartCreateTable()
+    {
+        _currentTable = new TableEditor
+        {
+            Actif = true,
+            IsHistorise = true
+        };
+        _fields = new List<FieldEditor>();
+        _currentField = null;
+        _statusMessage = null;
+        _errorMessage = null;
+    }
+
+    private async Task SaveTableAsync()
+    {
+        if (_currentTable is null)
+        {
+            return;
+        }
+
+        try
+        {
+            STable entity;
+            if (_currentTable.Id == 0)
+            {
+                entity = new STable
+                {
+                    TenantId = UserContext.TenantId,
+                    DtCreation = DateTime.UtcNow,
+                    UsrCreationId = UserContext.UserId
+                };
+                Db.STable.Add(entity);
+            }
+            else
+            {
+                entity = await Db.STable.FirstAsync(t => t.Id == _currentTable.Id);
+                entity.DtModification = DateTime.UtcNow;
+                entity.UsrModificationId = UserContext.UserId;
+            }
+
+            entity.Libelle = _currentTable.Libelle;
+            entity.Description = _currentTable.Description;
+            entity.Type = _currentTable.Type;
+            entity.Parent = _currentTable.Parent;
+            entity.ParentLiaison = _currentTable.ParentLiaison;
+            entity.ReferentielLibelle = _currentTable.ReferentielLibelle;
+            entity.IsHistorise = _currentTable.IsHistorise;
+            entity.Actif = _currentTable.Actif;
+            entity.Doc = _currentTable.Doc;
+
+            await Db.SaveChangesAsync();
+            await DataEngine.InvalidateMetadataAsync(entity.Id, entity.Libelle);
+
+            _statusMessage = $"Table '{entity.Libelle}' enregistrée.";
+            await LoadTablesAsync(entity.Id);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private async Task DeleteTableAsync()
+    {
+        if (_currentTable is null || _currentTable.Id == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            var entity = await Db.STable.Include(t => t.Champs).FirstOrDefaultAsync(t => t.Id == _currentTable.Id);
+            if (entity == null)
+            {
+                return;
+            }
+
+            Db.SField.RemoveRange(entity.Champs);
+            Db.STable.Remove(entity);
+            await Db.SaveChangesAsync();
+            await DataEngine.InvalidateMetadataAsync(_currentTable.Id, _currentTable.Libelle);
+
+            _statusMessage = $"Table '{_currentTable.Libelle}' supprimée.";
+            await LoadTablesAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private async Task MaterializeAsync()
+    {
+        if (_currentTable is null || _currentTable.Id == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            var entity = await Db.STable.Include(t => t.Champs).FirstAsync(t => t.Id == _currentTable.Id);
+            await DataEngine.CreatePhysicalTableAsync(entity, entity.Champs);
+            await DataEngine.InvalidateMetadataAsync(entity.Id, entity.Libelle);
+            _statusMessage = $"Table physique '{entity.Libelle}' créée.";
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private void StartCreateField()
+    {
+        if (_currentTable is null || _currentTable.Id == 0)
+        {
+            return;
+        }
+
+        _currentField = new FieldEditor
+        {
+            TableId = _currentTable.Id,
+            DataType = "NVARCHAR",
+            Taille = 255,
+            IsNulleable = true,
+            IsHistorise = true,
+            IsVisible = true
+        };
+        _statusMessage = null;
+        _errorMessage = null;
+    }
+
+    private void EditField(FieldEditor field)
+    {
+        _currentField = field.Clone();
+        _statusMessage = null;
+        _errorMessage = null;
+    }
+
+    private void CancelFieldEdit()
+    {
+        _currentField = null;
+    }
+
+    private async Task SaveFieldAsync()
+    {
+        if (_currentTable is null || _currentTable.Id == 0 || _currentField is null)
+        {
+            return;
+        }
+
+        try
+        {
+            SField entity;
+            if (_currentField.Id == 0)
+            {
+                entity = new SField
+                {
+                    TableId = _currentTable.Id,
+                    TenantId = UserContext.TenantId,
+                    DtCreation = DateTime.UtcNow,
+                    UsrCreationId = UserContext.UserId
+                };
+                Db.SField.Add(entity);
+            }
+            else
+            {
+                entity = await Db.SField.FirstAsync(f => f.Id == _currentField.Id);
+                entity.DtModification = DateTime.UtcNow;
+                entity.UsrModificationId = UserContext.UserId;
+            }
+
+            entity.Libelle = _currentField.Libelle;
+            entity.Alias = _currentField.Alias;
+            entity.DataType = _currentField.DataType;
+            entity.Taille = _currentField.Taille;
+            entity.Defaut = _currentField.Defaut;
+            entity.IsClePrimaire = _currentField.IsClePrimaire;
+            entity.IsUnique = _currentField.IsUnique;
+            entity.IsNulleable = _currentField.IsNulleable;
+            entity.IsVisible = _currentField.IsVisible;
+            entity.IsHistorise = _currentField.IsHistorise;
+            entity.Ordre = _currentField.Ordre;
+            entity.Format = _currentField.Format;
+            entity.Masque = _currentField.Masque;
+
+            await Db.SaveChangesAsync();
+            await DataEngine.InvalidateMetadataAsync(entity.TableId, _currentTable.Libelle);
+
+            _statusMessage = $"Champ '{entity.Libelle}' enregistré.";
+            await SelectTableInternalAsync(_currentTable.Id);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _currentField = null;
+        }
+    }
+
+    private async Task DeleteFieldAsync(int id)
+    {
+        if (_currentTable is null || id == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            var entity = await Db.SField.FirstOrDefaultAsync(f => f.Id == id);
+            if (entity == null)
+            {
+                return;
+            }
+
+            Db.SField.Remove(entity);
+            await Db.SaveChangesAsync();
+            await DataEngine.InvalidateMetadataAsync(entity.TableId, _currentTable.Libelle);
+
+            _statusMessage = $"Champ '{entity.Libelle}' supprimé.";
+            await SelectTableInternalAsync(_currentTable.Id);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private sealed record TableSummary(int Id, string Label);
+
+    private sealed class TableEditor
+    {
+        public int Id { get; set; }
+
+        [Required]
+        public string Libelle { get; set; } = string.Empty;
+
+        public string? Description { get; set; }
+        public string? Type { get; set; }
+        public string? Parent { get; set; }
+        public string? ParentLiaison { get; set; }
+        public string? ReferentielLibelle { get; set; }
+        public bool IsHistorise { get; set; }
+        public bool Actif { get; set; }
+        public bool Doc { get; set; }
+
+        public static TableEditor FromEntity(STable table) => new()
+        {
+            Id = table.Id,
+            Libelle = table.Libelle,
+            Description = table.Description,
+            Type = table.Type,
+            Parent = table.Parent,
+            ParentLiaison = table.ParentLiaison,
+            ReferentielLibelle = table.ReferentielLibelle,
+            IsHistorise = table.IsHistorise,
+            Actif = table.Actif,
+            Doc = table.Doc
+        };
+    }
+
+    private sealed class FieldEditor
+    {
+        public int Id { get; set; }
+        public int TableId { get; set; }
+
+        [Required]
+        public string Libelle { get; set; } = string.Empty;
+
+        public string? Alias { get; set; }
+
+        [Required]
+        public string DataType { get; set; } = string.Empty;
+
+        public int Taille { get; set; }
+        public string? Defaut { get; set; }
+        public bool IsNulleable { get; set; }
+        public bool IsClePrimaire { get; set; }
+        public bool IsUnique { get; set; }
+        public bool IsVisible { get; set; }
+        public bool IsHistorise { get; set; }
+        public int? Ordre { get; set; }
+        public string? Format { get; set; }
+        public string? Masque { get; set; }
+
+        public static FieldEditor FromEntity(SField field) => new()
+        {
+            Id = field.Id,
+            TableId = field.TableId,
+            Libelle = field.Libelle,
+            Alias = field.Alias,
+            DataType = field.DataType,
+            Taille = field.Taille,
+            Defaut = field.Defaut,
+            IsNulleable = field.IsNulleable,
+            IsClePrimaire = field.IsClePrimaire,
+            IsUnique = field.IsUnique,
+            IsVisible = field.IsVisible,
+            IsHistorise = field.IsHistorise,
+            Ordre = field.Ordre,
+            Format = field.Format,
+            Masque = field.Masque
+        };
+
+        public FieldEditor Clone() => new()
+        {
+            Id = Id,
+            TableId = TableId,
+            Libelle = Libelle,
+            Alias = Alias,
+            DataType = DataType,
+            Taille = Taille,
+            Defaut = Defaut,
+            IsNulleable = IsNulleable,
+            IsClePrimaire = IsClePrimaire,
+            IsUnique = IsUnique,
+            IsVisible = IsVisible,
+            IsHistorise = IsHistorise,
+            Ordre = Ordre,
+            Format = Format,
+            Masque = Masque
+        };
+    }
+}

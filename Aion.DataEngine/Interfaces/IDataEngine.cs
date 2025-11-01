@@ -75,5 +75,12 @@ namespace Aion.DataEngine.Interfaces
         /// <param name="primaryKeyName">The primary key column name.</param>
         /// <param name="id">The primary key value.</param>
         Task<int> DeleteAsync(string tableName, string primaryKeyName, object id);
+
+        /// <summary>
+        /// Invalidates cached metadata for the specified table.
+        /// </summary>
+        /// <param name="tableId">Identifier of the table in STable.</param>
+        /// <param name="tableName">Optional physical table name.</param>
+        Task InvalidateMetadataAsync(int tableId, string? tableName = null);
     }
 }

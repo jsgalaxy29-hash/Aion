@@ -148,6 +148,75 @@ namespace Aion.Infrastructure.Seeders
             await db.SaveChangesAsync();
         }
 
+        public static async Task EnsureSystemMenusAsync(AionDbContext appDb)
+        {
+            var utcNow = DateTime.UtcNow;
+
+            var adminModule = await appDb.SModule.FirstOrDefaultAsync(m => m.Code == "SYSTEM");
+            if (adminModule == null)
+            {
+                adminModule = new SModule
+                {
+                    Code = "SYSTEM",
+                    Name = "Administration",
+                    Order = 900,
+                    IsActive = true,
+                    TenantId = 1,
+                    Actif = true,
+                    DtCreation = utcNow,
+                    UsrCreationId = 1
+                };
+                appDb.SModule.Add(adminModule);
+                await appDb.SaveChangesAsync();
+            }
+
+            var adminRootMenu = await appDb.SMenu.FirstOrDefaultAsync(m => m.Code == "ADMIN_ROOT");
+            if (adminRootMenu == null)
+            {
+                adminRootMenu = new SMenu
+                {
+                    ModuleId = adminModule.Id,
+                    Code = "ADMIN_ROOT",
+                    Title = "Administration",
+                    ParentId = 0,
+                    Icon = "Settings20Regular",
+                    Route = string.Empty,
+                    Path = string.Empty,
+                    IsLeaf = false,
+                    Order = 900,
+                    TenantId = 1,
+                    Actif = true,
+                    DtCreation = utcNow,
+                    UsrCreationId = 1
+                };
+                appDb.SMenu.Add(adminRootMenu);
+                await appDb.SaveChangesAsync();
+            }
+
+            var designerMenu = await appDb.SMenu.FirstOrDefaultAsync(m => m.Code == "ADMIN_CATALOG");
+            if (designerMenu == null)
+            {
+                designerMenu = new SMenu
+                {
+                    ModuleId = adminModule.Id,
+                    Code = "ADMIN_CATALOG",
+                    Title = "Designer métadonnées",
+                    ParentId = adminRootMenu.Id,
+                    Icon = "DatabaseLink20Regular",
+                    Route = "/admin/catalog",
+                    Path = "/admin/catalog",
+                    IsLeaf = true,
+                    Order = adminRootMenu.Order + 1,
+                    TenantId = 1,
+                    Actif = true,
+                    DtCreation = utcNow,
+                    UsrCreationId = 1
+                };
+                appDb.SMenu.Add(designerMenu);
+                await appDb.SaveChangesAsync();
+            }
+        }
+
         /// <summary>
         /// Donne tous les droits Menu au groupe Administrateurs.
         /// À appeler après création des menus.

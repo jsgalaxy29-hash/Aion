@@ -26,5 +26,11 @@ namespace Aion.DataEngine.Interfaces
         /// <param name="value">Value to store.</param>
         /// <param name="expiration">Absolute expiration relative to now.</param>
         Task SetAsync<T>(string key, T value, TimeSpan expiration);
+
+        /// <summary>
+        /// Removes an entry from the cache if it exists.
+        /// </summary>
+        /// <param name="key">Cache key.</param>
+        Task RemoveAsync(string key);
     }
 }

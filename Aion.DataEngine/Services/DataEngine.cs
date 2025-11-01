@@ -6,6 +6,7 @@ using System.Data;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Aion.DataEngine.Services
 {
@@ -29,16 +30,20 @@ namespace Aion.DataEngine.Services
         /// </summary>
         private const string ChampsCacheKeyPrefix = "Aion.DataEngine.Fields.";
 
-        public DataEngine(IDataProvider db, IClock clock)
+        public DataEngine(IDataProvider db, IUserContext user, IClock clock)
+            : this(db,
+                  user,
+                  clock,
+                  new SimpleValidationService(),
+                  new NoOpHistorizationService(),
+                  new MemoryCacheService(new MemoryCache(new MemoryCacheOptions())))
         {
-            _db = db ?? throw new ArgumentNullException(nameof(db)); ;
-            _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         }
 
         public DataEngine(IDataProvider db, IUserContext user, IClock clock, IValidationService validator, IHistorizationService historizer, ICacheService cache)
         {
-            _db = db ?? throw new ArgumentNullException(nameof(db)); ; 
-            _user = user ?? throw new ArgumentNullException(nameof(user)); 
+            _db = db ?? throw new ArgumentNullException(nameof(db)); ;
+            _user = user ?? throw new ArgumentNullException(nameof(user));
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _validator = validator ?? throw new ArgumentNullException(nameof(validator));
             _historizer = historizer ?? throw new ArgumentNullException(nameof(historizer));
@@ -134,7 +139,7 @@ namespace Aion.DataEngine.Services
             }
 
             // Invalidate cached metadata.
-            await _cache.SetAsync(TablesCacheKey, (IList<STable>?)null!, TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+            await _cache.RemoveAsync(TablesCacheKey).ConfigureAwait(false);
         }
 
 
@@ -228,7 +233,7 @@ namespace Aion.DataEngine.Services
             }
 
             // Invalidate cached metadata.
-            await _cache.SetAsync(TablesCacheKey, (IList<STable>?)null!, TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+            await _cache.RemoveAsync(TablesCacheKey).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -457,6 +462,31 @@ namespace Aion.DataEngine.Services
                          SET Deleted=0, DtSuppression=NULL, UsrSuppressionId=NULL
                          WHERE ID=@ID;";
             return await _db.ExecuteNonQueryAsync(sql, new Dictionary<string, object?> { ["@ID"] = id });
+        }
+
+        public Task InvalidateMetadataAsync(int tableId, string? tableName = null)
+        {
+            if (_cache == null)
+            {
+                return Task.CompletedTask;
+            }
+
+            var tasks = new List<Task>
+            {
+                _cache.RemoveAsync(TablesCacheKey)
+            };
+
+            if (!string.IsNullOrWhiteSpace(tableName))
+            {
+                tasks.Add(_cache.RemoveAsync($"{TablesCacheKey}:{tableName}"));
+            }
+
+            if (tableId > 0)
+            {
+                tasks.Add(_cache.RemoveAsync(ChampsCacheKeyPrefix + tableId));
+            }
+
+            return Task.WhenAll(tasks);
         }
 
         private static Dictionary<string, object?> ToParams(IDictionary<string, object?> src)
