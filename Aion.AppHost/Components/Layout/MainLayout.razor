@@ -3,17 +3,13 @@
 @inject NavigationManager Nav
 
 <CascadingAuthenticationState>
-    <div class="aion-shell">
-        <!-- Zone de navigation principale -->
-        <aside class="aion-nav">
+    <div style="display:grid;grid-template-columns:280px 1fr;height:100vh;overflow:hidden;">
+        <aside style="border-right:1px solid #ddd;overflow:auto;">
             <OutlookBar />
         </aside>
 
-        <!-- Zone de contenu modules -->
-        <main class="aion-content">
-            <div class="aion-content-inner">
-                @Body
-            </div>
+        <main style="overflow:auto;">
+            <TabHost />
         </main>
     </div>
 </CascadingAuthenticationState>
