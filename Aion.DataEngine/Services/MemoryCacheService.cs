@@ -14,7 +14,12 @@ namespace Aion.DataEngine.Services
     /// </summary>
     public class MemoryCacheService : ICacheService
     {
-        private readonly MemoryCache _cache = new(new MemoryCacheOptions());
+        private readonly IMemoryCache _cache;
+
+        public MemoryCacheService(IMemoryCache cache)
+        {
+            _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        }
 
         /// <inheritdoc />
         public Task<T?> GetAsync<T>(string key)
@@ -26,6 +31,12 @@ namespace Aion.DataEngine.Services
         public Task SetAsync<T>(string key, T value, TimeSpan expiration)
         {
             _cache.Set(key, value, expiration);
+            return Task.CompletedTask;
+        }
+
+        public Task RemoveAsync(string key)
+        {
+            _cache.Remove(key);
             return Task.CompletedTask;
         }
     }

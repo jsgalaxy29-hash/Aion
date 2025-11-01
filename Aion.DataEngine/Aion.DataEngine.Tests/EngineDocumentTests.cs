@@ -11,7 +11,7 @@ namespace Aion.DataEngine.Tests
     public class EngineDocumentTests
     {
         private readonly InMemoryDataProvider _db = new();
-        private readonly IUserContext _user = new StaticUserContext { CurrentUserId = 99, SystemUserId = 1 };
+        private readonly IUserContext _user = new StaticUserContext { CurrentUserId = 99, Tenant = 1 };
         private readonly IClock _clock = new SystemClock();
 
         private DataEngine CreateEngine() => new DataEngine(_db, _user, _clock);
