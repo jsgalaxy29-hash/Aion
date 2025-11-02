@@ -82,5 +82,20 @@ namespace Aion.DataEngine.Interfaces
         /// <param name="tableId">Identifier of the table in STable.</param>
         /// <param name="tableName">Optional physical table name.</param>
         Task InvalidateMetadataAsync(int tableId, string? tableName = null);
+
+        /// <summary>
+        /// Retrieves metadata for a table stored dans STable.
+        /// </summary>
+        Task<STable?> GetTableMetadataAsync(string tableName);
+
+        /// <summary>
+        /// Retrieves the collection of fields for the specified table identifier.
+        /// </summary>
+        Task<IList<SField>> GetFieldsMetadataAsync(int tableId);
+
+        /// <summary>
+        /// Retrieves all rows of a reference table optionally filtered by a WHERE clause.
+        /// </summary>
+        Task<DataTable> GetReferentialAsync(string tableName, string? whereClause);
     }
 }

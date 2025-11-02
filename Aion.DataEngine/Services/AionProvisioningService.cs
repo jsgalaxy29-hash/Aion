@@ -242,6 +242,7 @@ BEGIN
     Libelle NVARCHAR(255) NOT NULL,
     IsLeaf BIT NOT NULL DEFAULT(1),
     Icon NVARCHAR(100) NULL,
+    Parametre NVARCHAR(MAX) NULL,
     [Order] INT NOT NULL DEFAULT(0),
     TenantId INT NOT NULL DEFAULT(1),
     Actif BIT NOT NULL DEFAULT(1),
@@ -262,7 +263,14 @@ BEGIN
   PRINT 'Table SMenu créée';
 END
 ELSE
+BEGIN
   PRINT 'Table SMenu existe déjà';
+  IF COL_LENGTH('dbo.SMenu','Parametre') IS NULL
+  BEGIN
+    ALTER TABLE dbo.SMenu ADD Parametre NVARCHAR(MAX) NULL;
+    PRINT 'Colonne Parametre ajoutée à SMenu';
+  END
+END
 
 IF OBJECT_ID('dbo.SModule','U') IS NULL
 BEGIN

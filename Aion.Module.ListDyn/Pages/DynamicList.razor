@@ -1,0 +1,88 @@
+@page "/dynamic/list"
+@page "/dynamic/list/{TableName}"
+@inject IDataEngine DataEngine
+@inject ITabService Tabs
+
+<PageTitle>@(_tableTitle ?? TableName ?? "Liste dynamique")</PageTitle>
+
+@if (string.IsNullOrWhiteSpace(TableName))
+{
+    <div class="alert alert-info">Aucune table sélectionnée.</div>
+}
+else if (_isLoading)
+{
+    <div class="d-flex align-items-center gap-2"><FluentProgressRing /> Chargement...</div>
+}
+else if (!string.IsNullOrEmpty(_errorMessage))
+{
+    <div class="text-danger">@_errorMessage</div>
+}
+else
+{
+    <div class="mb-3">
+        <h1 class="h4 mb-1">@(_tableTitle ?? TableName)</h1>
+        <p class="text-muted">Affichage dynamique de la table <strong>@TableName</strong>.</p>
+    </div>
+    <AionDataGrid TableName="@TableName" OnRowDoubleClick="OnRowDoubleClick" />
+}
+
+@code {
+    [Parameter] public string? TableName { get; set; }
+    private string? _currentTable;
+    private string? _tableTitle;
+    private string? _errorMessage;
+    private bool _isLoading;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (string.Equals(TableName, _currentTable, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _currentTable = TableName;
+        _tableTitle = null;
+        _errorMessage = null;
+
+        if (string.IsNullOrWhiteSpace(TableName))
+        {
+            return;
+        }
+
+        _isLoading = true;
+        try
+        {
+            var table = await DataEngine.GetTableMetadataAsync(TableName!);
+            _tableTitle = table?.Description ?? table?.Libelle;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task OnRowDoubleClick(DynamicRow row)
+    {
+        if (string.IsNullOrWhiteSpace(TableName) || row.PrimaryKeyValue is null || string.IsNullOrEmpty(row.PrimaryKeyName))
+        {
+            return;
+        }
+
+        var title = string.IsNullOrWhiteSpace(row.DisplayLabel)
+            ? $"{_tableTitle ?? TableName} #{row.PrimaryKeyValue}"
+            : row.DisplayLabel;
+
+        var parameters = new Dictionary<string, object?>
+        {
+            ["TableName"] = TableName!,
+            ["RowId"] = row.PrimaryKeyValue?.ToString(),
+            ["PrimaryKey"] = row.PrimaryKeyName
+        };
+
+        await Tabs.OpenAsync(title, "/dynamic/form", parameters, true, CancellationToken.None);
+    }
+}

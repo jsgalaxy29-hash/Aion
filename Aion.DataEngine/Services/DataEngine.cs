@@ -542,7 +542,7 @@ namespace Aion.DataEngine.Services
         /// an in‑memory cache to avoid repeated lookups.
         /// </summary>
         /// <param name="tableName">Physical table name (LIBELLE).</param>
-        private async Task<STable?> GetTableMetadataAsync(string tableName)
+        public async Task<STable?> GetTableMetadataAsync(string tableName)
         {
             var cacheKey = $"{TablesCacheKey}:{tableName}";
             var cached = await _cache.GetAsync<STable>(cacheKey).ConfigureAwait(false);
@@ -578,7 +578,7 @@ namespace Aion.DataEngine.Services
         /// Uses an in‑memory cache to avoid repeated lookups.
         /// </summary>
         /// <param name="tableId">Identifier of the table (S_TABLE.Id).</param>
-        private async Task<IList<SField>> GetFieldsMetadataAsync(int tableId)
+        public async Task<IList<SField>> GetFieldsMetadataAsync(int tableId)
         {
             var cacheKey = ChampsCacheKeyPrefix + tableId;
             var cached = await _cache.GetAsync<IList<SField>>(cacheKey).ConfigureAwait(false);
@@ -640,6 +640,19 @@ namespace Aion.DataEngine.Services
             }
             await _cache.SetAsync(cacheKey, champs, TimeSpan.FromMinutes(5)).ConfigureAwait(false);
             return champs;
+        }
+
+        public async Task<DataTable> GetReferentialAsync(string tableName, string? whereClause)
+        {
+            if (string.IsNullOrWhiteSpace(tableName)) throw new ArgumentNullException(nameof(tableName));
+
+            var sql = $"SELECT * FROM [{tableName}]";
+            if (!string.IsNullOrWhiteSpace(whereClause))
+            {
+                sql += $" WHERE {whereClause}";
+            }
+
+            return await _db.ExecuteQueryAsync(sql).ConfigureAwait(false);
         }
         #endregion
     }

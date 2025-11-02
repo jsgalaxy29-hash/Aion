@@ -1,0 +1,889 @@
+@inject Aion.DataEngine.Interfaces.IDataEngine DataEngine
+@inject Aion.DataEngine.Interfaces.IUserContext UserContext
+@inject IDynamicLayoutStore LayoutStore
+
+<div class="aion-grid">
+    @if (_isLoading)
+    {
+        <div class="d-flex align-items-center gap-2"><FluentProgressRing /> Chargement de la table...</div>
+    }
+    else if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="text-danger">@_errorMessage</div>
+    }
+    else if (_tableMetadata is null)
+    {
+        <div class="text-muted">Table inconnue.</div>
+    }
+    else
+    {
+        <div class="grid-toolbar">
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                <h2 class="h5 mb-0">@_tableMetadata.Libelle</h2>
+                <FluentButton Appearance="Appearance.Accent" OnClick="CreateRow">Nouvelle ligne</FluentButton>
+                <FluentButton Appearance="Appearance.Stealth" OnClick="ReloadAsync" Icon="ArrowClockwise16Filled">Rafraîchir</FluentButton>
+                <FluentButton Appearance="Appearance.Outline" OnClick="OpenLayoutEditor" Icon="Settings20Regular">Personnaliser</FluentButton>
+            </div>
+            <div class="text-muted small">@(_filteredCount) ligne(s) - page @_page / @_pageCount</div>
+        </div>
+
+        @if (_searchableColumns.Count > 0)
+        {
+            <div class="search-panel mb-3">
+                <h3 class="h6">Filtres</h3>
+                <div class="search-grid">
+                    @foreach (var column in _searchableColumns)
+                    {
+                        <div class="search-item">
+                            <label>@column.DisplayName</label>
+                            @switch (column.InputKind)
+                            {
+                                case DynamicColumnInputKind.Boolean:
+                                    <FluentSelect Value="GetSearchValue(column.FieldName)" ValueChanged="value => OnSearchChanged(column.FieldName, value)" Style="min-width:120px;">
+                                        <FluentOption Value="">(Tous)</FluentOption>
+                                        <FluentOption Value="true">Oui</FluentOption>
+                                        <FluentOption Value="false">Non</FluentOption>
+                                    </FluentSelect>
+                                    break;
+                                case DynamicColumnInputKind.Date:
+                                    <input type="date" class="form-control" value="@GetSearchValue(column.FieldName)" @onchange="e => OnSearchChanged(column.FieldName, e.Value?.ToString())" />
+                                    break;
+                                case DynamicColumnInputKind.DateTime:
+                                    <input type="datetime-local" class="form-control" value="@GetSearchValue(column.FieldName)" @onchange="e => OnSearchChanged(column.FieldName, e.Value?.ToString())" />
+                                    break;
+                                case DynamicColumnInputKind.Number or DynamicColumnInputKind.Decimal:
+                                    <input type="number" class="form-control" value="@GetSearchValue(column.FieldName)" @onchange="e => OnSearchChanged(column.FieldName, e.Value?.ToString())" />
+                                    break;
+                                case DynamicColumnInputKind.Select when column.Options is not null:
+                                    <FluentSelect Value="GetSearchValue(column.FieldName)" ValueChanged="value => OnSearchChanged(column.FieldName, value)" Style="min-width:180px;">
+                                        <FluentOption Value="">(Tous)</FluentOption>
+                                        @foreach (var option in column.Options)
+                                        {
+                                            <FluentOption Value="@option.Value">@option.Label</FluentOption>
+                                        }
+                                    </FluentSelect>
+                                    break;
+                                default:
+                                    <input type="text" class="form-control" value="@GetSearchValue(column.FieldName)" @onchange="e => OnSearchChanged(column.FieldName, e.Value?.ToString())" />
+                                    break;
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <div class="table-responsive">
+            <table class="table table-sm table-striped">
+                <thead>
+                    <tr>
+                        @foreach (var column in VisibleColumns)
+                        {
+                            var isSorted = string.Equals(_sortColumn?.FieldName, column.FieldName, StringComparison.OrdinalIgnoreCase);
+                            <th role="button" @onclick="() => SortBy(column)">
+                                @column.DisplayName
+                                @if (isSorted)
+                                {
+                                    <span>@(_sortDescending ? "▼" : "▲")</span>
+                                }
+                            </th>
+                        }
+                        <th style="width:160px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (_viewRows.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="@(VisibleColumns.Count + 1)" class="text-center text-muted">Aucune donnée.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var row in _viewRows)
+                        {
+                            <tr ondblclick="@(async () => await HandleRowDoubleClick(row))">
+                                @foreach (var column in VisibleColumns)
+                                {
+                                    <td>
+                                        @if (row.IsEditing)
+                                        {
+                                            @RenderEditCell(row, column)
+                                        }
+                                        else
+                                        {
+                                            @RenderReadCell(row, column)
+                                        }
+                                    </td>
+                                }
+                                <td class="text-nowrap">
+                                    @if (row.IsEditing)
+                                    {
+                                        <FluentButton Appearance="Appearance.Accent" Size="ControlSize.Small" OnClick="() => SaveRowAsync(row)">Sauver</FluentButton>
+                                        <FluentButton Appearance="Appearance.Stealth" Size="ControlSize.Small" OnClick="() => CancelEdit(row)">Annuler</FluentButton>
+                                    }
+                                    else
+                                    {
+                                        <FluentButton Appearance="Appearance.Stealth" Size="ControlSize.Small" OnClick="() => StartEdit(row)">Modifier</FluentButton>
+                                        <FluentButton Appearance="Appearance.Outline" Size="ControlSize.Small" OnClick="() => DeleteRowAsync(row)">Supprimer</FluentButton>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mt-2">
+            <div class="d-flex align-items-center gap-2">
+                <label>Page</label>
+                <FluentButton Appearance="Appearance.Stealth" Disabled="@(_page <= 1)" OnClick="PrevPage">◀</FluentButton>
+                <span>@_page / @_pageCount</span>
+                <FluentButton Appearance="Appearance.Stealth" Disabled="@(_page >= _pageCount)" OnClick="NextPage">▶</FluentButton>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <label>Elements / page</label>
+                <select class="form-select" value="@_pageSize" @onchange="OnPageSizeChanged">
+                    @foreach (var size in _pageSizes)
+                    {
+                        <option value="@size">@size</option>
+                    }
+                </select>
+            </div>
+        </div>
+    }
+
+    <FluentDialog IsOpen="@_layoutEditorOpen" Title="Personnalisation de la grille" OnDismiss="CloseLayoutEditor">
+        <div class="layout-editor">
+            <div class="mb-2">
+                <label>Éléments par page</label>
+                <input type="number" min="5" max="200" value="@_pageSizeDraft" @onchange="e => OnLayoutPageSizeChanged(e.Value?.ToString())" class="form-control" />
+            </div>
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Colonne</th>
+                        <th>Visible</th>
+                        <th>Ordre</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var column in _columnsDraft)
+                    {
+                        <tr>
+                            <td>@column.DisplayName</td>
+                            <td>
+                                <input type="checkbox" checked="@column.Visible" @onchange="e => column.Visible = ParseCheckbox(e.Value)" />
+                            </td>
+                            <td>
+                                <input type="number" class="form-control" value="@column.Order" @onchange="e => OnColumnOrderChanged(column, e.Value?.ToString())" />
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <div class="d-flex justify-content-end gap-2">
+                <FluentButton Appearance="Appearance.Accent" OnClick="SaveLayoutAsync">Sauvegarder</FluentButton>
+                <FluentButton Appearance="Appearance.Stealth" OnClick="CloseLayoutEditor">Fermer</FluentButton>
+            </div>
+        </div>
+    </FluentDialog>
+</div>
+
+@code {
+    [Parameter] public string TableName { get; set; } = string.Empty;
+    [Parameter] public EventCallback<DynamicRow> OnRowDoubleClick { get; set; }
+
+    private STable? _tableMetadata;
+    private readonly List<DynamicColumnDefinition> _columns = new();
+    private readonly List<DynamicRow> _rows = new();
+    private readonly Dictionary<string, string?> _searchValues = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<int> _pageSizes = new() { 10, 20, 50, 100 };
+    private readonly List<DynamicColumnDefinition> _columnsDraft = new();
+    private readonly List<DynamicRow> _viewRows = new();
+    private readonly List<DynamicColumnDefinition> _searchableColumns = new();
+
+    private DynamicColumnDefinition? _sortColumn;
+    private bool _sortDescending;
+    private bool _isLoading = true;
+    private bool _layoutEditorOpen;
+    private int _page = 1;
+    private int _pageSize = 20;
+    private int _pageSizeDraft = 20;
+    private int _pageCount = 1;
+    private int _filteredCount = 0;
+    private string? _errorMessage;
+    private string? _loadedTableName;
+
+    private IReadOnlyList<DynamicColumnDefinition> VisibleColumns
+        => _columns.Where(c => c.Visible).OrderBy(c => c.Order).ToList();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.Equals(TableName, _loadedTableName, StringComparison.OrdinalIgnoreCase))
+        {
+            await LoadAsync();
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        _loadedTableName = TableName;
+        _columns.Clear();
+        _rows.Clear();
+        _searchValues.Clear();
+        _searchableColumns.Clear();
+        _sortColumn = null;
+        _sortDescending = false;
+        StateHasChanged();
+
+        if (string.IsNullOrWhiteSpace(TableName))
+        {
+            _tableMetadata = null;
+            _isLoading = false;
+            return;
+        }
+
+        try
+        {
+            _tableMetadata = await DataEngine.GetTableMetadataAsync(TableName);
+            if (_tableMetadata is null)
+            {
+                _errorMessage = $"Table '{TableName}' introuvable.";
+                _isLoading = false;
+                return;
+            }
+
+            var fields = await DataEngine.GetFieldsMetadataAsync(_tableMetadata.Id);
+            foreach (var field in fields.OrderBy(f => f.Ordre ?? int.MaxValue).ThenBy(f => f.Libelle))
+            {
+                if (!field.IsLinkToBdd)
+                {
+                    continue;
+                }
+
+                var column = new DynamicColumnDefinition(field);
+                _columns.Add(column);
+                if (column.IsSearchable)
+                {
+                    _searchableColumns.Add(column);
+                    if (!string.IsNullOrWhiteSpace(column.DefaultSearchValue))
+                    {
+                        _searchValues[column.FieldName] = column.DefaultSearchValue;
+                    }
+                }
+            }
+
+            await LoadLayoutAsync();
+            await LoadReferentialsAsync();
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadReferentialsAsync()
+    {
+        foreach (var column in _columns.Where(c => c.IsReference))
+        {
+            try
+            {
+                var dt = await DataEngine.GetReferentialAsync(column.Field.Referentiel!, column.Field.ReferentielWhereClause);
+                var options = new List<DynamicOption>();
+                foreach (System.Data.DataRow row in dt.Rows)
+                {
+                    var value = row.Table.Columns.Contains("Id") ? row["Id"] : row[0];
+                    var label = row.Table.Columns.Contains("Libelle") ? row["Libelle"] : null;
+                    if (label is null)
+                    {
+                        label = row.Table.Columns.Cast<System.Data.DataColumn>()
+                            .Select(c => row[c])
+                            .FirstOrDefault(v => v is string);
+                    }
+
+                    options.Add(new DynamicOption
+                    {
+                        Value = value?.ToString() ?? string.Empty,
+                        Label = label?.ToString() ?? value?.ToString() ?? string.Empty
+                    });
+                }
+                column.Options = options;
+            }
+            catch
+            {
+                column.Options = new List<DynamicOption>();
+            }
+        }
+    }
+
+    private async Task LoadLayoutAsync()
+    {
+        try
+        {
+            var layout = await LayoutStore.LoadLayoutAsync(TableName, UserContext.TenantId, UserContext.UserId, CancellationToken.None);
+            if (layout != null)
+            {
+                foreach (var column in _columns)
+                {
+                    var persisted = layout.Columns.FirstOrDefault(c => string.Equals(c.FieldName, column.FieldName, StringComparison.OrdinalIgnoreCase));
+                    if (persisted != null)
+                    {
+                        column.Visible = persisted.Visible;
+                        column.Order = persisted.Order;
+                    }
+                }
+                if (layout.PageSize > 0)
+                {
+                    _pageSize = layout.PageSize;
+                }
+            }
+        }
+        catch
+        {
+            // Ignorer les erreurs de lecture de layout
+        }
+        finally
+        {
+            _page = 1;
+            _pageCount = 1;
+            _pageSizeDraft = _pageSize;
+        }
+    }
+
+    private async Task LoadDataAsync()
+    {
+        var dt = await DataEngine.GetAllAsync(TableName);
+        _rows.Clear();
+
+        DynamicColumnDefinition? primaryKeyColumn = _columns.FirstOrDefault(c => c.IsPrimaryKey)
+            ?? _columns.FirstOrDefault(c => string.Equals(c.FieldName, "Id", StringComparison.OrdinalIgnoreCase));
+
+        foreach (System.Data.DataRow dataRow in dt.Rows)
+        {
+            var dict = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+            foreach (System.Data.DataColumn col in dt.Columns)
+            {
+                var value = dataRow[col];
+                dict[col.ColumnName] = value == DBNull.Value ? null : value;
+            }
+
+            var row = new DynamicRow(dict)
+            {
+                PrimaryKeyName = primaryKeyColumn?.FieldName,
+                PrimaryKeyValue = primaryKeyColumn is not null && dict.TryGetValue(primaryKeyColumn.FieldName, out var pk) ? pk : null,
+            };
+
+            var firstColumn = VisibleColumns.FirstOrDefault();
+            row.DisplayLabel = firstColumn is not null ? row.GetValueAsString(firstColumn.FieldName) : null;
+            _rows.Add(row);
+        }
+
+        ApplyFilters();
+    }
+
+    private void ApplyFilters()
+    {
+        IEnumerable<DynamicRow> query = _rows;
+
+        foreach (var kvp in _searchValues)
+        {
+            if (string.IsNullOrWhiteSpace(kvp.Value))
+            {
+                continue;
+            }
+
+            var column = _columns.FirstOrDefault(c => string.Equals(c.FieldName, kvp.Key, StringComparison.OrdinalIgnoreCase));
+            if (column is null)
+            {
+                continue;
+            }
+
+            query = query.Where(row => FilterRow(row, column, kvp.Value!));
+        }
+
+        if (_sortColumn is not null)
+        {
+            query = _sortDescending
+                ? query.OrderByDescending(row => row.GetValue(_sortColumn.FieldName))
+                : query.OrderBy(row => row.GetValue(_sortColumn.FieldName));
+        }
+
+        var result = query.ToList();
+        _filteredCount = result.Count;
+        _pageCount = Math.Max(1, (int)Math.Ceiling(_filteredCount / (double)_pageSize));
+        if (_page > _pageCount)
+        {
+            _page = _pageCount;
+        }
+        var skip = (_page - 1) * _pageSize;
+        _viewRows.Clear();
+        _viewRows.AddRange(result.Skip(skip).Take(_pageSize));
+    }
+
+    private bool FilterRow(DynamicRow row, DynamicColumnDefinition column, string filterValue)
+    {
+        var rowValue = row.GetValue(column.FieldName);
+        if (rowValue is null)
+        {
+            return false;
+        }
+
+        var op = column.SearchOperator?.Trim().ToLowerInvariant() ?? "contains";
+        if (column.InputKind == DynamicColumnInputKind.Boolean)
+        {
+            if (bool.TryParse(filterValue, out var boolFilter) && rowValue is bool boolValue)
+            {
+                return boolValue == boolFilter;
+            }
+            return false;
+        }
+
+        if (column.InputKind == DynamicColumnInputKind.Number || column.InputKind == DynamicColumnInputKind.Decimal)
+        {
+            if (decimal.TryParse(filterValue, out var numericFilter) && decimal.TryParse(Convert.ToString(rowValue), out var numericRow))
+            {
+                return op switch
+                {
+                    "=" or "eq" => numericRow == numericFilter,
+                    "!=" or "ne" => numericRow != numericFilter,
+                    ">" => numericRow > numericFilter,
+                    ">=" => numericRow >= numericFilter,
+                    "<" => numericRow < numericFilter,
+                    "<=" => numericRow <= numericFilter,
+                    _ => numericRow == numericFilter
+                };
+            }
+            return false;
+        }
+
+        if (column.InputKind == DynamicColumnInputKind.Date || column.InputKind == DynamicColumnInputKind.DateTime)
+        {
+            if (DateTime.TryParse(filterValue, out var dateFilter) && DateTime.TryParse(Convert.ToString(rowValue), out var dateRow))
+            {
+                return op switch
+                {
+                    "=" or "eq" => dateRow.Date == dateFilter.Date,
+                    ">" => dateRow > dateFilter,
+                    ">=" => dateRow >= dateFilter,
+                    "<" => dateRow < dateFilter,
+                    "<=" => dateRow <= dateFilter,
+                    _ => dateRow.Date == dateFilter.Date
+                };
+            }
+            return false;
+        }
+
+        var str = Convert.ToString(rowValue) ?? string.Empty;
+        return op switch
+        {
+            "=" or "eq" => string.Equals(str, filterValue, StringComparison.OrdinalIgnoreCase),
+            "!=" or "ne" => !string.Equals(str, filterValue, StringComparison.OrdinalIgnoreCase),
+            "starts" => str.StartsWith(filterValue, StringComparison.OrdinalIgnoreCase),
+            "ends" => str.EndsWith(filterValue, StringComparison.OrdinalIgnoreCase),
+            _ => str.Contains(filterValue, StringComparison.OrdinalIgnoreCase)
+        };
+    }
+
+    private void SortBy(DynamicColumnDefinition column)
+    {
+        if (_sortColumn == column)
+        {
+            _sortDescending = !_sortDescending;
+        }
+        else
+        {
+            _sortColumn = column;
+            _sortDescending = false;
+        }
+        ApplyFilters();
+    }
+
+    private void OnSearchChanged(string fieldName, string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            _searchValues.Remove(fieldName);
+        }
+        else
+        {
+            _searchValues[fieldName] = value;
+        }
+        _page = 1;
+        ApplyFilters();
+    }
+
+    private string? GetSearchValue(string fieldName)
+        => _searchValues.TryGetValue(fieldName, out var value) ? value : string.Empty;
+
+    private void PrevPage()
+    {
+        if (_page > 1)
+        {
+            _page--;
+            ApplyFilters();
+        }
+    }
+
+    private void NextPage()
+    {
+        if (_page < _pageCount)
+        {
+            _page++;
+            ApplyFilters();
+        }
+    }
+
+    private void OnPageSizeChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var size) && size > 0)
+        {
+            _pageSize = size;
+            _pageSizeDraft = size;
+            _page = 1;
+            ApplyFilters();
+        }
+    }
+
+    private RenderFragment RenderReadCell(DynamicRow row, DynamicColumnDefinition column) => builder =>
+    {
+        var value = row.GetValue(column.FieldName);
+        if (column.InputKind == DynamicColumnInputKind.Boolean && value is bool boolValue)
+        {
+            builder.AddContent(0, boolValue ? "Oui" : "Non");
+        }
+        else if (column.IsReference && column.Options is not null)
+        {
+            var strValue = value?.ToString();
+            var label = column.Options.FirstOrDefault(o => string.Equals(o.Value, strValue, StringComparison.OrdinalIgnoreCase))?.Label ?? strValue;
+            builder.AddContent(1, label);
+        }
+        else
+        {
+            builder.AddContent(2, row.GetValueAsString(column.FieldName));
+        }
+    };
+
+    private RenderFragment RenderEditCell(DynamicRow row, DynamicColumnDefinition column) => builder =>
+    {
+        switch (column.InputKind)
+        {
+            case DynamicColumnInputKind.Boolean:
+                builder.OpenElement(0, "input");
+                builder.AddAttribute(1, "type", "checkbox");
+                builder.AddAttribute(2, "checked", row.GetEditBool(column.FieldName));
+                builder.AddAttribute(3, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this, e => row.SetEditBool(column.FieldName, ParseCheckbox(e.Value))));
+                builder.CloseElement();
+                break;
+            case DynamicColumnInputKind.Date:
+                builder.OpenElement(0, "input");
+                builder.AddAttribute(1, "type", "date");
+                builder.AddAttribute(2, "class", "form-control");
+                builder.AddAttribute(3, "value", row.GetEditValue(column.FieldName));
+                builder.AddAttribute(4, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this, e => row.SetEditValue(column.FieldName, e.Value?.ToString())));
+                builder.CloseElement();
+                break;
+            case DynamicColumnInputKind.DateTime:
+                builder.OpenElement(0, "input");
+                builder.AddAttribute(1, "type", "datetime-local");
+                builder.AddAttribute(2, "class", "form-control");
+                builder.AddAttribute(3, "value", row.GetEditValue(column.FieldName));
+                builder.AddAttribute(4, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this, e => row.SetEditValue(column.FieldName, e.Value?.ToString())));
+                builder.CloseElement();
+                break;
+            case DynamicColumnInputKind.Number or DynamicColumnInputKind.Decimal:
+                builder.OpenElement(0, "input");
+                builder.AddAttribute(1, "type", "number");
+                builder.AddAttribute(2, "class", "form-control");
+                builder.AddAttribute(3, "value", row.GetEditValue(column.FieldName));
+                builder.AddAttribute(4, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this, e => row.SetEditValue(column.FieldName, e.Value?.ToString())));
+                builder.CloseElement();
+                break;
+            case DynamicColumnInputKind.Select when column.Options is not null:
+                builder.OpenElement(0, "select");
+                builder.AddAttribute(1, "class", "form-select");
+                builder.AddAttribute(2, "value", row.GetEditValue(column.FieldName));
+                builder.AddAttribute(3, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this, e => row.SetEditValue(column.FieldName, e.Value?.ToString())));
+                foreach (var option in column.Options)
+                {
+                    builder.OpenElement(4, "option");
+                    builder.AddAttribute(5, "value", option.Value);
+                    builder.AddContent(6, option.Label);
+                    builder.CloseElement();
+                }
+                builder.CloseElement();
+                break;
+            default:
+                builder.OpenElement(0, "input");
+                builder.AddAttribute(1, "type", "text");
+                builder.AddAttribute(2, "class", "form-control");
+                builder.AddAttribute(3, "value", row.GetEditValue(column.FieldName));
+                builder.AddAttribute(4, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this, e => row.SetEditValue(column.FieldName, e.Value?.ToString())));
+                builder.CloseElement();
+                break;
+        }
+    };
+
+    private async Task SaveRowAsync(DynamicRow row)
+    {
+        try
+        {
+            var values = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+            foreach (var column in _columns)
+            {
+                if (column.IsPrimaryKey && row.IsNew)
+                {
+                    continue;
+                }
+
+                if (column.IsPrimaryKey && !row.IsNew)
+                {
+                    continue;
+                }
+
+                var rawValue = row.GetEditValue(column.FieldName);
+                var typedValue = ConvertToType(column, rawValue);
+                values[column.FieldName] = typedValue;
+            }
+
+            if (row.IsNew)
+            {
+                await DataEngine.InsertAsync(TableName, values);
+            }
+            else if (row.HasPrimaryKey && row.PrimaryKeyValue is not null)
+            {
+                await DataEngine.UpdateAsync(TableName, row.PrimaryKeyName!, row.PrimaryKeyValue, values);
+            }
+
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private async Task DeleteRowAsync(DynamicRow row)
+    {
+        if (!row.HasPrimaryKey || row.PrimaryKeyValue is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await DataEngine.DeleteAsync(TableName, row.PrimaryKeyName!, row.PrimaryKeyValue);
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private void StartEdit(DynamicRow row)
+    {
+        row.IsEditing = true;
+        row.IsNew = false;
+        row.ClearEditValues();
+        foreach (var column in _columns)
+        {
+            if (row.GetValue(column.FieldName) is { } value)
+            {
+                if (column.InputKind == DynamicColumnInputKind.Boolean && value is bool boolValue)
+                {
+                    row.SetEditBool(column.FieldName, boolValue);
+                }
+                else
+                {
+                    row.SetEditValue(column.FieldName, value?.ToString());
+                }
+            }
+        }
+    }
+
+    private void CancelEdit(DynamicRow row)
+    {
+        if (row.IsNew)
+        {
+            _rows.Remove(row);
+        }
+        else
+        {
+            row.IsEditing = false;
+            row.IsNew = false;
+            row.ClearEditValues();
+        }
+        ApplyFilters();
+    }
+
+    private void CreateRow()
+    {
+        var dict = _columns.ToDictionary(c => c.FieldName, _ => (object?)null, StringComparer.OrdinalIgnoreCase);
+        var row = new DynamicRow(dict)
+        {
+            IsNew = true,
+            IsEditing = true,
+            PrimaryKeyName = _columns.FirstOrDefault(c => c.IsPrimaryKey)?.FieldName
+        };
+        _rows.Insert(0, row);
+        _page = 1;
+        ApplyFilters();
+    }
+
+    private async Task ReloadAsync()
+        => await LoadAsync();
+
+    private object? ConvertToType(DynamicColumnDefinition column, string? rawValue)
+    {
+        if (string.IsNullOrWhiteSpace(rawValue))
+        {
+            return column.IsNullable ? null : rawValue;
+        }
+
+        var type = column.DataType.ToLowerInvariant();
+        try
+        {
+            if (column.InputKind == DynamicColumnInputKind.Boolean)
+            {
+                return bool.TryParse(rawValue, out var boolValue) && boolValue;
+            }
+            if (column.InputKind == DynamicColumnInputKind.Number)
+            {
+                return int.TryParse(rawValue, out var intValue) ? intValue : Convert.ToInt32(rawValue);
+            }
+            if (column.InputKind == DynamicColumnInputKind.Decimal)
+            {
+                return decimal.TryParse(rawValue, out var dec) ? dec : Convert.ToDecimal(rawValue);
+            }
+            if (column.InputKind == DynamicColumnInputKind.Date || column.InputKind == DynamicColumnInputKind.DateTime)
+            {
+                return DateTime.TryParse(rawValue, out var date) ? date : rawValue;
+            }
+            if (type.Contains("bigint"))
+            {
+                return long.TryParse(rawValue, out var l) ? l : Convert.ToInt64(rawValue);
+            }
+            if (type.Contains("uniqueidentifier"))
+            {
+                return Guid.TryParse(rawValue, out var guid) ? guid : null;
+            }
+            if (column.IsReference)
+            {
+                if (int.TryParse(rawValue, out var refId))
+                {
+                    return refId;
+                }
+            }
+        }
+        catch
+        {
+            return rawValue;
+        }
+
+        return rawValue;
+    }
+
+    private async Task HandleRowDoubleClick(DynamicRow row)
+    {
+        if (OnRowDoubleClick.HasDelegate)
+        {
+            await OnRowDoubleClick.InvokeAsync(row);
+        }
+    }
+
+    private void CloseLayoutEditor()
+    {
+        _layoutEditorOpen = false;
+    }
+
+    private void OnLayoutPageSizeChanged(string? value)
+    {
+        if (int.TryParse(value, out var pageSize) && pageSize > 0)
+        {
+            _pageSizeDraft = pageSize;
+        }
+    }
+
+    private void OnColumnOrderChanged(DynamicColumnDefinition column, string? value)
+    {
+        if (int.TryParse(value, out var order))
+        {
+            column.Order = order;
+        }
+    }
+
+    private async Task SaveLayoutAsync()
+    {
+        var layout = new DynamicGridLayout
+        {
+            PageSize = _pageSizeDraft,
+            Columns = _columnsDraft.Select(c => new DynamicGridColumnLayout
+            {
+                FieldName = c.FieldName,
+                Visible = c.Visible,
+                Order = c.Order
+            }).ToList()
+        };
+
+        await LayoutStore.SaveLayoutAsync(TableName, UserContext.TenantId, UserContext.UserId, layout, CancellationToken.None);
+
+        foreach (var draft in _columnsDraft)
+        {
+            var column = _columns.FirstOrDefault(c => string.Equals(c.FieldName, draft.FieldName, StringComparison.OrdinalIgnoreCase));
+            if (column is null)
+            {
+                continue;
+            }
+            column.Visible = draft.Visible;
+            column.Order = draft.Order;
+        }
+
+        _pageSize = _pageSizeDraft;
+        _layoutEditorOpen = false;
+        _page = 1;
+        ApplyFilters();
+    }
+
+    private void PrepareLayoutDraft()
+    {
+        _columnsDraft.Clear();
+        foreach (var column in _columns)
+        {
+            _columnsDraft.Add(new DynamicColumnDefinition(column.Field)
+            {
+                Visible = column.Visible,
+                Order = column.Order
+            });
+        }
+        _pageSizeDraft = _pageSize;
+    }
+
+    private void OpenLayoutEditor()
+    {
+        PrepareLayoutDraft();
+        _layoutEditorOpen = true;
+    }
+
+    private static bool ParseCheckbox(object? value)
+    {
+        return value switch
+        {
+            bool b => b,
+            string s => s.Equals("true", StringComparison.OrdinalIgnoreCase) || s.Equals("on", StringComparison.OrdinalIgnoreCase),
+            _ => false
+        };
+    }
+
+    private string? GetDisplayValue(DynamicRow row, DynamicColumnDefinition column)
+        => row.GetValueAsString(column.FieldName);
+}

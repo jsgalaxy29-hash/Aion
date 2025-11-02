@@ -1,0 +1,412 @@
+@page "/dynamic/form"
+@page "/dynamic/form/{TableName}"
+@page "/dynamic/form/{TableName}/{RowId}"
+@inject IDataEngine DataEngine
+
+<PageTitle>@(_tableTitle ?? TableName ?? "Formulaire")</PageTitle>
+
+@if (string.IsNullOrWhiteSpace(TableName))
+{
+    <div class="alert alert-info">Aucune table spécifiée.</div>
+}
+else if (_isLoading)
+{
+    <div class="d-flex align-items-center gap-2"><FluentProgressRing /> Chargement...</div>
+}
+else if (!string.IsNullOrEmpty(_errorMessage))
+{
+    <div class="text-danger">@_errorMessage</div>
+}
+else if (_table is null)
+{
+    <div class="alert alert-warning">Table introuvable.</div>
+}
+else
+{
+    <div class="mb-3">
+        <h1 class="h4 mb-1">@(_tableTitle ?? TableName)</h1>
+        <p class="text-muted">Edition d'un enregistrement de <strong>@TableName</strong>.</p>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_statusMessage))
+    {
+        <div class="alert alert-success">@_statusMessage</div>
+    }
+
+    <div class="form-grid">
+        @foreach (var column in _columns)
+        {
+            <div class="form-group">
+                <label>@column.DisplayName</label>
+                @RenderEditor(column)
+            </div>
+        }
+    </div>
+
+    <div class="d-flex gap-2 mt-3">
+        <FluentButton Appearance="Appearance.Accent" OnClick="SaveAsync">Enregistrer</FluentButton>
+        @if (!IsNew)
+        {
+            <FluentButton Appearance="Appearance.Outline" OnClick="DeleteAsync">Supprimer</FluentButton>
+        }
+        <FluentButton Appearance="Appearance.Stealth" OnClick="ResetForm">Réinitialiser</FluentButton>
+    </div>
+}
+
+@code {
+    [Parameter] public string? TableName { get; set; }
+    [Parameter] public string? RowId { get; set; }
+    [Parameter] public string? PrimaryKey { get; set; }
+
+    private STable? _table;
+    private string? _tableTitle;
+    private readonly List<DynamicColumnDefinition> _columns = new();
+    private readonly Dictionary<string, string?> _values = new(StringComparer.OrdinalIgnoreCase);
+    private string? _errorMessage;
+    private string? _statusMessage;
+    private string? _currentTable;
+    private string? _currentRowId;
+    private string? _primaryKeyName;
+    private bool _isLoading;
+
+    private bool IsNew => string.IsNullOrWhiteSpace(_currentRowId);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.Equals(TableName, _currentTable, StringComparison.OrdinalIgnoreCase) || !string.Equals(RowId, _currentRowId, StringComparison.Ordinal))
+        {
+            await LoadAsync();
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        _errorMessage = null;
+        _statusMessage = null;
+        _isLoading = true;
+        _columns.Clear();
+        _values.Clear();
+        _table = null;
+        _tableTitle = null;
+        _primaryKeyName = PrimaryKey;
+        _currentTable = TableName;
+        _currentRowId = RowId;
+
+        if (string.IsNullOrWhiteSpace(TableName))
+        {
+            _isLoading = false;
+            return;
+        }
+
+        try
+        {
+            _table = await DataEngine.GetTableMetadataAsync(TableName!);
+            if (_table is null)
+            {
+                _errorMessage = $"Table '{TableName}' introuvable.";
+                return;
+            }
+
+            _tableTitle = _table.Description ?? _table.Libelle;
+            var fields = await DataEngine.GetFieldsMetadataAsync(_table.Id);
+            foreach (var field in fields.Where(f => f.IsLinkToBdd && f.IsVisible).OrderBy(f => f.Ordre ?? int.MaxValue).ThenBy(f => f.Libelle))
+            {
+                var column = new DynamicColumnDefinition(field);
+                _columns.Add(column);
+                _values[column.FieldName] = field.Defaut ?? string.Empty;
+                if (column.IsReference)
+                {
+                    try
+                    {
+                        var dt = await DataEngine.GetReferentialAsync(field.Referentiel!, field.ReferentielWhereClause);
+                        var opts = new List<DynamicOption>();
+                        foreach (System.Data.DataRow row in dt.Rows)
+                        {
+                            var value = row.Table.Columns.Contains("Id") ? row["Id"] : row[0];
+                            var label = row.Table.Columns.Contains("Libelle") ? row["Libelle"] : row.Table.Columns.Cast<System.Data.DataColumn>()
+                                .Select(c => row[c])
+                                .FirstOrDefault(v => v is string);
+                            opts.Add(new DynamicOption
+                            {
+                                Value = value?.ToString() ?? string.Empty,
+                                Label = label?.ToString() ?? value?.ToString() ?? string.Empty
+                            });
+                        }
+                        column.Options = opts;
+                    }
+                    catch
+                    {
+                        column.Options = new List<DynamicOption>();
+                    }
+                }
+            }
+
+            _primaryKeyName ??= _columns.FirstOrDefault(c => c.IsPrimaryKey)?.FieldName ?? "Id";
+
+            if (!string.IsNullOrWhiteSpace(_currentRowId))
+            {
+                var record = await DataEngine.GetByIdAsync(TableName!, _primaryKeyName!, ConvertPrimaryKey(_currentRowId!));
+                foreach (var column in _columns)
+                {
+                    if (record.TryGetValue(column.FieldName, out var value))
+                    {
+                        _values[column.FieldName] = FormatValue(column, value);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private RenderFragment RenderEditor(DynamicColumnDefinition column) => builder =>
+    {
+        switch (column.InputKind)
+        {
+            case DynamicColumnInputKind.Boolean:
+                builder.OpenComponent<FluentCheckbox>(0);
+                builder.AddAttribute(1, "Checked", GetBoolValue(column));
+                builder.AddAttribute(2, "CheckedChanged", EventCallback.Factory.Create<bool>(this, value => SetBoolValue(column, value)));
+                builder.CloseComponent();
+                break;
+            case DynamicColumnInputKind.Date:
+                builder.OpenElement(0, "input");
+                builder.AddAttribute(1, "type", "date");
+                builder.AddAttribute(2, "class", "form-control");
+                builder.AddAttribute(3, "value", GetValue(column));
+                builder.AddAttribute(4, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this, e => SetValue(column, e.Value?.ToString())));
+                builder.CloseElement();
+                break;
+            case DynamicColumnInputKind.DateTime:
+                builder.OpenElement(0, "input");
+                builder.AddAttribute(1, "type", "datetime-local");
+                builder.AddAttribute(2, "class", "form-control");
+                builder.AddAttribute(3, "value", GetValue(column));
+                builder.AddAttribute(4, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this, e => SetValue(column, e.Value?.ToString())));
+                builder.CloseElement();
+                break;
+            case DynamicColumnInputKind.Number or DynamicColumnInputKind.Decimal:
+                builder.OpenElement(0, "input");
+                builder.AddAttribute(1, "type", "number");
+                builder.AddAttribute(2, "class", "form-control");
+                builder.AddAttribute(3, "value", GetValue(column));
+                builder.AddAttribute(4, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this, e => SetValue(column, e.Value?.ToString())));
+                builder.CloseElement();
+                break;
+            case DynamicColumnInputKind.Select when column.Options is not null:
+                builder.OpenComponent<FluentSelect>(0);
+                builder.AddAttribute(1, "Value", GetValue(column) ?? string.Empty);
+                builder.AddAttribute(2, "ValueChanged", EventCallback.Factory.Create<string?>(this, value => SetValue(column, value)));
+                builder.AddAttribute(3, "ChildContent", (RenderFragment)(childBuilder =>
+                {
+                    childBuilder.OpenComponent<FluentOption>(0);
+                    childBuilder.AddAttribute(1, "Value", string.Empty);
+                    childBuilder.AddAttribute(2, "ChildContent", (RenderFragment)(opt => opt.AddContent(0, "(Sélectionner)")));
+                    childBuilder.CloseComponent();
+                    foreach (var option in column.Options)
+                    {
+                        childBuilder.OpenComponent<FluentOption>(3);
+                        childBuilder.AddAttribute(4, "Value", option.Value);
+                        childBuilder.AddAttribute(5, "ChildContent", (RenderFragment)(opt => opt.AddContent(0, option.Label)));
+                        childBuilder.CloseComponent();
+                    }
+                }));
+                builder.CloseComponent();
+                break;
+            default:
+                builder.OpenElement(0, "input");
+                builder.AddAttribute(1, "type", "text");
+                builder.AddAttribute(2, "class", "form-control");
+                builder.AddAttribute(3, "value", GetValue(column));
+                builder.AddAttribute(4, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this, e => SetValue(column, e.Value?.ToString())));
+                builder.CloseElement();
+                break;
+        }
+    };
+
+    private string? GetValue(DynamicColumnDefinition column)
+        => _values.TryGetValue(column.FieldName, out var value) ? value : null;
+
+    private bool GetBoolValue(DynamicColumnDefinition column)
+        => bool.TryParse(GetValue(column), out var b) && b;
+
+    private void SetValue(DynamicColumnDefinition column, string? value)
+        => _values[column.FieldName] = value;
+
+    private void SetBoolValue(DynamicColumnDefinition column, bool value)
+        => _values[column.FieldName] = value ? bool.TrueString : bool.FalseString;
+
+    private async Task SaveAsync()
+    {
+        if (_table is null || string.IsNullOrWhiteSpace(TableName) || string.IsNullOrWhiteSpace(_primaryKeyName))
+        {
+            return;
+        }
+
+        try
+        {
+            var values = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+            foreach (var column in _columns)
+            {
+                if (column.IsPrimaryKey && IsNew)
+                {
+                    continue;
+                }
+
+                if (column.IsPrimaryKey && !IsNew)
+                {
+                    continue;
+                }
+
+                values[column.FieldName] = ConvertValue(column, GetValue(column));
+            }
+
+            if (IsNew)
+            {
+                await DataEngine.InsertAsync(TableName!, values);
+                _statusMessage = "Enregistrement créé.";
+                _currentRowId = null;
+                foreach (var column in _columns)
+                {
+                    _values[column.FieldName] = column.Field.Defaut ?? string.Empty;
+                }
+            }
+            else
+            {
+                var pkColumn = _columns.First(c => string.Equals(c.FieldName, _primaryKeyName, StringComparison.OrdinalIgnoreCase));
+                var primaryValue = ConvertValue(pkColumn, GetValue(pkColumn));
+                await DataEngine.UpdateAsync(TableName!, _primaryKeyName!, primaryValue!, values);
+                _statusMessage = "Enregistrement mis à jour.";
+                await LoadAsync();
+                _statusMessage = "Enregistrement mis à jour.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (IsNew || string.IsNullOrWhiteSpace(TableName) || string.IsNullOrWhiteSpace(_primaryKeyName))
+        {
+            return;
+        }
+
+        try
+        {
+            var pkColumn = _columns.First(c => string.Equals(c.FieldName, _primaryKeyName, StringComparison.OrdinalIgnoreCase));
+            var pkValue = ConvertValue(pkColumn, GetValue(pkColumn));
+            if (pkValue is null)
+            {
+                return;
+            }
+
+            await DataEngine.DeleteAsync(TableName!, _primaryKeyName!, pkValue);
+            _statusMessage = "Enregistrement supprimé.";
+            _currentRowId = null;
+            await LoadAsync();
+            _statusMessage = "Enregistrement supprimé.";
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private void ResetForm()
+    {
+        foreach (var column in _columns)
+        {
+            _values[column.FieldName] = column.Field.Defaut ?? string.Empty;
+        }
+        _statusMessage = null;
+    }
+
+    private object? ConvertValue(DynamicColumnDefinition column, string? rawValue)
+    {
+        if (string.IsNullOrWhiteSpace(rawValue))
+        {
+            return column.IsNullable ? null : rawValue;
+        }
+
+        var type = column.DataType.ToLowerInvariant();
+        try
+        {
+            if (column.InputKind == DynamicColumnInputKind.Boolean)
+            {
+                return bool.TryParse(rawValue, out var b) && b;
+            }
+            if (column.InputKind == DynamicColumnInputKind.Number)
+            {
+                return int.TryParse(rawValue, out var i) ? i : Convert.ToInt32(rawValue);
+            }
+            if (column.InputKind == DynamicColumnInputKind.Decimal)
+            {
+                return decimal.TryParse(rawValue, NumberStyles.Any, CultureInfo.InvariantCulture, out var d) ? d : Convert.ToDecimal(rawValue, CultureInfo.InvariantCulture);
+            }
+            if (column.InputKind == DynamicColumnInputKind.Date || column.InputKind == DynamicColumnInputKind.DateTime)
+            {
+                return DateTime.TryParse(rawValue, out var dt) ? dt : rawValue;
+            }
+            if (type.Contains("bigint"))
+            {
+                return long.TryParse(rawValue, out var l) ? l : Convert.ToInt64(rawValue);
+            }
+            if (type.Contains("uniqueidentifier"))
+            {
+                return Guid.TryParse(rawValue, out var guid) ? guid : null;
+            }
+            if (column.IsReference && int.TryParse(rawValue, out var refId))
+            {
+                return refId;
+            }
+        }
+        catch
+        {
+            return rawValue;
+        }
+
+        return rawValue;
+    }
+
+    private object? ConvertPrimaryKey(string value)
+    {
+        if (string.IsNullOrWhiteSpace(_primaryKeyName))
+        {
+            return value;
+        }
+
+        var column = _columns.FirstOrDefault(c => string.Equals(c.FieldName, _primaryKeyName, StringComparison.OrdinalIgnoreCase));
+        if (column is null)
+        {
+            return value;
+        }
+
+        return ConvertValue(column, value);
+    }
+
+    private string? FormatValue(DynamicColumnDefinition column, object? value)
+    {
+        if (value is null || value is DBNull)
+        {
+            return null;
+        }
+
+        return column.InputKind switch
+        {
+            DynamicColumnInputKind.Boolean => Convert.ToBoolean(value) ? bool.TrueString : bool.FalseString,
+            DynamicColumnInputKind.Date => value is DateTime dt ? dt.ToString("yyyy-MM-dd") : value.ToString(),
+            DynamicColumnInputKind.DateTime => value is DateTime dt2 ? dt2.ToString("yyyy-MM-ddTHH:mm") : value.ToString(),
+            DynamicColumnInputKind.Number or DynamicColumnInputKind.Decimal => Convert.ToString(value, CultureInfo.InvariantCulture),
+            _ => value.ToString()
+        };
+    }
+}

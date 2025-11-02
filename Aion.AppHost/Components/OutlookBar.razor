@@ -6,6 +6,7 @@
 @using System.Collections.Generic
 @using System
 @using System.Linq
+@using System.Text.Json
 @inject IMenuProvider MenuProvider
 @inject ITabService Tabs
 @inject AuthenticationStateProvider Auth
@@ -197,10 +198,95 @@ else
     private async Task OnClick(SMenu item)
     {
         var route = item.Module?.Route;
-        if (item.IsLeaf && !string.IsNullOrEmpty(route))
+        if (!item.IsLeaf || string.IsNullOrEmpty(route))
         {
-            await Tabs.OpenAsync(item.Libelle, route, null, true, CancellationToken.None);
+            return;
         }
+
+        var parameters = ParseParameters(item.Parametre, out var routeSuffix);
+        if (!string.IsNullOrEmpty(routeSuffix))
+        {
+            route = route.Contains('?') ? $"{route}&{routeSuffix}" : $"{route}?{routeSuffix}";
+        }
+
+        await Tabs.OpenAsync(item.Libelle, route, parameters, true, CancellationToken.None);
+    }
+
+    private IDictionary<string, object?>? ParseParameters(string? raw, out string? routeQuery)
+    {
+        routeQuery = null;
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return null;
+        }
+
+        var trimmed = raw.Trim();
+        if (trimmed.StartsWith("#", StringComparison.Ordinal))
+        {
+            var dict = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+            var payload = trimmed[1..];
+            foreach (var pair in payload.Split(new[] { '&', ';' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                var kv = pair.Split('=', 2, StringSplitOptions.TrimEntries);
+                if (kv.Length == 0)
+                {
+                    continue;
+                }
+
+                var key = NormalizeParameterKey(kv[0]);
+                var value = kv.Length > 1 ? Uri.UnescapeDataString(kv[1]) : "true";
+                dict[key] = value;
+            }
+            return dict.Count > 0 ? dict : null;
+        }
+
+        if (trimmed.StartsWith("{", StringComparison.Ordinal) && trimmed.EndsWith("}", StringComparison.Ordinal))
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(trimmed);
+                var dict = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+                foreach (var prop in doc.RootElement.EnumerateObject())
+                {
+                    var key = NormalizeParameterKey(prop.Name);
+                    dict[key] = prop.Value.ValueKind switch
+                    {
+                        JsonValueKind.String => prop.Value.GetString(),
+                        JsonValueKind.Number when prop.Value.TryGetInt64(out var l) => l,
+                        JsonValueKind.Number => prop.Value.GetDecimal(),
+                        JsonValueKind.True => true,
+                        JsonValueKind.False => false,
+                        _ => prop.Value.ToString()
+                    };
+                }
+                return dict.Count > 0 ? dict : null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        routeQuery = trimmed.TrimStart('?');
+        return null;
+    }
+
+    private static string NormalizeParameterKey(string key)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            return key;
+        }
+
+        var lowered = key.Trim().TrimStart('#');
+        return lowered.ToLowerInvariant() switch
+        {
+            "tablename" => "TableName",
+            "table" => "TableName",
+            "rowid" => "RowId",
+            "primarykey" => "PrimaryKey",
+            _ => char.ToUpperInvariant(lowered[0]) + lowered[1..]
+        };
     }
 
     protected override void OnParametersSet()

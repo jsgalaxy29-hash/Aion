@@ -1,6 +1,8 @@
 ﻿using Aion.Module.CRM;
 using Aion.Module.SystemCatalog;
 using Aion.Module.SecurityAdmin;
+using Aion.Module.ListDyn;
+using Aion.Module.FormDyn;
 using Aion.AppHost;
 using Aion.AppHost.Services;
 using Aion.DataEngine.Interfaces;
@@ -21,6 +23,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Aion.DataEngine.Services;
 using Aion.Infrastructure.Data;
 using System.Linq;
+using Aion.Domain.UI.DynamicLayouts;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -94,9 +97,12 @@ builder.Services.AddSingleton<IClock, Aion.Infrastructure.Services.SystemClock>(
 builder.Services.AddScoped<IValidationService, SimpleValidationService>();
 builder.Services.AddScoped<IHistorizationService, NoOpHistorizationService>();
 builder.Services.AddScoped<IDataEngine, DataEngine>();
+builder.Services.AddSingleton<IDynamicLayoutStore, FileDynamicLayoutStore>();
 builder.Services.AddSingleton<IModuleBootstrapper, CrmBootstrapper>();
 builder.Services.AddSingleton<IModuleBootstrapper, SystemCatalogBootstrapper>();
 builder.Services.AddSingleton<IModuleBootstrapper, SecurityAdminBootstrapper>();
+builder.Services.AddSingleton<IModuleBootstrapper, ListDynBootstrapper>();
+builder.Services.AddSingleton<IModuleBootstrapper, FormDynBootstrapper>();
 builder.Services.AddScoped<StartupOrchestrator>();
 
 // ===== Build Application =====
