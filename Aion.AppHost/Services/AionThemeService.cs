@@ -5,10 +5,11 @@ namespace Aion.AppHost.Services
     public interface IAionThemeService
     {
         FluentDesignTheme Current { get; }
+        event Action? ThemeChanged;
         void UseLight();
         void UseDark();
         /// <summary>
-        /// Définit la couleur d’accent (hex, rgb/rgba, etc.). Optionnellement la base neutre.
+        /// DÃ©finit la couleur d'accent (hex, rgb/rgba, etc.). Optionnellement la base neutre.
         /// </summary>
         void SetAccent(string accentCssColor, string? neutralBaseCssColor = null);
     }
@@ -20,13 +21,24 @@ namespace Aion.AppHost.Services
 
         public FluentDesignTheme Current { get; private set; }
 
+        public event Action? ThemeChanged;
+
         public AionThemeService()
         {
             Current = CloneFrom(_light);
         }
 
-        public void UseLight() => Current = CloneFrom(_light);
-        public void UseDark() => Current = CloneFrom(_dark);
+        public void UseLight()
+        {
+            Current = CloneFrom(_light);
+            OnThemeChanged();
+        }
+
+        public void UseDark()
+        {
+            Current = CloneFrom(_dark);
+            OnThemeChanged();
+        }
 
         public void SetAccent(string accentCssColor, string? neutralBaseCssColor = null)
         {
@@ -34,6 +46,8 @@ namespace Aion.AppHost.Services
             Current.CustomColor = accentCssColor;          // ex: "#0f6cbd" ou "rgb(15,108,189)"
             if (!string.IsNullOrWhiteSpace(neutralBaseCssColor))
                 Current.NeutralBaseColor = neutralBaseCssColor; // optionnel
+
+            OnThemeChanged();
         }
 
         private static FluentDesignTheme CloneFrom(FluentDesignTheme baseTheme)
@@ -45,5 +59,7 @@ namespace Aion.AppHost.Services
                 OfficeColor = baseTheme.OfficeColor,
                 StorageName = baseTheme.StorageName
             };
+
+        private void OnThemeChanged() => ThemeChanged?.Invoke();
     }
 }
