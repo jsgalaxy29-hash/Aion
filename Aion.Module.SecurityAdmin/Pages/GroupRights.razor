@@ -234,46 +234,46 @@ else
                                                         @if (!string.IsNullOrWhiteSpace(type.Right1Name))
                                                         {
                                                             <td>
-                                                                <input type="checkbox"
-                                                                       class="form-check-input"
-                                                                       checked="@entry.Right1"
-                                                                       @onchange="async args => await ToggleRightAsync(state, entry, 1, args.Value is bool value && value)" />
+                                                                <InputCheckbox class="form-check-input"
+                                                                               Value="@entry.Right1"
+                                                                               ValueChanged="async value => await ToggleRightAsync(state, entry, 1, value)"
+                                                                               ValueExpression="() => entry.Right1" />
                                                             </td>
                                                         }
                                                         @if (!string.IsNullOrWhiteSpace(type.Right2Name))
                                                         {
                                                             <td>
-                                                                <input type="checkbox"
-                                                                       class="form-check-input"
-                                                                       checked="@entry.Right2"
-                                                                       @onchange="async args => await ToggleRightAsync(state, entry, 2, args.Value is bool value && value)" />
+                                                                <InputCheckbox class="form-check-input"
+                                                                               Value="@entry.Right2"
+                                                                               ValueChanged="async value => await ToggleRightAsync(state, entry, 2, value)"
+                                                                               ValueExpression="() => entry.Right2" />
                                                             </td>
                                                         }
                                                         @if (!string.IsNullOrWhiteSpace(type.Right3Name))
                                                         {
                                                             <td>
-                                                                <input type="checkbox"
-                                                                       class="form-check-input"
-                                                                       checked="@entry.Right3"
-                                                                       @onchange="async args => await ToggleRightAsync(state, entry, 3, args.Value is bool value && value)" />
+                                                                <InputCheckbox class="form-check-input"
+                                                                               Value="@entry.Right3"
+                                                                               ValueChanged="async value => await ToggleRightAsync(state, entry, 3, value)"
+                                                                               ValueExpression="() => entry.Right3" />
                                                             </td>
                                                         }
                                                         @if (!string.IsNullOrWhiteSpace(type.Right4Name))
                                                         {
                                                             <td>
-                                                                <input type="checkbox"
-                                                                       class="form-check-input"
-                                                                       checked="@entry.Right4"
-                                                                       @onchange="async args => await ToggleRightAsync(state, entry, 4, args.Value is bool value && value)" />
+                                                                <InputCheckbox class="form-check-input"
+                                                                               Value="@entry.Right4"
+                                                                               ValueChanged="async value => await ToggleRightAsync(state, entry, 4, value)"
+                                                                               ValueExpression="() => entry.Right4" />
                                                             </td>
                                                         }
                                                         @if (!string.IsNullOrWhiteSpace(type.Right5Name))
                                                         {
                                                             <td>
-                                                                <input type="checkbox"
-                                                                       class="form-check-input"
-                                                                       checked="@entry.Right5"
-                                                                       @onchange="async args => await ToggleRightAsync(state, entry, 5, args.Value is bool value && value)" />
+                                                                <InputCheckbox class="form-check-input"
+                                                                               Value="@entry.Right5"
+                                                                               ValueChanged="async value => await ToggleRightAsync(state, entry, 5, value)"
+                                                                               ValueExpression="() => entry.Right5" />
                                                             </td>
                                                         }
                                                         <td class="text-end">
