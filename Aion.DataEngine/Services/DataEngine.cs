@@ -616,7 +616,7 @@ namespace Aion.DataEngine.Services
                     IsNulleable = Convert.ToBoolean(row["ISNULLEABLE"]),
                     Min = row["MIN"] as string,
                     Max = row["MAX"] as string,
-                    Regex = row["REGEX"] as string,
+                    Regex = row.Table.Columns.Contains("REGEX") ? row["REGEX"] as string : null,
                     IsVisible = Convert.ToBoolean(row["ISVISIBLE"]),
                     Ordre = row["ORDRE"] != DBNull.Value ? (int?)Convert.ToInt32(row["ORDRE"]) : null,
                     Format = row["FORMAT"] as string,
