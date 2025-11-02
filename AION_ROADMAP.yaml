@@ -1,391 +1,202 @@
-# =============================================================================
-# AION_ROADMAP.yaml - Spécification complète du système Aion ERP
-# =============================================================================
+aion:
+  name: "Aion ERP"
+  version: "0.3.x"
+  description: "Source de vérité modulaire : modules, menus, métabase, droits, actions, rapports, endpoints."
+  regen_command: "dotnet run --project Aion.AppHost -- --regen-meta"
 
-version: "1.0"
-project: "Aion ERP"
-description: "Moteur ERP universel open-source à architecture métadonnées"
-
-# =============================================================================
-# CONFIGURATION UI
-# =============================================================================
-ui:
-  library: fluentui
-  theme:
-    default: "light"
-    modes: ["light", "dark", "auto"]
-  
-  outlookbar:
-    filter: true
-    favorites: true
-    icons: true
-    collapsible: true
-  
-  tabs:
-    deep_links: true
-    max_tabs: 10
-    persist_state: true
-  
-  dashboard:
-    rearrangement: true
-    widgets: true
-    data_query_ref:
-      modes: ["ef", "api", "report"]
-
-# =============================================================================
-# CONFIGURATION SÉCURITÉ
-# =============================================================================
-security:
-  authentication:
-    provider: "custom"  # custom | identity | oauth
-    cookie:
-      sliding_expiration: true
-      expire_hours: 8
-      remember_me_days: 30
-    
-  password:
-    hash_algorithm: "bcrypt"  # À implémenter
-    min_length: 8
-    require_uppercase: true
-    require_digit: true
-    lockout_attempts: 5
-    lockout_minutes: 30
-  
-  authorization:
-    model: "rbac"  # RBAC (Role-Based Access Control)
-    inheritance: "group"  # Les droits sont hérités par groupe
-    merge_rule: "max_privilege"  # true > false
-  
-  # Définition des types de droits
-  right_types:
-    - code: "Menu"
-      name: "Droits sur menus"
-      data_source: "SMenu"
-      description: "Contrôle la visibilité des menus dans OutlookBar"
-      rights:
-        - key: "Right1"
-          name: "Voir"
-          description: "Autorise l'affichage du menu"
-      multi_tenant: true
-    
-    - code: "Module"
-      name: "Droits sur modules"
-      data_source: "S_Module"
-      description: "Contrôle l'accès aux modules métiers"
-      rights:
-        - key: "Right1"
-          name: "Lire"
-          description: "Consulter les données"
-        - key: "Right2"
-          name: "Écrire"
-          description: "Créer/Modifier les données"
-        - key: "Right3"
-          name: "Supprimer"
-          description: "Supprimer les données"
-        - key: "Right4"
-          name: "Exporter"
-          description: "Exporter les données"
-        - key: "Right5"
-          name: "Administrer"
-          description: "Configuration avancée"
-      multi_tenant: true
-    
-    - code: "Table"
-      name: "Droits sur tables"
-      data_source: "STable"
-      description: "Contrôle l'accès au niveau table"
-      rights:
-        - key: "Right1"
-          name: "Lire"
-        - key: "Right2"
-          name: "Créer"
-        - key: "Right3"
-          name: "Modifier"
-        - key: "Right4"
-          name: "Supprimer"
-        - key: "Right5"
-          name: "Exporter"
-      multi_tenant: true
-    
-    - code: "Action"
-      name: "Droits sur actions"
-      data_source: "S_Action"
-      description: "Contrôle l'exécution des actions système"
-      rights:
-        - key: "Right1"
-          name: "Exécuter"
-          description: "Lancer l'action"
-      multi_tenant: true
-    
-    - code: "Report"
-      name: "Droits sur rapports"
-      data_source: "S_Report"
-      description: "Contrôle la génération de rapports"
-      rights:
-        - key: "Right1"
-          name: "Voir"
-        - key: "Right2"
-          name: "Générer"
-      multi_tenant: true
-
-  # Groupes système par défaut
-  default_groups:
-    - name: "Administrateurs"
-      description: "Groupe avec tous les droits"
-      is_system: true
-      rights: "*"  # Tous les droits
-    
-    - name: "Utilisateurs"
-      description: "Groupe utilisateurs standards"
-      is_system: true
-      rights:
-        - target: "Menu"
-          subjects: ["Dashboard", "Profile"]
-          flags: ["Right1"]
-
-# =============================================================================
-# MODULES MÉTIERS
-# =============================================================================
-modules:
-  - code: "CRM"
-    name: "CRM"
-    description: "Gestion de la relation client"
-    icon: "People"
-    color: "#0078D4"
-    order: 1
-    active: true
-    
-    menus:
-      - id: 1
-        label: "Ventes"
-        route: "/noop"
-        parent: null
-        is_leaf: false
-        icon: "Money"
-        order: 1
-      
-      - id: 2
-        label: "Opportunités"
-        route: "/modules/crm/opportunities"
-        parent: 1
-        is_leaf: true
-        icon: "Lightbulb"
-        order: 1
-      
-      - id: 3
-        label: "Clients"
-        route: "/modules/crm/customers"
-        parent: 1
-        is_leaf: true
-        icon: "ContactCard"
-        order: 2
-      
-      - id: 4
-        label: "Dashboard"
-        route: "/dashboard"
-        parent: null
-        is_leaf: true
-        icon: "ViewDashboard"
-        order: 0
-    
-    tables:
-      - name: "F_Customer"
-        description: "Clients"
-        fields:
-          - name: "Name"
-            type: "string"
-            required: true
-          - name: "Email"
-            type: "string"
-          - name: "Phone"
-            type: "string"
-    
-    actions:
-      - code: "SEND_EMAIL"
-        name: "Envoyer email"
-        description: "Envoi d'email au client"
-        type: "workflow"
-  
-  - code: "ADMIN"
-    name: "Administration"
-    description: "Configuration système"
-    icon: "Settings"
-    color: "#D13438"
-    order: 99
-    active: true
-    
-    menus:
-      - id: 100
-        label: "Administration"
-        route: "/noop"
-        parent: null
-        is_leaf: false
-        icon: "Settings"
-        order: 99
-      
-      - id: 101
-        label: "Utilisateurs"
-        route: "/admin/users"
-        parent: 100
-        is_leaf: true
-        icon: "People"
-        order: 1
-      
-      - id: 102
-        label: "Groupes"
-        route: "/admin/groups"
-        parent: 100
-        is_leaf: true
-        icon: "Group"
-        order: 2
-      
-      - id: 103
-        label: "Droits"
-        route: "/admin/rights"
-        parent: 100
-        is_leaf: true
-        icon: "Shield"
-        order: 3
-
-# =============================================================================
-# TABLES SYSTÈME
-# =============================================================================
-system_tables:
-  - name: "SUser"
-    description: "Utilisateurs du système"
-    schema: "dbo"
-    primary_key: "Id"
-    auditable: true
-    
-  - name: "SGroup"
-    description: "Groupes d'utilisateurs"
-    schema: "dbo"
-    primary_key: "Id"
-    
-  - name: "SUserGroup"
-    description: "Association utilisateur-groupe"
-    schema: "dbo"
-    primary_key: "Id"
-    
-  - name: "SRight"
-    description: "Droits par groupe"
-    schema: "dbo"
-    primary_key: "Id"
-    indexes:
-      - fields: ["GroupId", "Target", "SubjectId", "TenantId"]
-        unique: true
-    
-  - name: "SRightType"
-    description: "Types de droits"
-    schema: "dbo"
-    primary_key: "Id"
-
-# =============================================================================
-# WORKFLOWS & ACTIONS
-# =============================================================================
-workflows:
-  - code: "OPPORTUNITY_VALIDATION"
-    name: "Validation opportunité"
-    trigger: "manual"
-    steps:
-      - action: "check_rights"
-        params:
-          target: "Module"
-          subject: "CRM"
-          right: "Right4"
-      - action: "update_status"
-      - action: "send_notification"
-
-# =============================================================================
-# RAPPORTS
-# =============================================================================
-reports:
-  - code: "SALES_REPORT"
-    name: "Rapport des ventes"
-    description: "Synthèse mensuelle des ventes"
-    category: "CRM"
-    data_source: "F_Opportunity"
-    format: "pdf"
-    template: "reports/sales_monthly.razor"
-
-# =============================================================================
-# API ENDPOINTS
-# =============================================================================
-api:
-  base_path: "/api/v1"
-  authentication: "jwt"
-  
-  endpoints:
-    - path: "/rights/check"
-      method: "POST"
-      description: "Vérifie un droit utilisateur"
-      auth_required: true
-      
-    - path: "/menus/authorized"
-      method: "GET"
-      description: "Récupère les menus autorisés"
-      auth_required: true
-
-# =============================================================================
-# INTÉGRATIONS
-# =============================================================================
-integrations:
-  ai:
-    provider: "openai"
-    features: ["chat", "code_generation", "data_analysis"]
-    
-  email:
-    provider: "smtp"
-    from: "noreply@aion.local"
-
-# =============================================================================
-# MÉTADONNÉES
-# =============================================================================
-metadata:
-  generation:
-    auto_entities: true
-    auto_repositories: true
-    auto_services: true
-    auto_ui: true
-  
   conventions:
-    system_prefix: "S_"
-    reference_prefix: "R_"
-    functional_prefix: "F_"
-    
-  base_entity:
-    fields:
-      - name: "Id"
-        type: "int"
-        primary_key: true
-        auto_increment: true
-      - name: "TenantId"
-        type: "int"
-        indexed: true
-      - name: "Actif"
-        type: "bool"
-        default: true
-      - name: "Doc"
-        type: "bool"
-        default: false
-      - name: "Deleted"
-        type: "bool"
-        default: false
-        soft_delete: true
-      - name: "DtCreation"
-        type: "datetime"
-        auto_now_add: true
-      - name: "DtModification"
-        type: "datetime?"
-        auto_now: true
-      - name: "DtSuppression"
-        type: "datetime?"
-      - name: "UsrCreationId"
-        type: "int?"
-      - name: "UsrModificationId"
-        type: "int?"
-      - name: "UsrSuppressionId"
-        type: "int?"
-      - name: "RowVersion"
-        type: "byte[]?"
-        concurrency_token: true
+    environments: "agnostic"
+    naming:
+      system_tables_prefix: "S_"
+      reference_tables_prefix: "R_"
+      feature_tables_prefix: "F_"
+    menus:
+      id_strategy: "code"          # Pas de plages numériques; l’engine génère un ID interne
+      code_format: "[A-Z0-9_]+"
+      route_format: "/modules/{moduleCode}"
+    icons:
+      library: "Lucide"            # ou Fluent, selon dispo UI
+    palette:
+      system:
+        primary: "#0E639C"
+        success: "#107C10"
+        warning: "#C19C00"
+        danger:  "#C50F1F"
+        neutral: "#2B2B2B"
+    security:
+      multi_tenant:
+        enabled: true
+        tenant_table: "S_Tenant"
+        tenant_key_name: "TenantId"
+        enforce_on:
+          - scope: "all_feature_tables"
+          - scope: "users"        # SUser peut porter TenantId si multi-tenant strict
+      password_hashing:
+        provider: "BCrypt"
+        work_factor: 12
+      rbac:
+        merge_rule: "most_permissive_wins"
+        targets:
+          - target: "Menu"
+            flags: ["Right1"]                    # Voir
+          - target: "Module"
+            flags: ["Right1","Right2","Right3","Right4","Right5"]   # Lire, Écrire, Suppr, Export, Admin
+          - target: "Table"
+            flags: ["Right1","Right2","Right3","Right4","Right5"]
+          - target: "Action"
+            flags: ["Right1"]                    # Exécuter
+          - target: "Report"
+            flags: ["Right1","Right2"]           # Voir, Générer
+    data_policies:
+      soft_delete:
+        enabled: true
+        fields:
+          is_deleted: "IsDeleted"
+          deleted_at: "DeletedAt"
+          deleted_by: "DeletedBy"
+      audit_trail:
+        enabled: false   # journalisation avancée (S_Audit) désactivée pour 0.3.x
+
+  system_schema:
+    tables:
+      - name: "SUser"
+      - name: "SGroup"
+      - name: "SUserGroup"
+      - name: "SRightType"
+      - name: "SRight"
+      - name: "SMenu"
+      - name: "STable"
+      - name: "SField"
+      - name: "S_Module"
+      - name: "S_Action"
+      - name: "S_Tenant"     # requis par multi-tenant
+    rules:
+      tenant_required_on_feature_tables: true
+      seed:
+        right_types:
+          - code: "Menu.Right1"    # Voir
+          - code: "Module.Right1"  # Lire
+          - code: "Module.Right2"  # Écrire
+          - code: "Module.Right3"  # Supprimer
+          - code: "Module.Right4"  # Exporter
+          - code: "Module.Right5"  # Admin
+          - code: "Table.Right1"
+          - code: "Table.Right2"
+          - code: "Table.Right3"
+          - code: "Table.Right4"
+          - code: "Table.Right5"
+          - code: "Action.Right1"
+          - code: "Report.Right1"
+          - code: "Report.Right2"
+
+  modules:
+
+    - code: "SYSTEM_CATALOG"
+      name: "Catalogue système"
+      color: "#107C10"
+      icon: "Layers"
+      menus:
+        - code: "SYSTEM_CATALOG_ROOT"
+          label: "Catalogue système"
+          route: "/modules/SYSTEM_CATALOG"
+          is_leaf: true
+          icon: "Layers"
+      tables:
+        - "SMenu"
+        - "STable"
+        - "SField"
+        - "S_Module"
+        - "S_Action"
+      rights:
+        defaults:
+          group: "Administrators"
+          grants:
+            - target: "Module"
+              flags: ["Right1","Right2","Right3","Right4","Right5"]
+
+    - code: "SECURITY_ADMIN"
+      name: "Administration sécurité"
+      color: "#0E639C"
+      icon: "ShieldCheck"
+      menus:
+        - code: "SECURITY_ADMIN_ROOT"
+          label: "Sécurité"
+          route: "/modules/SECURITY_ADMIN"
+          is_leaf: true
+          icon: "ShieldCheck"
+      tables:
+        - "SUser"
+        - "SGroup"
+        - "SUserGroup"
+        - "SRightType"
+        - "SRight"
+        - "S_Tenant"
+
+    - code: "DATA_ENGINE"
+      name: "Moteur de données"
+      color: "#7A3E9D"
+      icon: "Database"
+      menus:
+        - code: "DATA_ENGINE_ROOT"
+          label: "Moteur de données"
+          route: "/modules/DATA_ENGINE"
+          is_leaf: true
+          icon: "Database"
+      actions:
+        - code: "RegenMetadata"
+          label: "Régénérer les métadonnées"
+          right: { target: "Action", flag: "Right1" }
+        - code: "RebuildCache"
+          label: "Reconstruire le cache"
+          right: { target: "Action", flag: "Right1" }
+
+    - code: "ACTION_ENGINE"
+      name: "Moteur d’actions"
+      color: "#2B2B2B"
+      icon: "Play"
+      menus:
+        - code: "ACTION_ENGINE_ROOT"
+          label: "Moteur d’actions"
+          route: "/modules/ACTION_ENGINE"
+          is_leaf: true
+          icon: "Play"
+
+    - code: "REPORT_ENGINE"
+      name: "Moteur de rapports"
+      color: "#0E639C"
+      icon: "BarChart"
+      menus:
+        - code: "REPORT_ENGINE_ROOT"
+          label: "Moteur de rapports"
+          route: "/modules/REPORT_ENGINE"
+          is_leaf: true
+          icon: "BarChart"
+      reports: []   # placeholder pour 0.3.x
+
+    - code: "CRM"
+      name: "CRM"
+      color: "#107C10"
+      icon: "Users"
+      menus:
+        - code: "CRM_ROOT"
+          label: "CRM"
+          route: "/modules/CRM"
+          is_leaf: false
+          icon: "Users"
+        - code: "CRM_COMPANIES"
+          parent_code: "CRM_ROOT"
+          label: "Entreprises"
+          route: "/modules/CRM/companies"
+          is_leaf: true
+          icon: "Building"
+        - code: "CRM_CONTACTS"
+          parent_code: "CRM_ROOT"
+          label: "Contacts"
+          route: "/modules/CRM/contacts"
+          is_leaf: true
+          icon: "Contact"
+      tables: []    # volontairement vide pour 0.3.x (à définir plus tard)
+
+  endpoints: []     # section préparée mais vide (0.3.x)
+
+  reports: []       # central registry optionnel, conservé vide pour 0.3.x
