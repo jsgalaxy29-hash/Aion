@@ -342,8 +342,12 @@ IF OBJECT_ID('dbo.STable','U') IS NULL
 BEGIN
   CREATE TABLE dbo.STable(
     ID INT IDENTITY(1,1) PRIMARY KEY,
-    Nom NVARCHAR(255) NOT NULL,
-    Libelle NVARCHAR(255) NULL,
+    Libelle NVARCHAR(255) NOT NULL,
+    Description NVARCHAR(500) NULL,
+    Parent NVARCHAR(255) NULL,
+    ParentLiaison NVARCHAR(255) NULL,
+    ReferentielLibelle NVARCHAR(255) NULL,
+    Type NVARCHAR(5) NULL,
     IsHistorise BIT NOT NULL DEFAULT(0),
     TenantId INT NOT NULL DEFAULT(1),
     Actif BIT NOT NULL DEFAULT(1),
@@ -356,7 +360,7 @@ BEGIN
     UsrModificationId INT NULL,
     UsrSuppressionId INT NULL,
     RowVersion ROWVERSION,
-    CONSTRAINT UQ_STable_Nom UNIQUE(Nom)
+    CONSTRAINT UQ_STable_Nom UNIQUE(Libelle)
   );
   PRINT 'Table STable créée';
 END
@@ -368,9 +372,16 @@ BEGIN
   CREATE TABLE dbo.SField(
     ID INT IDENTITY(1,1) PRIMARY KEY,
     TableId INT NOT NULL,
-    Nom NVARCHAR(255) NOT NULL,
-    TypeSql NVARCHAR(100) NOT NULL,
-    Longueur INT NULL,
+    Libelle NVARCHAR(255) NOT NULL,
+    Alias NVARCHAR(255) NOT NULL,
+    DataType NVARCHAR(15) NOT NULL,
+    Taille INT NOT NULL DEFAULT(1),
+    IsClePrimaire BIT DEFAULT(0), 
+    IsUnique BIT DEFAULT(0), 
+    Referentiel NVARCHAR(255) NULL,
+    ReferentielWhereClause NVARCHAR(255) NULL,
+    Defaut NVARCHAR(255) NULL,
+    IsNulleable BIT NOT NULL DEFAULT(1),
     [Precision] INT NULL,
     Echelle INT NULL,
     Nullable BIT NOT NULL DEFAULT(1),
@@ -393,7 +404,7 @@ BEGIN
   IF OBJECT_ID('dbo.STable', 'U') IS NOT NULL
     ALTER TABLE dbo.SField ADD CONSTRAINT FK_SField_Table FOREIGN KEY(TableId) REFERENCES dbo.STable(ID);
   
-  CREATE UNIQUE INDEX UX_SField_Table_Col ON dbo.SField(TableId, Nom);
+  CREATE UNIQUE INDEX UX_SField_Table_Col ON dbo.SField(TableId, Libelle);
   PRINT 'Table SField créée';
 END
 ELSE

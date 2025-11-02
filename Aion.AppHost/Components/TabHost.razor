@@ -33,7 +33,6 @@
         }
     }
 
-
     void OnTabsChanged()
     {
         if (_activeId is null || Tabs.Tabs.All(t => t.Id != _activeId))
@@ -52,6 +51,8 @@
 
         InvokeAsync(StateHasChanged);
     }
+   
+
     public void Dispose() => Tabs.TabsChanged -= OnTabsChanged;
 
     private Task OnTabChanged(Microsoft.FluentUI.AspNetCore.Components.TabChangeEventArgs e)

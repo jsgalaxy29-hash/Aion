@@ -113,10 +113,10 @@ namespace Aion.DataEngine.Services
                     {
                         // Insert column metadata.  We assume no primary key or unique constraints for discovered columns.
                         const string insertColSql = @"
-                            INSERT INTO S_CHAMP (
+                            INSERT INTO SField (
                                 TableId, Libelle, Alias, DataType,
                                 IsClePrimaire, IsUnique, Taille, Referentiel,
-                                ReferentielWhereClause, Defaut, IsNulleable,
+                                ReferentielWhereClause, Defaut, IsNulleable
                                 )
                             VALUES (
                                 @tableId, @libelle, @alias, @dataType,
@@ -128,7 +128,7 @@ namespace Aion.DataEngine.Services
                         {
                             ["@tableId"] = tableId,
                             ["@libelle"] = colName,
-                            ["@alias"] = (object?)null,
+                            ["@alias"] = colName,
                             ["@dataType"] = dataType,
                             ["@taille"] = maxLength,
                             ["@isNullable"] = isNullable ? 1 : 0
