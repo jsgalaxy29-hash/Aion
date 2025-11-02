@@ -882,7 +882,7 @@ else
                     return await db.SAction
                         .AsNoTracking()
                         .OrderBy(a => a.Name)
-                        .Select(a => new SelectOption(a.Id, string.IsNullOrWhiteSpace(a.Name) ? a.ActionCode : a.Name))
+                        .Select(a => new SelectOption(a.Id, string.IsNullOrWhiteSpace(a.Name) ? a.Name : a.Name))
                         .ToListAsync();
                 case "SReport":
                     return await db.SReport

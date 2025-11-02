@@ -290,7 +290,6 @@ IF OBJECT_ID('dbo.SAction','U') IS NULL
 BEGIN
   CREATE TABLE dbo.SAction(
     ID INT IDENTITY(1,1) PRIMARY KEY,
-    Code NVARCHAR(128) NOT NULL,
     Name NVARCHAR(255) NOT NULL,
     Description NVARCHAR(500) NULL,
     Type NVARCHAR(50) NULL,
@@ -299,7 +298,7 @@ BEGIN
     Doc BIT NOT NULL DEFAULT(0),
     Deleted BIT NOT NULL DEFAULT(0),
     DtCreation DATETIME NOT NULL DEFAULT(GETUTCDATE()),
-    CONSTRAINT UQ_Action_Code UNIQUE(Code)
+    CONSTRAINT UQ_Action_Code UNIQUE(Name)
   );
   PRINT 'Table SAction créée';
 END
