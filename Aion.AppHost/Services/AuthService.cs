@@ -219,25 +219,43 @@ namespace Aion.AppHost.Services
             }
         }
 
-        private bool VerifyPassword(string password, string hash)
+        private bool VerifyPassword(string password, string storedValue)
         {
-            if (string.IsNullOrEmpty(password) || string.IsNullOrEmpty(hash))
+            if (string.IsNullOrEmpty(password) || string.IsNullOrEmpty(storedValue))
                 return false;
+
+            if (!IsBCryptHash(storedValue))
+            {
+                var legacyMatch = string.Equals(password, storedValue, StringComparison.Ordinal);
+                if (legacyMatch)
+                {
+                    _logger.LogWarning("Mot de passe legacy détecté pour un utilisateur. Pensez à migrer vers BCrypt.");
+                }
+
+                return legacyMatch;
+            }
 
             try
             {
-                return BCrypt.Net.BCrypt.Verify(password, hash);
+                return BCrypt.Net.BCrypt.Verify(password, storedValue);
             }
             catch (BCrypt.Net.SaltParseException ex)
             {
-                _logger.LogError(ex, "Hash de mot de passe invalide");
-                return false;
+                _logger.LogWarning(ex, "Hash de mot de passe invalide, tentative de vérification legacy");
+                return string.Equals(password, storedValue, StringComparison.Ordinal);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erreur lors de la vérification du mot de passe");
                 return false;
             }
+        }
+
+        private static bool IsBCryptHash(string hash)
+        {
+            return hash.StartsWith("$2a$", StringComparison.Ordinal) ||
+                   hash.StartsWith("$2b$", StringComparison.Ordinal) ||
+                   hash.StartsWith("$2y$", StringComparison.Ordinal);
         }
     }
 }
