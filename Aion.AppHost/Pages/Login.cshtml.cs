@@ -135,8 +135,8 @@ namespace Aion.AppHost.Pages
 
                 _logger.LogInformation("✅ Connexion réussie pour {Username}", Input.Username);
 
-                // Mise à jour dernière connexion (en arrière-plan)
-                _ = Task.Run(() => UpdateLastLoginAsync(user.Id));
+                // Mise à jour dernière connexion
+                await UpdateLastLoginAsync(user.Id);
 
                 // Redirection
                 return LocalRedirect("/Dashboard");
