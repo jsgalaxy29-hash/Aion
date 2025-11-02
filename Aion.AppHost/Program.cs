@@ -44,6 +44,9 @@ builder.Services.AddDbContext<AionDbContext>(opt =>
 builder.Services.AddDbContext<SecurityDbContext>(opt =>
     opt.UseSqlServer(connectionString));
 
+builder.Services.AddServerSideBlazor()
+    .AddCircuitOptions(o => { o.DetailedErrors = true; });
+
 // ===== Authentication & Authorization =====
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(o =>
