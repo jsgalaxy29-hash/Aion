@@ -200,18 +200,18 @@ else
                 builder.CloseElement();
                 break;
             case DynamicColumnInputKind.Select when column.Options is not null:
-                builder.OpenComponent<FluentSelect>(0);
+                builder.OpenComponent<FluentSelect<string>>(0);
                 builder.AddAttribute(1, "Value", GetValue(column) ?? string.Empty);
                 builder.AddAttribute(2, "ValueChanged", EventCallback.Factory.Create<string?>(this, value => SetValue(column, value)));
                 builder.AddAttribute(3, "ChildContent", (RenderFragment)(childBuilder =>
                 {
-                    childBuilder.OpenComponent<FluentOption>(0);
+                    childBuilder.OpenComponent<FluentOption<string>>(0);
                     childBuilder.AddAttribute(1, "Value", string.Empty);
                     childBuilder.AddAttribute(2, "ChildContent", (RenderFragment)(opt => opt.AddContent(0, "(Sélectionner)")));
                     childBuilder.CloseComponent();
                     foreach (var option in column.Options)
                     {
-                        childBuilder.OpenComponent<FluentOption>(3);
+                        childBuilder.OpenComponent<FluentOption<string>>(3);
                         childBuilder.AddAttribute(4, "Value", option.Value);
                         childBuilder.AddAttribute(5, "ChildContent", (RenderFragment)(opt => opt.AddContent(0, option.Label)));
                         childBuilder.CloseComponent();
@@ -254,11 +254,6 @@ else
             var values = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
             foreach (var column in _columns)
             {
-                if (column.IsPrimaryKey && IsNew)
-                {
-                    continue;
-                }
-
                 if (column.IsPrimaryKey && !IsNew)
                 {
                     continue;

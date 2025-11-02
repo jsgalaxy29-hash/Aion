@@ -551,7 +551,7 @@ namespace Aion.DataEngine.Services
                 return cached;
             }
             // Query STable to obtain the table definition
-            const string sql = "SELECT Id, LIBELLE, DESCRIPTION, PARENT, PARENTLIAISON, REFERENTIELLIBELLE, TYPE, DOC, ACTIF, DELETED, IS_HISTORISE FROM S_TABLE WHERE LIBELLE = @name";
+            const string sql = "SELECT Id, LIBELLE, DESCRIPTION, PARENT, PARENTLIAISON, REFERENTIELLIBELLE, TYPE, DOC, ACTIF, DELETED, ISHISTORISE FROM STable WHERE LIBELLE = @name";
             var dt = await _db.ExecuteQueryAsync(sql, new Dictionary<string, object?> { ["@name"] = tableName }).ConfigureAwait(false);
             if (dt.Rows.Count == 0) return null;
             var row = dt.Rows[0];
@@ -567,7 +567,7 @@ namespace Aion.DataEngine.Services
                 Doc = Convert.ToBoolean(row["DOC"]),
                 Actif = Convert.ToBoolean(row["ACTIF"]),
                 Deleted = Convert.ToBoolean(row["DELETED"]),
-                IsHistorise = row.Table.Columns.Contains("IS_HISTORISE") && Convert.ToBoolean(row["IS_HISTORISE"])
+                IsHistorise = row.Table.Columns.Contains("ISHISTORISE") && Convert.ToBoolean(row["ISHISTORISE"])
             };
             await _cache.SetAsync(cacheKey, table, TimeSpan.FromMinutes(5)).ConfigureAwait(false);
             return table;
@@ -593,9 +593,9 @@ namespace Aion.DataEngine.Services
                        ISLINKTOBDD, ISSEARCH, SEARCHOPERATOR, SEARCHDEFAUTVALUE,
                        COORDONNEEX, COORDONNEEY, COORDONNEELABELX, COORDONNEELABELY, COMMENTAIRE,
                        DOC, ACTIF, DELETED, ISHISTORISE,
-                       SCRIPTVALIDATION, YAMLVALIDATION
+                       ValidationScript, ValidationYaml
                 FROM SField
-                WHERE TABLE_ID = @tableId";
+                WHERE TABLEID = @tableId";
             var dt = await _db.ExecuteQueryAsync(sql, new Dictionary<string, object?> { ["@tableId"] = tableId }).ConfigureAwait(false);
             var champs = new List<SField>(dt.Rows.Count);
             foreach (DataRow row in dt.Rows)
@@ -634,8 +634,8 @@ namespace Aion.DataEngine.Services
                     Actif = Convert.ToBoolean(row["ACTIF"]),
                     Deleted = Convert.ToBoolean(row["DELETED"]),
                     IsHistorise = row.Table.Columns.Contains("ISHISTORISE") && Convert.ToBoolean(row["ISHISTORISE"]),
-                    ValidationScript = row.Table.Columns.Contains("SCRIPTVALIDATION") ? row["SCRIPTVALIDATION"] as string : null,
-                    ValidationYaml = row.Table.Columns.Contains("YAMLVALIDATION") ? row["YAMLVALIDATION"] as string : null
+                    ValidationScript = row.Table.Columns.Contains("ValidationScript") ? row["ValidationScript"] as string : null,
+                    ValidationYaml = row.Table.Columns.Contains("ValidationYaml") ? row["ValidationYaml"] as string : null
                 });
             }
             await _cache.SetAsync(cacheKey, champs, TimeSpan.FromMinutes(5)).ConfigureAwait(false);
