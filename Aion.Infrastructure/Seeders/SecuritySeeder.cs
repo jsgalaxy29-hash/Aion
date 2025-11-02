@@ -175,6 +175,29 @@ namespace Aion.Infrastructure.Seeders
                 await appDb.SaveChangesAsync();
             }
 
+            var rightsModule = await appDb.SModule.FirstOrDefaultAsync(m => m.Name == "Gestion Droit");
+            if (rightsModule == null)
+            {
+                rightsModule = new SModule
+                {
+                    Name = "Gestion Droit",
+                    Order = adminModule?.Order + 1 ?? 901,
+                    Route = "/admin/rights",
+                    TenantId = 1,
+                    Actif = true,
+                    DtCreation = utcNow,
+                    UsrCreationId = 1
+                };
+                appDb.SModule.Add(rightsModule);
+                await appDb.SaveChangesAsync();
+            }
+            else if (string.IsNullOrWhiteSpace(rightsModule.Route))
+            {
+                rightsModule.Route = "/admin/rights";
+                appDb.SModule.Update(rightsModule);
+                await appDb.SaveChangesAsync();
+            }
+
             var adminRootMenu = await appDb.SMenu.FirstOrDefaultAsync(m => m.Libelle == "Administration");
             if (adminRootMenu == null)
             {
@@ -211,6 +234,26 @@ namespace Aion.Infrastructure.Seeders
                     UsrCreationId = 1
                 };
                 appDb.SMenu.Add(designerMenu);
+                await appDb.SaveChangesAsync();
+            }
+
+            var rightsMenu = await appDb.SMenu.FirstOrDefaultAsync(m => m.Libelle == "Gestion des droits");
+            if (rightsMenu == null)
+            {
+                rightsMenu = new SMenu
+                {
+                    ModuleId = rightsModule.Id,
+                    Libelle = "Gestion des droits",
+                    ParentId = adminRootMenu.Id,
+                    Icon = "ShieldCheckmark20Regular",
+                    IsLeaf = true,
+                    Order = designerMenu.Order + 1,
+                    TenantId = 1,
+                    Actif = true,
+                    DtCreation = utcNow,
+                    UsrCreationId = 1
+                };
+                appDb.SMenu.Add(rightsMenu);
                 await appDb.SaveChangesAsync();
             }
         }
