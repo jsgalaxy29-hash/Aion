@@ -469,7 +469,7 @@ else
             .AsNoTracking()
             .Where(u => !memberIds.Contains(u.Id))
             .OrderBy(u => u.UserName)
-            .Select(u => new SelectOption(u.Id, string.IsNullOrWhiteSpace(u.FullName) ? u.UserName : $"{u.FullName} ({u.UserName})"))
+            .Select(u => new SelectOption(u.Id, string.IsNullOrWhiteSpace(u.UserName) ? u.UserName : $"{u.UserName} ({u.UserName})"))
             .ToListAsync();
 
         _availableUsers.AddRange(availableUsers);
