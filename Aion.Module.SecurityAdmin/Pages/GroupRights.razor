@@ -237,7 +237,7 @@ else
                                                                 <input type="checkbox"
                                                                        class="form-check-input"
                                                                        checked="@entry.Right1"
-                                                                       @onclick="async _ => await ToggleRightAsync(state, entry, 1, !entry.Right1)" />
+                                                                       @onchange="async args => await ToggleRightAsync(state, entry, 1, args.Value is bool value && value)" />
                                                             </td>
                                                         }
                                                         @if (!string.IsNullOrWhiteSpace(type.Right2Name))
@@ -246,7 +246,7 @@ else
                                                                 <input type="checkbox"
                                                                        class="form-check-input"
                                                                        checked="@entry.Right2"
-                                                                       @onclick="async _ => await ToggleRightAsync(state, entry, 2, !entry.Right2)" />
+                                                                       @onchange="async args => await ToggleRightAsync(state, entry, 2, args.Value is bool value && value)" />
                                                             </td>
                                                         }
                                                         @if (!string.IsNullOrWhiteSpace(type.Right3Name))
@@ -255,7 +255,7 @@ else
                                                                 <input type="checkbox"
                                                                        class="form-check-input"
                                                                        checked="@entry.Right3"
-                                                                       @onclick="async _ => await ToggleRightAsync(state, entry, 3, !entry.Right3)" />
+                                                                       @onchange="async args => await ToggleRightAsync(state, entry, 3, args.Value is bool value && value)" />
                                                             </td>
                                                         }
                                                         @if (!string.IsNullOrWhiteSpace(type.Right4Name))
@@ -264,7 +264,7 @@ else
                                                                 <input type="checkbox"
                                                                        class="form-check-input"
                                                                        checked="@entry.Right4"
-                                                                       @onclick="async _ => await ToggleRightAsync(state, entry, 4, !entry.Right4)" />
+                                                                       @onchange="async args => await ToggleRightAsync(state, entry, 4, args.Value is bool value && value)" />
                                                             </td>
                                                         }
                                                         @if (!string.IsNullOrWhiteSpace(type.Right5Name))
@@ -273,7 +273,7 @@ else
                                                                 <input type="checkbox"
                                                                        class="form-check-input"
                                                                        checked="@entry.Right5"
-                                                                       @onclick="async _ => await ToggleRightAsync(state, entry, 5, !entry.Right5)" />
+                                                                       @onchange="async args => await ToggleRightAsync(state, entry, 5, args.Value is bool value && value)" />
                                                             </td>
                                                         }
                                                         <td class="text-end">
