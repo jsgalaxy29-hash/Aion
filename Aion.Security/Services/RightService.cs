@@ -19,6 +19,7 @@ namespace Aion.Security.Services
         private readonly SecurityDbContext _db;
         private readonly IMemoryCache _cache;
         private const string CacheKeyPrefix = "UserRights_";
+        private const string CacheIndexKeyPrefix = "UserRightsIndex_";
         private const int CacheExpirationMinutes = 30;
 
         public RightService(SecurityDbContext db, IMemoryCache cache)
@@ -40,7 +41,7 @@ namespace Aion.Security.Services
 
         public async Task<Dictionary<string, List<UserRights>>> GetUserRightsAsync(int userId, int tenantId, CancellationToken ct = default)
         {
-            var cacheKey = $"{CacheKeyPrefix}{userId}_{tenantId}";
+            var cacheKey = GetCacheKey(userId, tenantId);
 
             if (_cache.TryGetValue<Dictionary<string, List<UserRights>>>(cacheKey, out var cached))
                 return cached!;
@@ -78,6 +79,7 @@ namespace Aion.Security.Services
 
             // Mise en cache
             _cache.Set(cacheKey, aggregated, TimeSpan.FromMinutes(CacheExpirationMinutes));
+            TrackTenantCache(userId, tenantId);
 
             return aggregated;
         }
@@ -98,9 +100,42 @@ namespace Aion.Security.Services
 
         public void InvalidateCache(int userId)
         {
-            // Invalider pour tous les tenants (pattern approximatif)
-            // En production, utiliser IMemoryCache avec tags ou Redis
-            _cache.Remove($"{CacheKeyPrefix}{userId}");
+            var indexKey = GetIndexKey(userId);
+
+            if (_cache.TryGetValue<HashSet<int>>(indexKey, out var tenants))
+            {
+                lock (tenants)
+                {
+                    foreach (var tenantId in tenants)
+                    {
+                        _cache.Remove(GetCacheKey(userId, tenantId));
+                    }
+
+                    tenants.Clear();
+                }
+
+                _cache.Remove(indexKey);
+            }
+        }
+
+        private string GetCacheKey(int userId, int tenantId) => $"{CacheKeyPrefix}{userId}_{tenantId}";
+
+        private string GetIndexKey(int userId) => $"{CacheIndexKeyPrefix}{userId}";
+
+        private void TrackTenantCache(int userId, int tenantId)
+        {
+            var indexKey = GetIndexKey(userId);
+
+            var tenants = _cache.GetOrCreate(indexKey, entry =>
+            {
+                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(CacheExpirationMinutes);
+                return new HashSet<int>();
+            });
+
+            lock (tenants)
+            {
+                tenants.Add(tenantId);
+            }
         }
     }
 }

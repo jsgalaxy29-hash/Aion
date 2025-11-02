@@ -124,18 +124,14 @@ namespace Aion.AppHost.Services
                     principal,
                     authProperties);
 
-                // Mise à jour de la dernière connexion APRÈS SignIn (en arrière-plan)
-                _ = Task.Run(async () =>
+                try
                 {
-                    try
-                    {
-                        await UpdateLastLoginAsync(user.Id);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Erreur mise à jour dernière connexion");
-                    }
-                });
+                    await UpdateLastLoginAsync(user.Id);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Erreur mise à jour dernière connexion");
+                }
 
                 _logger.LogInformation("✅ Connexion réussie pour {Username} (ID: {UserId})", username, user.Id);
                 return true;
@@ -225,14 +221,23 @@ namespace Aion.AppHost.Services
 
         private bool VerifyPassword(string password, string hash)
         {
-            // TEMPORAIRE : comparaison simple pour le développement
-            // EN PRODUCTION : utiliser BCrypt.Net-Next
-            // return BCrypt.Net.BCrypt.Verify(password, hash);
-
             if (string.IsNullOrEmpty(password) || string.IsNullOrEmpty(hash))
                 return false;
 
-            return password == hash;
+            try
+            {
+                return BCrypt.Net.BCrypt.Verify(password, hash);
+            }
+            catch (BCrypt.Net.SaltParseException ex)
+            {
+                _logger.LogError(ex, "Hash de mot de passe invalide");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur lors de la vérification du mot de passe");
+                return false;
+            }
         }
     }
 }
