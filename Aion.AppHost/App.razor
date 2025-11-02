@@ -10,13 +10,16 @@
     <link href="_content/Microsoft.FluentUI.AspNetCore.Components/css/reboot.css" rel="stylesheet" />
 
     <!-- Bootstrap (optionnel si vous l'utilisez) -->
-    <link rel="stylesheet" href="bootstrap/bootstrap.min.css" />
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+          integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+          crossorigin="anonymous" />
 
     <!-- Vos styles custom -->
-    <link rel="stylesheet" href="app.css" />
+    <link rel="stylesheet" href="css/app.css" />
     <link rel="stylesheet" href="Aion.AppHost.styles.css" />
 
-    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
 
     <HeadOutlet @rendermode="RenderMode.InteractiveServer" />
 </head>
@@ -25,7 +28,7 @@
     <Routes @rendermode="RenderMode.InteractiveServer" />
 
     <!-- Fluent UI Script - OBLIGATOIRE -->
-    <script src="_content/Microsoft.FluentUI.AspNetCore.Components/js/web-components-v2.5.16.min.js" type="module" async></script>
+    <script src="_content/Microsoft.FluentUI.AspNetCore.Components/js/web-components.min.js" type="module" async></script>
 
     <!-- Blazor Script -->
     <script src="_framework/blazor.web.js"></script>
