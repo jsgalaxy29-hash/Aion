@@ -22,7 +22,7 @@
 @implements IDisposable
 
 @code {
-    private string? _activeId;
+    private Guid? _activeId;
     private TabDescriptor? _active;
 
     protected override void OnInitialized()
@@ -31,26 +31,28 @@
         if (Tabs.Tabs.Count > 0)
         {
             _active = Tabs.Tabs[^1];
-            _activeId = _active.Id.ToString();
+            _activeId = _active.Id;
             Tabs.Activate(_active.Id);
         }
     }
 
     void OnTabsChanged()
     {
-        var activeTab = Tabs.Tabs.FirstOrDefault(t => t.IsActive);
+        
+        //if (_activeId is null || Tabs.Tabs.All(t => t.Id != _activeId))
+        var activeTab = Tabs.Tabs.FirstOrDefault(t => t.Id == _activeId);
 
         if (activeTab is not null)
         {
             _active = activeTab;
-            _activeId = activeTab.Id.ToString();
+            _activeId = activeTab.Id;
         }
-        else if (_activeId is null || Tabs.Tabs.All(t => t.Id.ToString() != _activeId))
+        else if (_activeId is null || Tabs.Tabs.All(t => t.Id != _activeId))
         {
             if (Tabs.Tabs.Count > 0)
             {
                 _active = Tabs.Tabs[^1];
-                _activeId = _active.Id.ToString();
+                _activeId = _active.Id;
             }
             else
             {
@@ -60,11 +62,12 @@
         }
         else if (_activeId is not null)
         {
-            _active = Tabs.Tabs.FirstOrDefault(t => t.Id.ToString() == _activeId);
+            _active = Tabs.Tabs.FirstOrDefault(t => t.Id == _activeId);
         }
 
         InvokeAsync(StateHasChanged);
     }
+   
 
 
     public void Dispose() => Tabs.TabsChanged -= OnTabsChanged;
@@ -74,7 +77,7 @@
         if (Guid.TryParse(e.ActiveId, out var id))
         {
             _active = Tabs.Tabs.FirstOrDefault(t => t.Id == id);
-            _activeId = e.ActiveId;
+            _activeId = id;
             Tabs.Activate(id);
         }
         return Task.CompletedTask;
@@ -86,7 +89,7 @@
         if (Tabs.Tabs.Count > 0)
         {
             _active = Tabs.Tabs[^1];
-            _activeId = _active.Id.ToString();
+            _activeId = _active.Id;
             Tabs.Activate(_active.Id);
         }
         else
