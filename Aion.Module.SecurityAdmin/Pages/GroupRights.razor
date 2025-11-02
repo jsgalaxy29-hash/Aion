@@ -749,12 +749,16 @@ else
             return;
         }
 
+        var originalValue = GetEntryValue(entry, slot);
+        SetEntryValue(entry, slot, isChecked);
+
         try
         {
             var entity = await SecurityDb.SRight.FirstOrDefaultAsync(r => r.Id == entry.Id && r.TenantId == UserContext.TenantId);
             if (entity == null)
             {
                 _statusMessage = "Droit introuvable.";
+                SetEntryValue(entry, slot, originalValue);
                 return;
             }
 
@@ -762,23 +766,18 @@ else
             {
                 case 1:
                     entity.Right1 = isChecked;
-                    entry.Right1 = isChecked;
                     break;
                 case 2:
                     entity.Right2 = isChecked;
-                    entry.Right2 = isChecked;
                     break;
                 case 3:
                     entity.Right3 = isChecked;
-                    entry.Right3 = isChecked;
                     break;
                 case 4:
                     entity.Right4 = isChecked;
-                    entry.Right4 = isChecked;
                     break;
                 case 5:
                     entity.Right5 = isChecked;
-                    entry.Right5 = isChecked;
                     break;
             }
 
@@ -791,7 +790,40 @@ else
         }
         catch (Exception ex)
         {
+            SetEntryValue(entry, slot, originalValue);
             _errorMessage = $"Erreur lors de la mise à jour du droit : {ex.Message}";
+        }
+    }
+
+    private static bool GetEntryValue(RightEntry entry, int slot) => slot switch
+    {
+        1 => entry.Right1,
+        2 => entry.Right2,
+        3 => entry.Right3,
+        4 => entry.Right4,
+        5 => entry.Right5,
+        _ => false
+    };
+
+    private static void SetEntryValue(RightEntry entry, int slot, bool value)
+    {
+        switch (slot)
+        {
+            case 1:
+                entry.Right1 = value;
+                break;
+            case 2:
+                entry.Right2 = value;
+                break;
+            case 3:
+                entry.Right3 = value;
+                break;
+            case 4:
+                entry.Right4 = value;
+                break;
+            case 5:
+                entry.Right5 = value;
+                break;
         }
     }
 
