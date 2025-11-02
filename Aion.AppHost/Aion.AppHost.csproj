@@ -12,6 +12,7 @@
     <None Remove="Layouts\**" />
   </ItemGroup>
   <ItemGroup>
+    <Content Remove="MainLayout.razor" />
     <Content Remove="Pages\Logout.cshtml" />
   </ItemGroup>
   <ItemGroup>
