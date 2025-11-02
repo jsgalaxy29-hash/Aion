@@ -104,6 +104,7 @@ builder.Services.AddSingleton<IModuleBootstrapper, SecurityAdminBootstrapper>();
 builder.Services.AddSingleton<IModuleBootstrapper, ListDynBootstrapper>();
 builder.Services.AddSingleton<IModuleBootstrapper, FormDynBootstrapper>();
 builder.Services.AddScoped<StartupOrchestrator>();
+builder.Services.AddScoped<IAionThemeService, AionThemeService>();
 
 // ===== Build Application =====
 var app = builder.Build();

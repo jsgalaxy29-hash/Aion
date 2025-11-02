@@ -1,3 +1,7 @@
+@using Aion.AppHost.Services
+@inject IAionThemeService ThemeService
+@implements IDisposable
+
 <!DOCTYPE html>
 <html lang="fr">
 
@@ -25,7 +29,9 @@
 </head>
 
 <body>
-    <Routes @rendermode="RenderMode.InteractiveServer" />
+    <FluentProvider Theme="@ThemeService.Current">
+        <Routes @rendermode="RenderMode.InteractiveServer" />
+    </FluentProvider>
 
     <!-- Fluent UI Script - OBLIGATOIRE -->
     <script src="_content/Microsoft.FluentUI.AspNetCore.Components/js/web-components.min.js" type="module" async></script>
@@ -35,3 +41,20 @@
 </body>
 
 </html>
+
+@code {
+    protected override void OnInitialized()
+    {
+        ThemeService.ThemeChanged += OnThemeChanged;
+    }
+
+    private void OnThemeChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        ThemeService.ThemeChanged -= OnThemeChanged;
+    }
+}
