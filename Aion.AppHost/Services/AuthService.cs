@@ -255,7 +255,8 @@ namespace Aion.AppHost.Services
         {
             return hash.StartsWith("$2a$", StringComparison.Ordinal) ||
                    hash.StartsWith("$2b$", StringComparison.Ordinal) ||
-                   hash.StartsWith("$2y$", StringComparison.Ordinal);
+                   hash.StartsWith("$2y$", StringComparison.Ordinal) ||
+                   hash.StartsWith("$2x$", StringComparison.Ordinal);
         }
     }
 }
