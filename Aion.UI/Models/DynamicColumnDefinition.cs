@@ -1,3 +1,5 @@
+using Aion.DataEngine.Entities;
+
 namespace Aion.UI.Models
 {
     /// <summary>
