@@ -200,6 +200,78 @@ namespace Aion.Infrastructure.Seeders
                 await appDb.SaveChangesAsync();
             }
 
+            var listDynModule = await appDb.SModule.FirstOrDefaultAsync(m => m.Name == "ListDyn");
+            if (listDynModule == null)
+            {
+                listDynModule = new SModule
+                {
+                    Name = "ListDyn",
+                    Description = "Liste dynamique",
+                    Order = (rightsModule?.Order ?? 910) + 1,
+                    Route = "/dynamic/list",
+                    TenantId = 1,
+                    Actif = true,
+                    DtCreation = utcNow,
+                    UsrCreationId = 1
+                };
+                appDb.SModule.Add(listDynModule);
+                await appDb.SaveChangesAsync();
+            }
+            else if (string.IsNullOrWhiteSpace(listDynModule.Route))
+            {
+                listDynModule.Route = "/dynamic/list";
+                appDb.SModule.Update(listDynModule);
+                await appDb.SaveChangesAsync();
+            }
+
+            var formDynModule = await appDb.SModule.FirstOrDefaultAsync(m => m.Name == "FormDyn");
+            if (formDynModule == null)
+            {
+                formDynModule = new SModule
+                {
+                    Name = "FormDyn",
+                    Description = "Formulaire dynamique",
+                    Order = listDynModule.Order + 1,
+                    Route = "/dynamic/form",
+                    TenantId = 1,
+                    Actif = true,
+                    DtCreation = utcNow,
+                    UsrCreationId = 1
+                };
+                appDb.SModule.Add(formDynModule);
+                await appDb.SaveChangesAsync();
+            }
+            else if (string.IsNullOrWhiteSpace(formDynModule.Route))
+            {
+                formDynModule.Route = "/dynamic/form";
+                appDb.SModule.Update(formDynModule);
+                await appDb.SaveChangesAsync();
+            }
+
+            var managerModule = await appDb.SModule.FirstOrDefaultAsync(m => m.Name == "Manager les tables");
+            if (managerModule == null)
+            {
+                managerModule = new SModule
+                {
+                    Name = "Manager les tables",
+                    Description = "Sélection des tables dynamiques",
+                    Order = formDynModule.Order + 1,
+                    Route = "/dynamic/manager",
+                    TenantId = 1,
+                    Actif = true,
+                    DtCreation = utcNow,
+                    UsrCreationId = 1
+                };
+                appDb.SModule.Add(managerModule);
+                await appDb.SaveChangesAsync();
+            }
+            else if (string.IsNullOrWhiteSpace(managerModule.Route))
+            {
+                managerModule.Route = "/dynamic/manager";
+                appDb.SModule.Update(managerModule);
+                await appDb.SaveChangesAsync();
+            }
+
             var adminRootMenu = await appDb.SMenu.FirstOrDefaultAsync(m => m.Libelle == "Administration");
             if (adminRootMenu == null)
             {
@@ -257,6 +329,35 @@ namespace Aion.Infrastructure.Seeders
                 };
                 appDb.SMenu.Add(rightsMenu);
                 await appDb.SaveChangesAsync();
+            }
+
+            var myTablesMenu = await appDb.SMenu.FirstOrDefaultAsync(m => m.Libelle == "Mes tables");
+            if (myTablesMenu == null)
+            {
+                myTablesMenu = new SMenu
+                {
+                    ModuleId = managerModule.Id,
+                    Libelle = "Mes tables",
+                    ParentId = adminRootMenu.Id,
+                    Icon = "TableSimple20Regular",
+                    IsLeaf = true,
+                    Order = rightsMenu.Order + 1,
+                    TenantId = 1,
+                    Actif = true,
+                    DtCreation = utcNow,
+                    UsrCreationId = 1
+                };
+                appDb.SMenu.Add(myTablesMenu);
+                await appDb.SaveChangesAsync();
+            }
+            else
+            {
+                if (myTablesMenu.ModuleId != managerModule.Id)
+                {
+                    myTablesMenu.ModuleId = managerModule.Id;
+                    appDb.SMenu.Update(myTablesMenu);
+                    await appDb.SaveChangesAsync();
+                }
             }
         }
 

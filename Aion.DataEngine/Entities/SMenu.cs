@@ -8,6 +8,7 @@
         public int? ParentId { get; set; }
         public string? Icon { get; set; }
         public bool IsLeaf { get; set; } = true;
+        public string? Parametre { get; set; }
 
         public SModule? Module { get; set; }
     }
