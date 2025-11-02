@@ -1,0 +1,14 @@
+/*
+    Styles personnalisés pour l'hôte Blazor.
+    Ajoutez ici les règles spécifiques à l'application.
+*/
+
+body {
+    background-color: #f5f5f5;
+    min-height: 100vh;
+}
+
+main,
+.app-container {
+    padding: 1.5rem;
+}
