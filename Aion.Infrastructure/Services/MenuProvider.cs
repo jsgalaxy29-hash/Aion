@@ -3,6 +3,7 @@ using Aion.Domain.Contracts;
 using Aion.Domain.UI;
 using Aion.Security.Services;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
 
 namespace Aion.Infrastructure.Services
 {
@@ -34,18 +35,58 @@ namespace Aion.Infrastructure.Services
 
             // Récupération des menus depuis la base (table S_Menu ou équivalent)
             // ADAPTATION : Remplacer par votre table réelle
-            var menus = await _db.Set<SMenu>() // Supposé que MenuEntity est mappé
+            var menus = await _db.Set<SMenu>()
+                .Include(m => m.Module)
                 .Where(m => m.Actif && authorizedIds.Contains(m.Id))
                 .OrderBy(m => m.Order)
                 .ToListAsync(ct);
 
-            return menus;
+            if (!menus.Any())
+            {
+                return menus;
+            }
+
+            // Ajoute automatiquement les parents nécessaires pour afficher la hiérarchie
+            var parentIds = menus
+                .Where(m => m.ParentId.HasValue)
+                .Select(m => m.ParentId!.Value)
+                .Distinct()
+                .Except(menus.Select(m => m.Id))
+                .ToList();
+
+            while (parentIds.Count > 0)
+            {
+                var parents = await _db.Set<SMenu>()
+                    .Include(m => m.Module)
+                    .Where(m => parentIds.Contains(m.Id))
+                    .ToListAsync(ct);
+
+                if (!parents.Any())
+                {
+                    break;
+                }
+
+                menus.AddRange(parents);
+
+                parentIds = parents
+                    .Where(m => m.ParentId.HasValue)
+                    .Select(m => m.ParentId!.Value)
+                    .Distinct()
+                    .Except(menus.Select(m => m.Id))
+                    .ToList();
+            }
+
+            return menus
+                .DistinctBy(m => m.Id)
+                .OrderBy(m => m.Order)
+                .ToList();
         }
 
         public async Task<IReadOnlyList<SMenu>> GetAllMenuAsync(int tenantId, CancellationToken ct)
         {
             // ADAPTATION : Ajouter filtre TenantId si multi-tenant
             var menus = await _db.Set<SMenu>()
+                .Include(m => m.Module)
                 .Where(m => m.Actif)
                 .OrderBy(m => m.Order)
                 .ToListAsync(ct);

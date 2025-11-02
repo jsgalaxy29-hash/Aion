@@ -1,12 +1,16 @@
 @using Aion.Domain.UI
 @using Aion.Domain.Contracts
 @using Aion.DataEngine.Entities
+@using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Authorization
+@using System.Collections.Generic
+@using System
+@using System.Linq
 @inject IMenuProvider MenuProvider
 @inject ITabService Tabs
 @inject AuthenticationStateProvider Auth
 
-<FluentSearch @bind-Value="_filter" Placeholder="Rechercher..." Class="mb-2" />
+<FluentSearch @bind-Value="Filter" Placeholder="Rechercher..." Class="mb-2" />
 
 @if (_menus is null)
 {
@@ -16,7 +20,7 @@ else if (!_menus.Any())
 {
     <div class="text-muted p-3">
         <p>Aucun menu disponible.</p>
-        <small>Contactez votre administrateur pour obtenir les droits nécessaires.</small>
+        <small>Contactez votre administrateur pour obtenir les droits nÃ©cessaires.</small>
     </div>
 }
 else
@@ -24,15 +28,7 @@ else
     <FluentTreeView>
         @foreach (var root in _rootNodes)
         {
-            <FluentTreeItem Text="@root.Libelle" @onclick="() => OnClick(root)">
-                @if (Children.TryGetValue(root.Id, out var children))
-                {
-                    @foreach (var c in children)
-                    {
-                        <FluentTreeItem Text="@c.Libelle" @onclick="() => OnClick(c)" />
-                    }
-                }
-            </FluentTreeItem>
+            @RenderTreeItem(root)
         }
     </FluentTreeView>
 }
@@ -43,6 +39,22 @@ else
     private readonly Dictionary<int, List<SMenu>> Children = new();
     private string _filter = string.Empty;
 
+    private string Filter
+    {
+        get => _filter;
+        set
+        {
+            if (_filter != value)
+            {
+                _filter = value;
+                if (_menus != null)
+                {
+                    BuildTree();
+                }
+            }
+        }
+    }
+
     protected override async Task OnInitializedAsync()
     {
         try
@@ -50,27 +62,27 @@ else
             var state = await Auth.GetAuthenticationStateAsync();
             var user = state.User;
 
-            // Récupération sécurisée des claims
+            // RÃ©cupÃ©ration sÃ©curisÃ©e des claims
             var userIdClaim = user.FindFirst("sub");
             var tenantIdClaim = user.FindFirst("tenant");
 
             if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var userId))
             {
-                // Utilisateur non authentifié ou claim invalide
+                // Utilisateur non authentifiÃ© ou claim invalide
                 _menus = new List<SMenu>();
                 return;
             }
 
             if (tenantIdClaim == null || !int.TryParse(tenantIdClaim.Value, out var tenantId))
             {
-                // Tenant non défini
+                // Tenant non dÃ©fini
                 _menus = new List<SMenu>();
                 return;
             }
 
-            // Récupération des menus autorisés (filtrage RBAC côté serveur)
+            // RÃ©cupÃ©ration des menus autorisÃ©s (filtrage RBAC cÃ´tÃ© serveur)
             _menus = await MenuProvider.GetAuthorizedMenuAsync(tenantId, userId, default);
-            
+
             BuildTree();
         }
         catch (Exception ex)
@@ -84,41 +96,138 @@ else
     private void BuildTree()
     {
         if (_menus == null || !_menus.Any())
+        {
+            Children.Clear();
+            _rootNodes = new List<SMenu>();
             return;
+        }
 
-        var query = string.IsNullOrWhiteSpace(_filter)
-            ? _menus
-            : _menus.Where(m => m.Libelle.Contains(_filter, StringComparison.OrdinalIgnoreCase)).ToList();
+        var query = FilterMenus();
 
         Children.Clear();
 
-        // Construction de l'arbre enfants
-        foreach (var m in query.Where(x => x.ParentId > 0))
+        foreach (var menu in query.Where(x => x.ParentId.HasValue))
         {
-            if (!Children.ContainsKey(m.ParentId.Value))
-                Children[m.ParentId.Value] = new List<SMenu>();
-            
-            Children[m.ParentId.Value].Add(m);
+            if (!Children.TryGetValue(menu.ParentId!.Value, out var list))
+            {
+                list = new List<SMenu>();
+                Children[menu.ParentId.Value] = list;
+            }
+
+            list.Add(menu);
         }
 
-        // Noeuds racines
+        foreach (var childList in Children.Values)
+        {
+            childList.Sort((a, b) => a.Order.CompareTo(b.Order));
+        }
+
         _rootNodes = query
-            .Where(x => x.ParentId  <= 0)
+            .Where(x => !x.ParentId.HasValue)
             .OrderBy(x => x.Order)
+            .ToList();
+    }
+
+    private List<SMenu> FilterMenus()
+    {
+        if (_menus == null)
+        {
+            return new List<SMenu>();
+        }
+
+        if (string.IsNullOrWhiteSpace(_filter))
+        {
+            return _menus
+                .OrderBy(m => m.Order)
+                .ToList();
+        }
+
+        var comparer = StringComparison.OrdinalIgnoreCase;
+        var allMenus = _menus.ToDictionary(m => m.Id);
+        var selected = new HashSet<int>();
+
+        foreach (var menu in _menus)
+        {
+            if (menu.Libelle.Contains(_filter, comparer))
+            {
+                var current = menu;
+                while (current != null)
+                {
+                    if (!selected.Add(current.Id))
+                    {
+                        break;
+                    }
+
+                    if (current.ParentId.HasValue && allMenus.TryGetValue(current.ParentId.Value, out var parent))
+                    {
+                        current = parent;
+                    }
+                    else
+                    {
+                        current = null;
+                    }
+                }
+            }
+        }
+
+        if (!selected.Any())
+        {
+            return new List<SMenu>();
+        }
+
+        var queue = new Queue<int>(selected);
+        while (queue.Count > 0)
+        {
+            var id = queue.Dequeue();
+            foreach (var child in _menus.Where(m => m.ParentId == id))
+            {
+                if (selected.Add(child.Id))
+                {
+                    queue.Enqueue(child.Id);
+                }
+            }
+        }
+
+        return _menus
+            .Where(m => selected.Contains(m.Id))
+            .OrderBy(m => m.Order)
             .ToList();
     }
 
     private async Task OnClick(SMenu item)
     {
-        if (item.IsLeaf && !string.IsNullOrEmpty(item.Route))
+        var route = item.Module?.Route;
+        if (item.IsLeaf && !string.IsNullOrEmpty(route))
         {
-            await Tabs.OpenAsync(item.Libelle, item.Route, null, true, CancellationToken.None);
+            await Tabs.OpenAsync(item.Libelle, route, null, true, CancellationToken.None);
         }
     }
 
     protected override void OnParametersSet()
     {
         if (_menus != null)
+        {
             BuildTree();
+        }
     }
+
+    private RenderFragment RenderTreeItem(SMenu menu) => builder =>
+    {
+        builder.OpenComponent<FluentTreeItem>(0);
+        builder.AddAttribute(1, "Text", menu.Libelle);
+        builder.AddAttribute(2, "onclick", EventCallback.Factory.Create(this, () => OnClick(menu)));
+
+        if (Children.TryGetValue(menu.Id, out var children) && children.Count > 0)
+        {
+            builder.AddAttribute(3, "ChildContent", (RenderFragment)(childBuilder =>
+            {
+                foreach (var child in children)
+                {
+                    childBuilder.AddContent(4, RenderTreeItem(child));
+                }
+            }));
+        }
+
+        builder.CloseComponent();
+    };
 }
