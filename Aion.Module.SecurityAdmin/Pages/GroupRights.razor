@@ -446,9 +446,19 @@ else
 
         var members = await Db.SUserGroup
             .AsNoTracking()
-            .Where(ug => ug.GroupId == groupId)
-            .Join(Db.Users.AsNoTracking(), ug => ug.UserId, u => u.Id, (ug, u) => new GroupMemberVm(u.Id, u.UserName, string.IsNullOrWhiteSpace(u.FullName) ? u.UserName : u.FullName))
-            .OrderBy(vm => vm.UserName)
+            .Where(ug => ug.GroupId == groupId && ug.IsLinkActive)
+            .Join(
+                Db.Users.AsNoTracking(),
+                ug => ug.UserId,
+                u => u.Id,
+                (ug, u) => new
+                {
+                    u.Id,
+                    u.UserName,
+                    u.FullName
+                })
+            .OrderBy(x => x.UserName)
+            .Select(x => new GroupMemberVm(x.Id, x.UserName, string.IsNullOrEmpty(x.FullName) ? x.UserName : x.FullName))
             .ToListAsync();
 
         _groupMembers.AddRange(members);
