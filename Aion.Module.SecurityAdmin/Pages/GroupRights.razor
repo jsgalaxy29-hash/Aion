@@ -1,0 +1,912 @@
+@page "/admin/rights"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@inject Aion.Infrastructure.AionDbContext Db
+@inject IUserContext UserContext
+
+<PageTitle>Gestion des droits</PageTitle>
+
+<h1 class="mb-3">Gestion des droits</h1>
+
+@if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <div class="alert alert-danger" role="alert">@_errorMessage</div>
+}
+@if (!string.IsNullOrWhiteSpace(_statusMessage))
+{
+    <div class="alert alert-success" role="status">@_statusMessage</div>
+}
+
+@if (_isLoading)
+{
+    <div class="d-flex align-items-center gap-2">
+        <FluentProgressRing />
+        <span>Chargement des données de sécurité...</span>
+    </div>
+}
+else
+{
+    <EditForm Model="_groupModel" OnValidSubmit="SaveGroupAsync">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="d-flex flex-wrap align-items-end gap-3 mb-4">
+            <div>
+                <label class="form-label" for="group-select">Sélection d'un groupe</label>
+                <select id="group-select"
+                        class="form-select"
+                        @bind="_selectedGroupId"
+                        @bind:after="OnGroupSelectionChanged">
+                    <option value="">-- Sélectionner --</option>
+                    @foreach (var group in _groups)
+                    {
+                        <option value="@group.Id">@group.Name</option>
+                    }
+                </select>
+            </div>
+
+            <FluentButton Appearance="Appearance.Accent" Icon="Add16Filled" OnClick="CreateNewGroup">
+                Nouveau groupe
+            </FluentButton>
+
+            @if (_groupModel?.Id > 0)
+            {
+                <FluentButton Appearance="Appearance.Stealth" OnClick="ReloadCurrentGroupAsync">
+                    Réinitialiser
+                </FluentButton>
+            }
+        </div>
+
+        <fieldset class="mb-4">
+            <legend>Informations du groupe</legend>
+            <div class="form-grid">
+                <label>Nom *</label>
+                <InputText @bind-Value="_groupModel!.Name" class="form-control" />
+                <ValidationMessage For="() => _groupModel!.Name" />
+
+                <label>Description</label>
+                <InputTextArea @bind-Value="_groupModel!.Description" class="form-control" />
+
+                <label>Actif</label>
+                <InputCheckbox @bind-Value="_groupModel!.Actif" class="form-check-input" />
+
+                <label>Groupe système</label>
+                <InputCheckbox @bind-Value="_groupModel!.IsSystem" class="form-check-input" />
+            </div>
+        </fieldset>
+
+        <div class="d-flex flex-wrap gap-2 mb-4">
+            <FluentButton Appearance="Appearance.Accent" Type="ButtonType.Submit">
+                Enregistrer le groupe
+            </FluentButton>
+
+            @if (_groupModel?.Id > 0)
+            {
+                <FluentButton Appearance="Appearance.Outline" OnClick="DeleteGroupAsync" Disabled="_groupModel!.IsSystem">
+                    Supprimer
+                </FluentButton>
+            }
+        </div>
+    </EditForm>
+
+    <section>
+        <h2 class="h5">Membres et droits</h2>
+
+        @if (_groupModel is null || _groupModel.Id == 0)
+        {
+            <div class="alert alert-info">
+                Enregistrez le groupe avant de gérer les utilisateurs et les droits associés.
+            </div>
+        }
+        else
+        {
+            <FluentTabs>
+                <FluentTab>
+                    <HeaderContent>Utilisateurs</HeaderContent>
+                    <ChildContent>
+                        @if (_groupMembers.Count == 0)
+                        {
+                            <div class="alert alert-secondary">Aucun utilisateur dans ce groupe pour le moment.</div>
+                        }
+                        else
+                        {
+                            <div class="table-responsive mb-3">
+                                <table class="table table-striped align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>Identifiant</th>
+                                            <th>Nom complet</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var member in _groupMembers)
+                                        {
+                                            <tr>
+                                                <td>@member.UserName</td>
+                                                <td>@member.FullName</td>
+                                                <td class="text-end">
+                                                    <FluentButton Appearance="Appearance.Outline" OnClick="() => RemoveUserAsync(member.UserId)">
+                                                        Retirer
+                                                    </FluentButton>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+
+                        <div class="d-flex flex-wrap align-items-end gap-2">
+                            <div>
+                                <label class="form-label" for="user-select">Ajouter un utilisateur</label>
+                                <select id="user-select" class="form-select" @bind="_selectedUserToAdd">
+                                    <option value="">-- Sélectionner --</option>
+                                    @foreach (var user in _availableUsers)
+                                    {
+                                        <option value="@user.Id">@user.Label</option>
+                                    }
+                                </select>
+                            </div>
+                            <FluentButton Appearance="Appearance.Accent" Icon="Add16Filled" OnClick="AddUserAsync" Disabled="_selectedUserToAdd is null">
+                                Ajouter
+                            </FluentButton>
+                        </div>
+                    </ChildContent>
+                </FluentTab>
+
+                @foreach (var type in _rightTypes)
+                {
+                    var state = _rightStates[type.Code];
+                    <FluentTab>
+                        <HeaderContent>@type.Name</HeaderContent>
+                        <ChildContent>
+                            @if (!state.AllSubjects.Any())
+                            {
+                                <div class="alert alert-warning">
+                                    Aucune ressource disponible pour le type "@type.Name" (source : @type.DataSource).
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="d-flex flex-wrap align-items-end gap-2 mb-3">
+                                    <div>
+                                        <label class="form-label" for="add-@type.Code">Ajouter une ressource</label>
+                                        <select id="add-@type.Code" class="form-select" @bind="state.SelectedSubjectId">
+                                            <option value="">-- Sélectionner --</option>
+                                            @foreach (var subject in state.AvailableSubjects)
+                                            {
+                                                <option value="@subject.Id">@subject.Label</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <FluentButton Appearance="Appearance.Accent" Icon="Add16Filled" Disabled="state.SelectedSubjectId is null" OnClick="() => AddRightAsync(type.Code)">
+                                        Ajouter
+                                    </FluentButton>
+                                </div>
+
+                                @if (state.Entries.Count == 0)
+                                {
+                                    <div class="alert alert-secondary">Aucun droit n'est défini pour ce type.</div>
+                                }
+                                else
+                                {
+                                    <div class="table-responsive">
+                                        <table class="table table-striped align-middle">
+                                            <thead>
+                                                <tr>
+                                                    <th>Ressource</th>
+                                                    @if (!string.IsNullOrWhiteSpace(type.Right1Name))
+                                                    {
+                                                        <th>@type.Right1Name</th>
+                                                    }
+                                                    @if (!string.IsNullOrWhiteSpace(type.Right2Name))
+                                                    {
+                                                        <th>@type.Right2Name</th>
+                                                    }
+                                                    @if (!string.IsNullOrWhiteSpace(type.Right3Name))
+                                                    {
+                                                        <th>@type.Right3Name</th>
+                                                    }
+                                                    @if (!string.IsNullOrWhiteSpace(type.Right4Name))
+                                                    {
+                                                        <th>@type.Right4Name</th>
+                                                    }
+                                                    @if (!string.IsNullOrWhiteSpace(type.Right5Name))
+                                                    {
+                                                        <th>@type.Right5Name</th>
+                                                    }
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var entry in state.Entries)
+                                                {
+                                                    <tr>
+                                                        <td>@entry.Label</td>
+                                                        @if (!string.IsNullOrWhiteSpace(type.Right1Name))
+                                                        {
+                                                            <td>
+                                                                <input type="checkbox"
+                                                                       class="form-check-input"
+                                                                       checked="@entry.Right1"
+                                                                       @onchange="args => ToggleRightAsync(state, entry, 1, args)" />
+                                                            </td>
+                                                        }
+                                                        @if (!string.IsNullOrWhiteSpace(type.Right2Name))
+                                                        {
+                                                            <td>
+                                                                <input type="checkbox"
+                                                                       class="form-check-input"
+                                                                       checked="@entry.Right2"
+                                                                       @onchange="args => ToggleRightAsync(state, entry, 2, args)" />
+                                                            </td>
+                                                        }
+                                                        @if (!string.IsNullOrWhiteSpace(type.Right3Name))
+                                                        {
+                                                            <td>
+                                                                <input type="checkbox"
+                                                                       class="form-check-input"
+                                                                       checked="@entry.Right3"
+                                                                       @onchange="args => ToggleRightAsync(state, entry, 3, args)" />
+                                                            </td>
+                                                        }
+                                                        @if (!string.IsNullOrWhiteSpace(type.Right4Name))
+                                                        {
+                                                            <td>
+                                                                <input type="checkbox"
+                                                                       class="form-check-input"
+                                                                       checked="@entry.Right4"
+                                                                       @onchange="args => ToggleRightAsync(state, entry, 4, args)" />
+                                                            </td>
+                                                        }
+                                                        @if (!string.IsNullOrWhiteSpace(type.Right5Name))
+                                                        {
+                                                            <td>
+                                                                <input type="checkbox"
+                                                                       class="form-check-input"
+                                                                       checked="@entry.Right5"
+                                                                       @onchange="args => ToggleRightAsync(state, entry, 5, args)" />
+                                                            </td>
+                                                        }
+                                                        <td class="text-end">
+                                                            <FluentButton Appearance="Appearance.Outline" OnClick="() => RemoveRightAsync(state, entry)">
+                                                                Retirer
+                                                            </FluentButton>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                }
+                            }
+                        </ChildContent>
+                    </FluentTab>
+                }
+            </FluentTabs>
+        }
+    </section>
+}
+
+@code {
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private string? _statusMessage;
+    private int? _selectedGroupId;
+
+    private List<GroupSummary> _groups = new();
+    private GroupEditModel? _groupModel;
+
+    private readonly List<GroupMemberVm> _groupMembers = new();
+    private readonly List<SelectOption> _availableUsers = new();
+    private int? _selectedUserToAdd;
+
+    private readonly Dictionary<string, RightTabState> _rightStates = new(StringComparer.OrdinalIgnoreCase);
+    private List<SRightType> _rightTypes = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _rightTypes = await Db.SRightType
+                .AsNoTracking()
+                .OrderBy(t => t.Order)
+                .ThenBy(t => t.Name)
+                .ToListAsync();
+
+            foreach (var type in _rightTypes)
+            {
+                _rightStates[type.Code] = new RightTabState(type);
+            }
+
+            await LoadGroupsAsync();
+            _statusMessage = null;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Erreur lors du chargement : {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private Task OnGroupSelectionChanged()
+    {
+        _statusMessage = null;
+        _errorMessage = null;
+
+        if (_selectedGroupId.HasValue)
+        {
+            return LoadGroupDetailsAsync(_selectedGroupId.Value);
+        }
+
+        _groupModel = new GroupEditModel();
+        _groupMembers.Clear();
+        _availableUsers.Clear();
+        foreach (var state in _rightStates.Values)
+        {
+            state.Clear();
+        }
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private void CreateNewGroup()
+    {
+        _selectedGroupId = null;
+        _groupModel = new GroupEditModel
+        {
+            Actif = true
+        };
+        _groupMembers.Clear();
+        _availableUsers.Clear();
+        foreach (var state in _rightStates.Values)
+        {
+            state.Clear();
+        }
+        _statusMessage = null;
+        _errorMessage = null;
+    }
+
+    private async Task ReloadCurrentGroupAsync()
+    {
+        if (_groupModel?.Id > 0)
+        {
+            await LoadGroupDetailsAsync(_groupModel.Id);
+        }
+    }
+
+    private async Task LoadGroupsAsync(int? keepSelection = null)
+    {
+        _groups = await Db.SGroup
+            .AsNoTracking()
+            .OrderBy(g => g.Name)
+            .Select(g => new GroupSummary(g.Id, g.Name))
+            .ToListAsync();
+
+        if (_groups.Count == 0)
+        {
+            _groupModel = new GroupEditModel { Actif = true };
+            _selectedGroupId = null;
+            foreach (var state in _rightStates.Values)
+            {
+                state.Clear();
+            }
+            _groupMembers.Clear();
+            _availableUsers.Clear();
+            return;
+        }
+
+        var targetId = keepSelection
+            ?? _selectedGroupId
+            ?? _groups.First().Id;
+
+        _selectedGroupId = targetId;
+        await LoadGroupDetailsAsync(targetId);
+    }
+
+    private async Task LoadGroupDetailsAsync(int groupId)
+    {
+        try
+        {
+            var group = await Db.SGroup
+                .AsNoTracking()
+                .FirstOrDefaultAsync(g => g.Id == groupId);
+
+            if (group == null)
+            {
+                _errorMessage = "Groupe introuvable.";
+                return;
+            }
+
+            _groupModel = new GroupEditModel
+            {
+                Id = group.Id,
+                Name = group.Name,
+                Description = group.Description,
+                IsSystem = group.IsSystem,
+                Actif = group.Actif
+            };
+
+            await LoadGroupMembersAsync(group.Id);
+            await LoadRightsAsync(group.Id);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Erreur lors du chargement du groupe : {ex.Message}";
+        }
+    }
+
+    private async Task LoadGroupMembersAsync(int groupId)
+    {
+        _groupMembers.Clear();
+        _availableUsers.Clear();
+
+        var members = await Db.SUserGroup
+            .AsNoTracking()
+            .Where(ug => ug.GroupId == groupId)
+            .Join(Db.Users.AsNoTracking(), ug => ug.UserId, u => u.Id, (ug, u) => new GroupMemberVm(u.Id, u.UserName, string.IsNullOrWhiteSpace(u.FullName) ? u.UserName : u.FullName))
+            .OrderBy(vm => vm.UserName)
+            .ToListAsync();
+
+        _groupMembers.AddRange(members);
+
+        var memberIds = members.Select(m => m.UserId).ToHashSet();
+
+        var availableUsers = await Db.Users
+            .AsNoTracking()
+            .Where(u => !memberIds.Contains(u.Id))
+            .OrderBy(u => u.UserName)
+            .Select(u => new SelectOption(u.Id, string.IsNullOrWhiteSpace(u.FullName) ? u.UserName : $"{u.FullName} ({u.UserName})"))
+            .ToListAsync();
+
+        _availableUsers.AddRange(availableUsers);
+        _selectedUserToAdd = null;
+    }
+
+    private async Task LoadRightsAsync(int groupId)
+    {
+        foreach (var type in _rightTypes)
+        {
+            if (!_rightStates.TryGetValue(type.Code, out var state))
+            {
+                state = new RightTabState(type);
+                _rightStates[type.Code] = state;
+            }
+
+            await state.LoadAsync(Db, groupId);
+        }
+    }
+
+    private async Task SaveGroupAsync()
+    {
+        if (_groupModel is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _errorMessage = null;
+            _statusMessage = null;
+
+            if (_groupModel.Id == 0)
+            {
+                var entity = new SGroup
+                {
+                    Name = _groupModel.Name,
+                    Description = _groupModel.Description,
+                    IsSystem = _groupModel.IsSystem,
+                    Actif = _groupModel.Actif,
+                    TenantId = UserContext.TenantId,
+                    DtCreation = DateTime.UtcNow,
+                    UsrCreationId = UserContext.UserId
+                };
+
+                Db.SGroup.Add(entity);
+                await Db.SaveChangesAsync();
+
+                _statusMessage = "Groupe créé.";
+                await LoadGroupsAsync(entity.Id);
+            }
+            else
+            {
+                var entity = await Db.SGroup.FirstOrDefaultAsync(g => g.Id == _groupModel.Id);
+                if (entity == null)
+                {
+                    _errorMessage = "Groupe introuvable.";
+                    return;
+                }
+
+                entity.Name = _groupModel.Name;
+                entity.Description = _groupModel.Description;
+                entity.IsSystem = _groupModel.IsSystem;
+                entity.Actif = _groupModel.Actif;
+                entity.DtModification = DateTime.UtcNow;
+                entity.UsrModificationId = UserContext.UserId;
+
+                await Db.SaveChangesAsync();
+
+                _statusMessage = "Groupe mis à jour.";
+                await LoadGroupsAsync(entity.Id);
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Erreur lors de l'enregistrement : {ex.Message}";
+        }
+    }
+
+    private async Task DeleteGroupAsync()
+    {
+        if (_groupModel is null || _groupModel.Id == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            var entity = await Db.SGroup.FirstOrDefaultAsync(g => g.Id == _groupModel.Id);
+            if (entity == null)
+            {
+                _errorMessage = "Groupe introuvable.";
+                return;
+            }
+
+            Db.SGroup.Remove(entity);
+            await Db.SaveChangesAsync();
+
+            _statusMessage = "Groupe supprimé.";
+            await LoadGroupsAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Erreur lors de la suppression : {ex.Message}";
+        }
+    }
+
+    private async Task AddUserAsync()
+    {
+        if (_groupModel is null || _groupModel.Id == 0 || !_selectedUserToAdd.HasValue)
+        {
+            return;
+        }
+
+        try
+        {
+            var exists = await Db.SUserGroup.AnyAsync(ug => ug.GroupId == _groupModel.Id && ug.UserId == _selectedUserToAdd.Value);
+            if (exists)
+            {
+                _statusMessage = "L'utilisateur est déjà membre du groupe.";
+                return;
+            }
+
+            var link = new SUserGroup
+            {
+                GroupId = _groupModel.Id,
+                UserId = _selectedUserToAdd.Value,
+                IsLinkActive = true,
+                TenantId = UserContext.TenantId,
+                DtCreation = DateTime.UtcNow,
+                UsrCreationId = UserContext.UserId
+            };
+
+            Db.SUserGroup.Add(link);
+            await Db.SaveChangesAsync();
+
+            _statusMessage = "Utilisateur ajouté au groupe.";
+            await LoadGroupMembersAsync(_groupModel.Id);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Erreur lors de l'ajout de l'utilisateur : {ex.Message}";
+        }
+    }
+
+    private async Task RemoveUserAsync(int userId)
+    {
+        if (_groupModel is null || _groupModel.Id == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            var link = await Db.SUserGroup.FirstOrDefaultAsync(ug => ug.GroupId == _groupModel.Id && ug.UserId == userId);
+            if (link == null)
+            {
+                _statusMessage = "Lien utilisateur introuvable.";
+                return;
+            }
+
+            Db.SUserGroup.Remove(link);
+            await Db.SaveChangesAsync();
+
+            _statusMessage = "Utilisateur retiré du groupe.";
+            await LoadGroupMembersAsync(_groupModel.Id);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Erreur lors du retrait de l'utilisateur : {ex.Message}";
+        }
+    }
+
+    private async Task AddRightAsync(string code)
+    {
+        if (_groupModel is null || _groupModel.Id == 0)
+        {
+            return;
+        }
+
+        if (!_rightStates.TryGetValue(code, out var state) || !state.SelectedSubjectId.HasValue)
+        {
+            return;
+        }
+
+        try
+        {
+            var subjectId = state.SelectedSubjectId.Value;
+
+            var exists = await Db.SRight.AnyAsync(r => r.GroupId == _groupModel.Id && r.Target == code && r.SubjectId == subjectId);
+            if (exists)
+            {
+                _statusMessage = "Ce droit existe déjà.";
+                return;
+            }
+
+            var entity = new SRight
+            {
+                GroupId = _groupModel.Id,
+                Target = code,
+                SubjectId = subjectId,
+                Right1 = state.Type.HasRight1 ? false : null,
+                Right2 = state.Type.HasRight2 ? false : null,
+                Right3 = state.Type.HasRight3 ? false : null,
+                Right4 = state.Type.HasRight4 ? false : null,
+                Right5 = state.Type.HasRight5 ? false : null,
+                TenantId = UserContext.TenantId,
+                DtCreation = DateTime.UtcNow,
+                UsrCreationId = UserContext.UserId,
+                Actif = true
+            };
+
+            Db.SRight.Add(entity);
+            await Db.SaveChangesAsync();
+
+            _statusMessage = "Droit ajouté.";
+            await state.LoadAsync(Db, _groupModel.Id);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Erreur lors de l'ajout du droit : {ex.Message}";
+        }
+    }
+
+    private async Task RemoveRightAsync(RightTabState state, RightEntry entry)
+    {
+        if (_groupModel is null || _groupModel.Id == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            var entity = await Db.SRight.FirstOrDefaultAsync(r => r.Id == entry.Id);
+            if (entity == null)
+            {
+                _statusMessage = "Droit introuvable.";
+                return;
+            }
+
+            Db.SRight.Remove(entity);
+            await Db.SaveChangesAsync();
+
+            _statusMessage = "Droit supprimé.";
+            await state.LoadAsync(Db, _groupModel.Id);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Erreur lors de la suppression du droit : {ex.Message}";
+        }
+    }
+
+    private async Task ToggleRightAsync(RightTabState state, RightEntry entry, int slot, ChangeEventArgs args)
+    {
+        if (_groupModel is null || _groupModel.Id == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            var isChecked = args.Value is bool b && b;
+            var entity = await Db.SRight.FirstOrDefaultAsync(r => r.Id == entry.Id);
+            if (entity == null)
+            {
+                _statusMessage = "Droit introuvable.";
+                return;
+            }
+
+            switch (slot)
+            {
+                case 1:
+                    entity.Right1 = isChecked;
+                    entry.Right1 = isChecked;
+                    break;
+                case 2:
+                    entity.Right2 = isChecked;
+                    entry.Right2 = isChecked;
+                    break;
+                case 3:
+                    entity.Right3 = isChecked;
+                    entry.Right3 = isChecked;
+                    break;
+                case 4:
+                    entity.Right4 = isChecked;
+                    entry.Right4 = isChecked;
+                    break;
+                case 5:
+                    entity.Right5 = isChecked;
+                    entry.Right5 = isChecked;
+                    break;
+            }
+
+            entity.DtModification = DateTime.UtcNow;
+            entity.UsrModificationId = UserContext.UserId;
+
+            await Db.SaveChangesAsync();
+
+            _statusMessage = "Droit mis à jour.";
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Erreur lors de la mise à jour du droit : {ex.Message}";
+        }
+    }
+
+    private sealed record GroupSummary(int Id, string Name);
+
+    private sealed class GroupEditModel
+    {
+        public int Id { get; set; }
+
+        [Required, MaxLength(128)]
+        public string Name { get; set; } = string.Empty;
+
+        [MaxLength(500)]
+        public string? Description { get; set; }
+
+        public bool IsSystem { get; set; }
+
+        public bool Actif { get; set; }
+    }
+
+    private sealed record GroupMemberVm(int UserId, string UserName, string FullName);
+
+    private sealed record SelectOption(int Id, string Label);
+
+    private sealed class RightTabState
+    {
+        public RightTabState(SRightType type)
+        {
+            Type = type;
+        }
+
+        public SRightType Type { get; }
+        public List<SelectOption> AllSubjects { get; private set; } = new();
+        public List<SelectOption> AvailableSubjects { get; private set; } = new();
+        public List<RightEntry> Entries { get; private set; } = new();
+        public int? SelectedSubjectId { get; set; }
+
+        public bool HasRight1 => !string.IsNullOrWhiteSpace(Type.Right1Name);
+        public bool HasRight2 => !string.IsNullOrWhiteSpace(Type.Right2Name);
+        public bool HasRight3 => !string.IsNullOrWhiteSpace(Type.Right3Name);
+        public bool HasRight4 => !string.IsNullOrWhiteSpace(Type.Right4Name);
+        public bool HasRight5 => !string.IsNullOrWhiteSpace(Type.Right5Name);
+
+        public void Clear()
+        {
+            AllSubjects = new List<SelectOption>();
+            AvailableSubjects = new List<SelectOption>();
+            Entries = new List<RightEntry>();
+            SelectedSubjectId = null;
+        }
+
+        public async Task LoadAsync(Aion.Infrastructure.AionDbContext db, int groupId)
+        {
+            var type = Type;
+            var subjects = await ResolveSubjectsAsync(db, type);
+            AllSubjects = subjects;
+
+            var map = subjects.ToDictionary(s => s.Id, s => s.Label);
+
+            var rights = await db.SRight
+                .AsNoTracking()
+                .Where(r => r.GroupId == groupId && r.Target == type.Code)
+                .OrderBy(r => r.SubjectId)
+                .ToListAsync();
+
+            Entries = rights
+                .Select(r => new RightEntry(
+                    r.Id,
+                    r.SubjectId,
+                    map.TryGetValue(r.SubjectId, out var label) ? label : $"#{r.SubjectId}",
+                    r.Right1.GetValueOrDefault(),
+                    r.Right2.GetValueOrDefault(),
+                    r.Right3.GetValueOrDefault(),
+                    r.Right4.GetValueOrDefault(),
+                    r.Right5.GetValueOrDefault()))
+                .OrderBy(e => e.Label)
+                .ToList();
+
+            var assigned = Entries.Select(e => e.SubjectId).ToHashSet();
+            AvailableSubjects = subjects.Where(s => !assigned.Contains(s.Id)).OrderBy(s => s.Label).ToList();
+            SelectedSubjectId = null;
+        }
+
+        private static async Task<List<SelectOption>> ResolveSubjectsAsync(Aion.Infrastructure.AionDbContext db, SRightType type)
+        {
+            switch (type.DataSource)
+            {
+                case "SMenu":
+                    return await db.SMenu
+                        .AsNoTracking()
+                        .OrderBy(m => m.Libelle)
+                        .Select(m => new SelectOption(m.Id, m.Libelle))
+                        .ToListAsync();
+                case "SModule":
+                    return await db.SModule
+                        .AsNoTracking()
+                        .OrderBy(m => m.Name)
+                        .Select(m => new SelectOption(m.Id, m.Name))
+                        .ToListAsync();
+                case "STable":
+                    return await db.STable
+                        .AsNoTracking()
+                        .OrderBy(t => t.Libelle)
+                        .Select(t => new SelectOption(t.Id, t.Libelle))
+                        .ToListAsync();
+                case "SAction":
+                    return await db.SAction
+                        .AsNoTracking()
+                        .OrderBy(a => a.Name)
+                        .Select(a => new SelectOption(a.Id, string.IsNullOrWhiteSpace(a.Name) ? a.ActionCode : a.Name))
+                        .ToListAsync();
+                case "SReport":
+                    return await db.SReport
+                        .AsNoTracking()
+                        .OrderBy(r => r.Name)
+                        .Select(r => new SelectOption(r.Id, r.Name))
+                        .ToListAsync();
+                default:
+                    return new List<SelectOption>();
+            }
+        }
+    }
+
+    private sealed class RightEntry
+    {
+        public RightEntry(int id, int subjectId, string label, bool right1, bool right2, bool right3, bool right4, bool right5)
+        {
+            Id = id;
+            SubjectId = subjectId;
+            Label = label;
+            Right1 = right1;
+            Right2 = right2;
+            Right3 = right3;
+            Right4 = right4;
+            Right5 = right5;
+        }
+
+        public int Id { get; }
+        public int SubjectId { get; }
+        public string Label { get; }
+        public bool Right1 { get; set; }
+        public bool Right2 { get; set; }
+        public bool Right3 { get; set; }
+        public bool Right4 { get; set; }
+        public bool Right5 { get; set; }
+    }
+}
