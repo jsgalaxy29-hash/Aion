@@ -39,7 +39,7 @@
                             @switch (column.InputKind)
                             {
                                 case DynamicColumnInputKind.Boolean:
-                                    <FluentSelect Value="GetSearchValue(column.FieldName)" ValueChanged="value => OnSearchChanged(column.FieldName, value)" Style="min-width:120px;">
+                                    <FluentSelect TOption="string" Value="GetSearchValue(column.FieldName)" ValueChanged="(string? value) => OnSearchChanged(column.FieldName, value)" Style="min-width:120px;">
                                         <FluentOption Value="">(Tous)</FluentOption>
                                         <FluentOption Value="true">Oui</FluentOption>
                                         <FluentOption Value="false">Non</FluentOption>
@@ -55,7 +55,7 @@
                                     <input type="number" class="form-control" value="@GetSearchValue(column.FieldName)" @onchange="e => OnSearchChanged(column.FieldName, e.Value?.ToString())" />
                                     break;
                                 case DynamicColumnInputKind.Select when column.Options is not null:
-                                    <FluentSelect Value="GetSearchValue(column.FieldName)" ValueChanged="value => OnSearchChanged(column.FieldName, value)" Style="min-width:180px;">
+                                    <FluentSelect TOption="string" Value="GetSearchValue(column.FieldName)" ValueChanged="(string? value) => OnSearchChanged(column.FieldName, value)" Style="min-width:180px;">
                                         <FluentOption Value="">(Tous)</FluentOption>
                                         @foreach (var option in column.Options)
                                         {
