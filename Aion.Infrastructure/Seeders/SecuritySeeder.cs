@@ -159,12 +159,19 @@ namespace Aion.Infrastructure.Seeders
                 {
                     Name = "Gestion des tables",
                     Order = 900,
+                    Route = "/admin/catalog",
                     TenantId = 1,
                     Actif = true,
                     DtCreation = utcNow,
                     UsrCreationId = 1
                 };
                 appDb.SModule.Add(adminModule);
+                await appDb.SaveChangesAsync();
+            }
+            else if (string.IsNullOrWhiteSpace(adminModule.Route))
+            {
+                adminModule.Route = "/admin/catalog";
+                appDb.SModule.Update(adminModule);
                 await appDb.SaveChangesAsync();
             }
 
@@ -176,7 +183,6 @@ namespace Aion.Infrastructure.Seeders
                     Libelle = "Administration",
                     ParentId = null,
                     Icon = "Settings20Regular",
-                    Route = string.Empty,
                     IsLeaf = false,
                     Order = 900,
                     TenantId = 1,
@@ -188,7 +194,7 @@ namespace Aion.Infrastructure.Seeders
                 await appDb.SaveChangesAsync();
             }
 
-            var designerMenu = await appDb.SMenu.FirstOrDefaultAsync(m => m.Libelle == "Administration");
+            var designerMenu = await appDb.SMenu.FirstOrDefaultAsync(m => m.Libelle == "Liste des tables");
             if (designerMenu == null)
             {
                 designerMenu = new SMenu
@@ -197,7 +203,6 @@ namespace Aion.Infrastructure.Seeders
                     Libelle = "Liste des tables",
                     ParentId = adminRootMenu.Id,
                     Icon = "DatabaseLink20Regular",
-                    Route = "/admin/catalog",
                     IsLeaf = true,
                     Order = adminRootMenu.Order + 1,
                     TenantId = 1,
