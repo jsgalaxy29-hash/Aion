@@ -237,7 +237,7 @@ else
                                                                 <input type="checkbox"
                                                                        class="form-check-input"
                                                                        checked="@entry.Right1"
-                                                                       @onchange="args => ToggleRightAsync(state, entry, 1, args)" />
+                                                                       @onclick="async _ => await ToggleRightAsync(state, entry, 1, !entry.Right1)" />
                                                             </td>
                                                         }
                                                         @if (!string.IsNullOrWhiteSpace(type.Right2Name))
@@ -246,7 +246,7 @@ else
                                                                 <input type="checkbox"
                                                                        class="form-check-input"
                                                                        checked="@entry.Right2"
-                                                                       @onchange="args => ToggleRightAsync(state, entry, 2, args)" />
+                                                                       @onclick="async _ => await ToggleRightAsync(state, entry, 2, !entry.Right2)" />
                                                             </td>
                                                         }
                                                         @if (!string.IsNullOrWhiteSpace(type.Right3Name))
@@ -255,7 +255,7 @@ else
                                                                 <input type="checkbox"
                                                                        class="form-check-input"
                                                                        checked="@entry.Right3"
-                                                                       @onchange="args => ToggleRightAsync(state, entry, 3, args)" />
+                                                                       @onclick="async _ => await ToggleRightAsync(state, entry, 3, !entry.Right3)" />
                                                             </td>
                                                         }
                                                         @if (!string.IsNullOrWhiteSpace(type.Right4Name))
@@ -264,7 +264,7 @@ else
                                                                 <input type="checkbox"
                                                                        class="form-check-input"
                                                                        checked="@entry.Right4"
-                                                                       @onchange="args => ToggleRightAsync(state, entry, 4, args)" />
+                                                                       @onclick="async _ => await ToggleRightAsync(state, entry, 4, !entry.Right4)" />
                                                             </td>
                                                         }
                                                         @if (!string.IsNullOrWhiteSpace(type.Right5Name))
@@ -273,7 +273,7 @@ else
                                                                 <input type="checkbox"
                                                                        class="form-check-input"
                                                                        checked="@entry.Right5"
-                                                                       @onchange="args => ToggleRightAsync(state, entry, 5, args)" />
+                                                                       @onclick="async _ => await ToggleRightAsync(state, entry, 5, !entry.Right5)" />
                                                             </td>
                                                         }
                                                         <td class="text-end">
@@ -742,7 +742,7 @@ else
         }
     }
 
-    private async Task ToggleRightAsync(RightTabState state, RightEntry entry, int slot, ChangeEventArgs args)
+    private async Task ToggleRightAsync(RightTabState state, RightEntry entry, int slot, bool isChecked)
     {
         if (_groupModel is null || _groupModel.Id == 0)
         {
@@ -751,7 +751,6 @@ else
 
         try
         {
-            var isChecked = args.Value is bool b && b;
             var entity = await SecurityDb.SRight.FirstOrDefaultAsync(r => r.Id == entry.Id && r.TenantId == UserContext.TenantId);
             if (entity == null)
             {
