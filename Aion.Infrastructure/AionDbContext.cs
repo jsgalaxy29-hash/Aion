@@ -37,6 +37,14 @@ namespace Aion.Infrastructure
         {
             base.OnModelCreating(modelBuilder);
 
+            modelBuilder.Entity<SUser>(entity =>
+            {
+                entity.ToTable("SUser");
+                entity.HasIndex(x => x.NormalizedUserName).IsUnique();
+                entity.HasIndex(x => x.NormalizedEmail);
+                entity.HasIndex(x => new { x.TenantId, x.Deleted });
+            });
+
             // Ces filtres fonctionneront maintenant car _userContext sera initialisé
             // (à condition que IUserContext soit enregistré comme Scoped, voir note ci-dessous)
             modelBuilder.Entity<Aion.DataEngine.Entities.SMenu>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
