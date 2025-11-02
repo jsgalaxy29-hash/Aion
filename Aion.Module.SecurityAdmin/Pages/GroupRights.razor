@@ -101,7 +101,7 @@ else
         {
             <FluentTabs>
                 <FluentTab>
-                    <HeaderContent>Utilisateurs</HeaderContent>
+                    <Header>Utilisateurs</Header>
                     <ChildContent>
                         @if (_groupMembers.Count == 0)
                         {
@@ -158,7 +158,7 @@ else
                 {
                     var state = _rightStates[type.Code];
                     <FluentTab>
-                        <HeaderContent>@type.Name</HeaderContent>
+                        <Header>@type.Name</Header>
                         <ChildContent>
                             @if (!state.AllSubjects.Any())
                             {
@@ -661,11 +661,11 @@ else
                 GroupId = _groupModel.Id,
                 Target = code,
                 SubjectId = subjectId,
-                Right1 = state.Type.HasRight1 ? false : null,
-                Right2 = state.Type.HasRight2 ? false : null,
-                Right3 = state.Type.HasRight3 ? false : null,
-                Right4 = state.Type.HasRight4 ? false : null,
-                Right5 = state.Type.HasRight5 ? false : null,
+                Right1 = state.HasRight1 ? false : null,
+                Right2 = state.HasRight2 ? false : null,
+                Right3 = state.HasRight3 ? false : null,
+                Right4 = state.HasRight4 ? false : null,
+                Right5 = state.HasRight5 ? false : null,
                 TenantId = UserContext.TenantId,
                 DtCreation = DateTime.UtcNow,
                 UsrCreationId = UserContext.UserId,
