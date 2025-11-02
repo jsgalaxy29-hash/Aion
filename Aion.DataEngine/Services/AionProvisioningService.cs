@@ -237,19 +237,13 @@ IF OBJECT_ID('dbo.SMenu','U') IS NULL
 BEGIN
   CREATE TABLE dbo.SMenu(
     ID INT IDENTITY(1,1) PRIMARY KEY,
+    ParentId INT NULL,
     ModuleId INT NULL,
-    Path NVARCHAR(500) NULL,
-    Title NVARCHAR(255) NOT NULL,
-    RequiredPermissionsCsv NVARCHAR(500) NOT NULL,
-    RouteParamsSchemaJson NVARCHAR(500) NOT NULL,
-    Code NVARCHAR(128) NOT NULL,
     Libelle NVARCHAR(255) NOT NULL,
     Route NVARCHAR(500) NULL,
-    ParentId INT NULL,
-    IsLeaf BIT NOT NULL DEFAULT(0),
+    IsLeaf BIT NOT NULL DEFAULT(1),
     Icon NVARCHAR(100) NULL,
     [Order] INT NOT NULL DEFAULT(0),
-    IsActive BIT NOT NULL DEFAULT(1),
     TenantId INT NOT NULL DEFAULT(1),
     Actif BIT NOT NULL DEFAULT(1),
     Doc BIT NOT NULL DEFAULT(0),
@@ -261,7 +255,7 @@ BEGIN
     UsrModificationId INT NULL,
     UsrSuppressionId INT NULL,
     RowVersion ROWVERSION,
-    CONSTRAINT UQ_SMenu_Code UNIQUE(Code)
+    CONSTRAINT UQ_SMenu_Code UNIQUE(Libelle)
   );
   
   -- FK auto-référence
@@ -275,19 +269,17 @@ IF OBJECT_ID('dbo.SModule','U') IS NULL
 BEGIN
   CREATE TABLE dbo.SModule(
     ID INT IDENTITY(1,1) PRIMARY KEY,
-    Code NVARCHAR(128) NOT NULL,
     Name NVARCHAR(255) NOT NULL,
     Description NVARCHAR(500) NULL,
     Icon NVARCHAR(100) NULL,
     Color NVARCHAR(20) NULL,
     [Order] INT NOT NULL DEFAULT(0),
-    IsActive BIT NOT NULL DEFAULT(1),
     TenantId INT NOT NULL DEFAULT(1),
     Actif BIT NOT NULL DEFAULT(1),
     Doc BIT NOT NULL DEFAULT(0),
     Deleted BIT NOT NULL DEFAULT(0),
     DtCreation DATETIME NOT NULL DEFAULT(GETUTCDATE()),
-    CONSTRAINT UQ_Module_Code UNIQUE(Code)
+    CONSTRAINT UQ_Module_Code UNIQUE(Name)
   );
   PRINT 'Table SModule créée';
 END

@@ -24,12 +24,12 @@ else
     <FluentTreeView>
         @foreach (var root in _rootNodes)
         {
-            <FluentTreeItem Text="@root.Title" @onclick="() => OnClick(root)">
+            <FluentTreeItem Text="@root.Libelle" @onclick="() => OnClick(root)">
                 @if (Children.TryGetValue(root.Id, out var children))
                 {
                     @foreach (var c in children)
                     {
-                        <FluentTreeItem Text="@c.Title" @onclick="() => OnClick(c)" />
+                        <FluentTreeItem Text="@c.Libelle" @onclick="() => OnClick(c)" />
                     }
                 }
             </FluentTreeItem>
@@ -88,17 +88,17 @@ else
 
         var query = string.IsNullOrWhiteSpace(_filter)
             ? _menus
-            : _menus.Where(m => m.Title.Contains(_filter, StringComparison.OrdinalIgnoreCase)).ToList();
+            : _menus.Where(m => m.Libelle.Contains(_filter, StringComparison.OrdinalIgnoreCase)).ToList();
 
         Children.Clear();
 
         // Construction de l'arbre enfants
         foreach (var m in query.Where(x => x.ParentId > 0))
         {
-            if (!Children.ContainsKey(m.ParentId))
-                Children[m.ParentId] = new List<SMenu>();
+            if (!Children.ContainsKey(m.ParentId.Value))
+                Children[m.ParentId.Value] = new List<SMenu>();
             
-            Children[m.ParentId].Add(m);
+            Children[m.ParentId.Value].Add(m);
         }
 
         // Noeuds racines
@@ -112,7 +112,7 @@ else
     {
         if (item.IsLeaf && !string.IsNullOrEmpty(item.Route))
         {
-            await Tabs.OpenAsync(item.Title, item.Route, null, true, CancellationToken.None);
+            await Tabs.OpenAsync(item.Libelle, item.Route, null, true, CancellationToken.None);
         }
     }
 

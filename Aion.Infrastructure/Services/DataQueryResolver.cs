@@ -30,7 +30,7 @@ namespace Aion.Infrastructure.Services
                 ["LatestModules"] = async (settings, ct) =>
                 {
                     var top = settings != null && settings.TryGetValue("count", out var v) && v is int n ? n : 5;
-                    return await Task.FromResult(_db.SModule.OrderByDescending(m => m.Id).Take(top).Select(m => new { m.Code, m.Name }).ToList());
+                    return await Task.FromResult(_db.SModule.OrderByDescending(m => m.Id).Take(top).Select(m => new { V = m.Id.ToString(), m.Name }).ToList());
                 }
             };
         }

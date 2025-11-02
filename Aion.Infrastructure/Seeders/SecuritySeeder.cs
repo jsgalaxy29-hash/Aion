@@ -152,15 +152,13 @@ namespace Aion.Infrastructure.Seeders
         {
             var utcNow = DateTime.UtcNow;
 
-            var adminModule = await appDb.SModule.FirstOrDefaultAsync(m => m.Code == "SYSTEM");
+            var adminModule = await appDb.SModule.FirstOrDefaultAsync(m => m.Name == "Gestion des tables");
             if (adminModule == null)
             {
                 adminModule = new SModule
                 {
-                    Code = "SYSTEM",
-                    Name = "Administration",
+                    Name = "Gestion des tables",
                     Order = 900,
-                    IsActive = true,
                     TenantId = 1,
                     Actif = true,
                     DtCreation = utcNow,
@@ -170,18 +168,15 @@ namespace Aion.Infrastructure.Seeders
                 await appDb.SaveChangesAsync();
             }
 
-            var adminRootMenu = await appDb.SMenu.FirstOrDefaultAsync(m => m.Code == "ADMIN_ROOT");
+            var adminRootMenu = await appDb.SMenu.FirstOrDefaultAsync(m => m.Libelle == "Administration");
             if (adminRootMenu == null)
             {
                 adminRootMenu = new SMenu
                 {
-                    ModuleId = adminModule.Id,
-                    Code = "ADMIN_ROOT",
-                    Title = "Administration",
-                    ParentId = 0,
+                    Libelle = "Administration",
+                    ParentId = null,
                     Icon = "Settings20Regular",
                     Route = string.Empty,
-                    Path = string.Empty,
                     IsLeaf = false,
                     Order = 900,
                     TenantId = 1,
@@ -193,18 +188,16 @@ namespace Aion.Infrastructure.Seeders
                 await appDb.SaveChangesAsync();
             }
 
-            var designerMenu = await appDb.SMenu.FirstOrDefaultAsync(m => m.Code == "ADMIN_CATALOG");
+            var designerMenu = await appDb.SMenu.FirstOrDefaultAsync(m => m.Libelle == "Administration");
             if (designerMenu == null)
             {
                 designerMenu = new SMenu
                 {
                     ModuleId = adminModule.Id,
-                    Code = "ADMIN_CATALOG",
-                    Title = "Designer métadonnées",
+                    Libelle = "Liste des tables",
                     ParentId = adminRootMenu.Id,
                     Icon = "DatabaseLink20Regular",
                     Route = "/admin/catalog",
-                    Path = "/admin/catalog",
                     IsLeaf = true,
                     Order = adminRootMenu.Order + 1,
                     TenantId = 1,
