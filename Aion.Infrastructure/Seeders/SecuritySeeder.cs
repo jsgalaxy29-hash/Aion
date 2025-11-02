@@ -57,13 +57,15 @@ namespace Aion.Infrastructure.Seeders
             var admin = await db.SUser.FirstOrDefaultAsync(u => u.UserName == "admin" || u.UserName == "Admin");
             if (admin == null)
             {
+                var hashedPassword = BCrypt.Net.BCrypt.HashPassword("admin");
+
                 admin = new SUser
                 {
                     UserName = "admin",
                     NormalizedUserName = "ADMIN",
                     Email = "admin@aion.local",
                     NormalizedEmail = "ADMIN@AION.LOCAL",
-                    PasswordHash = "admin", // ⚠️ À REMPLACER par BCrypt !
+                    PasswordHash = hashedPassword,
                     FullName = "Administrateur Système",
                     IsActive = true,
                     TenantId = 1,

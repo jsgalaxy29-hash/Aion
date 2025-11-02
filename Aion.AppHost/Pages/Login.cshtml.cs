@@ -151,9 +151,23 @@ namespace Aion.AppHost.Pages
 
         private bool VerifyPassword(string password, string hash)
         {
-            // TEMPORAIRE : comparaison simple
-            // EN PRODUCTION : BCrypt.Net.BCrypt.Verify(password, hash)
-            return password == hash;
+            if (string.IsNullOrEmpty(password) || string.IsNullOrEmpty(hash))
+                return false;
+
+            try
+            {
+                return BCrypt.Net.BCrypt.Verify(password, hash);
+            }
+            catch (BCrypt.Net.SaltParseException ex)
+            {
+                _logger.LogError(ex, "Hash de mot de passe invalide");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erreur lors de la vérification du mot de passe");
+                return false;
+            }
         }
 
         private async Task IncrementFailedLoginAsync(int userId)
