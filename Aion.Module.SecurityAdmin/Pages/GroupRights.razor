@@ -175,8 +175,8 @@ else
                             {
                                 <div class="d-flex flex-wrap align-items-end gap-2 mb-3">
                                     <div>
-                                        <label class="form-label" for="add-@type.Code">Ajouter une ressource</label>
-                                        <InputSelect id="add-@type.Code"
+                                        <label class="form-label" for="@($"add-{type.Code}")">Ajouter une ressource</label>
+                                        <InputSelect id="@($"add-{type.Code}")"
                                                      class="form-select"
                                                      @bind-Value="state.SelectedSubjectId"
                                                      TValue="int?">
