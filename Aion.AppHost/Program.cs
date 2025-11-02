@@ -1,4 +1,7 @@
-﻿using Aion.AppHost;
+using Aion.Module.CRM;
+using Aion.Module.SystemCatalog;
+using Aion.Module.SecurityAdmin;
+using Aion.AppHost;
 using Aion.AppHost.Services;
 using Aion.DataEngine.Interfaces;
 using Aion.Domain.Contracts;
@@ -159,6 +162,3 @@ app.Logger.LogInformation("🔑 Connexion : https://localhost:5001/login");
 app.Logger.LogInformation("   User: admin / Pass: admin / Tenant: 1");
 
 app.Run();
-using Aion.Module.CRM;
-using Aion.Module.SystemCatalog;
-using Aion.Module.SecurityAdmin;
