@@ -33,16 +33,17 @@ else
         <div class="d-flex flex-wrap align-items-end gap-3 mb-4">
             <div>
                 <label class="form-label" for="group-select">Sélection d'un groupe</label>
-                <select id="group-select"
-                        class="form-select"
-                        @bind="_selectedGroupId"
-                        @bind:after="OnGroupSelectionChanged">
+                <InputSelect id="group-select"
+                             class="form-select"
+                             @bind-Value="_selectedGroupId"
+                             @bind-Value:after="OnGroupSelectionChanged"
+                             TValue="int?">
                     <option value="">-- Sélectionner --</option>
                     @foreach (var group in _groups)
                     {
                         <option value="@group.Id">@group.Name</option>
                     }
-                </select>
+                </InputSelect>
             </div>
 
             <FluentButton Appearance="Appearance.Accent" Icon="Add16Filled" OnClick="CreateNewGroup">
@@ -140,13 +141,16 @@ else
                         <div class="d-flex flex-wrap align-items-end gap-2">
                             <div>
                                 <label class="form-label" for="user-select">Ajouter un utilisateur</label>
-                                <select id="user-select" class="form-select" @bind="_selectedUserToAdd">
+                                <InputSelect id="user-select"
+                                             class="form-select"
+                                             @bind-Value="_selectedUserToAdd"
+                                             TValue="int?">
                                     <option value="">-- Sélectionner --</option>
                                     @foreach (var user in _availableUsers)
                                     {
                                         <option value="@user.Id">@user.Label</option>
                                     }
-                                </select>
+                                </InputSelect>
                             </div>
                             <FluentButton Appearance="Appearance.Accent" Icon="Add16Filled" OnClick="AddUserAsync" Disabled="_selectedUserToAdd is null">
                                 Ajouter
@@ -172,13 +176,16 @@ else
                                 <div class="d-flex flex-wrap align-items-end gap-2 mb-3">
                                     <div>
                                         <label class="form-label" for="add-@type.Code">Ajouter une ressource</label>
-                                        <select id="add-@type.Code" class="form-select" @bind="state.SelectedSubjectId">
+                                        <InputSelect id="add-@type.Code"
+                                                     class="form-select"
+                                                     @bind-Value="state.SelectedSubjectId"
+                                                     TValue="int?">
                                             <option value="">-- Sélectionner --</option>
                                             @foreach (var subject in state.AvailableSubjects)
                                             {
                                                 <option value="@subject.Id">@subject.Label</option>
                                             }
-                                        </select>
+                                        </InputSelect>
                                     </div>
                                     <FluentButton Appearance="Appearance.Accent" Icon="Add16Filled" Disabled="state.SelectedSubjectId is null" OnClick="() => AddRightAsync(type.Code)">
                                         Ajouter
