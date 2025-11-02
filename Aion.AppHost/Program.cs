@@ -2,8 +2,6 @@
 using Aion.AppHost.Services;
 using Aion.DataEngine.Interfaces;
 using Aion.Domain.Contracts;
-using Aion.Module.CRM;
-using Aion.Module.SystemCatalog;
 using Aion.Infrastructure;
 using Aion.Infrastructure.Services;
 using Aion.Infrastructure.Startup;
@@ -92,6 +90,7 @@ builder.Services.AddScoped<IHistorizationService, NoOpHistorizationService>();
 builder.Services.AddScoped<IDataEngine, DataEngine>();
 builder.Services.AddSingleton<IModuleBootstrapper, CrmBootstrapper>();
 builder.Services.AddSingleton<IModuleBootstrapper, SystemCatalogBootstrapper>();
+builder.Services.AddSingleton<IModuleBootstrapper, SecurityAdminBootstrapper>();
 builder.Services.AddScoped<StartupOrchestrator>();
 
 // ===== Build Application =====
@@ -160,3 +159,6 @@ app.Logger.LogInformation("🔑 Connexion : https://localhost:5001/login");
 app.Logger.LogInformation("   User: admin / Pass: admin / Tenant: 1");
 
 app.Run();
+using Aion.Module.CRM;
+using Aion.Module.SystemCatalog;
+using Aion.Module.SecurityAdmin;
