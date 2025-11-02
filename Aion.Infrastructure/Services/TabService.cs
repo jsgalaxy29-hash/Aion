@@ -20,8 +20,19 @@ namespace Aion.Infrastructure.Services
         {
             var tab = new TabDescriptor(Guid.NewGuid(), title, route,
                 parameters is null ? null : new Dictionary<string, object?>(parameters), false);
+
+            if (activate)
+            {
+                foreach (var t in _tabs)
+                {
+                    t.IsActive = false;
+                }
+
+                tab.IsActive = true;
+            }
+
             _tabs.Add(tab);
-            TabsChanged?.Invoke(); 
+            TabsChanged?.Invoke();
             return Task.FromResult(tab);
         }
         public void Activate(Guid id)

@@ -19,8 +19,10 @@
                       Parameters="@(RouteRegistry.ToParameters(_active.Parameters))" />
 }
 
+@implements IDisposable
+
 @code {
-    private Guid? _activeId;
+    private string? _activeId;
     private TabDescriptor? _active;
 
     protected override void OnInitialized()
@@ -29,18 +31,26 @@
         if (Tabs.Tabs.Count > 0)
         {
             _active = Tabs.Tabs[^1];
-            _activeId = _active.Id;
+            _activeId = _active.Id.ToString();
+            Tabs.Activate(_active.Id);
         }
     }
 
     void OnTabsChanged()
     {
-        if (_activeId is null || Tabs.Tabs.All(t => t.Id != _activeId))
+        var activeTab = Tabs.Tabs.FirstOrDefault(t => t.IsActive);
+
+        if (activeTab is not null)
+        {
+            _active = activeTab;
+            _activeId = activeTab.Id.ToString();
+        }
+        else if (_activeId is null || Tabs.Tabs.All(t => t.Id.ToString() != _activeId))
         {
             if (Tabs.Tabs.Count > 0)
             {
                 _active = Tabs.Tabs[^1];
-                _activeId = _active.Id;
+                _activeId = _active.Id.ToString();
             }
             else
             {
@@ -48,10 +58,14 @@
                 _activeId = null;
             }
         }
+        else if (_activeId is not null)
+        {
+            _active = Tabs.Tabs.FirstOrDefault(t => t.Id.ToString() == _activeId);
+        }
 
         InvokeAsync(StateHasChanged);
     }
-   
+
 
     public void Dispose() => Tabs.TabsChanged -= OnTabsChanged;
 
@@ -60,7 +74,8 @@
         if (Guid.TryParse(e.ActiveId, out var id))
         {
             _active = Tabs.Tabs.FirstOrDefault(t => t.Id == id);
-            _activeId = id;
+            _activeId = e.ActiveId;
+            Tabs.Activate(id);
         }
         return Task.CompletedTask;
     }
@@ -71,7 +86,8 @@
         if (Tabs.Tabs.Count > 0)
         {
             _active = Tabs.Tabs[^1];
-            _activeId = _active.Id;
+            _activeId = _active.Id.ToString();
+            Tabs.Activate(_active.Id);
         }
         else
         {
