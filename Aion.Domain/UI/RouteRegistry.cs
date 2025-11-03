@@ -88,12 +88,12 @@ namespace Aion.Domain.UI
                 trimmed = trimmed[..separatorIndex];
             }
 
-            if (!trimmed.StartsWith('/', StringComparison.Ordinal))
+            if (!trimmed.StartsWith("/", StringComparison.Ordinal))
             {
                 trimmed = "/" + trimmed;
             }
 
-            if (trimmed.Length > 1 && trimmed.EndsWith('/', StringComparison.Ordinal))
+            if (trimmed.Length > 1 && trimmed.EndsWith("/", StringComparison.Ordinal))
             {
                 trimmed = trimmed.TrimEnd('/');
             }
