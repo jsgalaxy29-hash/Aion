@@ -46,13 +46,13 @@
                                     </FluentSelect>
                                     break;
                                 case DynamicColumnInputKind.Date:
-                                    <input type="date" class="form-control" value="@GetSearchValue(column.FieldName)" @onchange="e => OnSearchChanged(column.FieldName, e.Value?.ToString())" />
+                                    <input type="date" class="form-control" value="@GetSearchValue(column.FieldName)" onchange="e => OnSearchChanged(column.FieldName, e.Value?.ToString())" />
                                     break;
                                 case DynamicColumnInputKind.DateTime:
-                                    <input type="datetime-local" class="form-control" value="@GetSearchValue(column.FieldName)" @onchange="e => OnSearchChanged(column.FieldName, e.Value?.ToString())" />
+                                    <input type="datetime-local" class="form-control" value="@GetSearchValue(column.FieldName)" onchange="e => OnSearchChanged(column.FieldName, e.Value?.ToString())" />
                                     break;
                                 case DynamicColumnInputKind.Number or DynamicColumnInputKind.Decimal:
-                                    <input type="number" class="form-control" value="@GetSearchValue(column.FieldName)" @onchange="e => OnSearchChanged(column.FieldName, e.Value?.ToString())" />
+                                    <input type="number" class="form-control" value="@GetSearchValue(column.FieldName)" onchange="e => OnSearchChanged(column.FieldName, e.Value?.ToString())" />
                                     break;
                                 case DynamicColumnInputKind.Select when column.Options is not null:
                                     <FluentSelect TOption="string" Value="GetSearchValue(column.FieldName)" ValueChanged="(string? value) => OnSearchChanged(column.FieldName, value)" Style="min-width:180px;">
@@ -64,7 +64,7 @@
                                     </FluentSelect>
                                     break;
                                 default:
-                                    <input type="text" class="form-control" value="@GetSearchValue(column.FieldName)" @onchange="e => OnSearchChanged(column.FieldName, e.Value?.ToString())" />
+                                    <input type="text" class="form-control" value="@GetSearchValue(column.FieldName)" onchange="e => OnSearchChanged(column.FieldName, e.Value?.ToString())" />
                                     break;
                             }
                         </div>
@@ -80,7 +80,7 @@
                         @foreach (var column in VisibleColumns)
                         {
                             var isSorted = string.Equals(_sortColumn?.FieldName, column.FieldName, StringComparison.OrdinalIgnoreCase);
-                            <th role="button" @onclick="() => SortBy(column)">
+                            <th role="button" onclick="() => SortBy(column)">
                                 @column.DisplayName
                                 @if (isSorted)
                                 {
@@ -144,7 +144,7 @@
             </div>
             <div class="d-flex align-items-center gap-2">
                 <label>Elements / page</label>
-                <select class="form-select" value="@_pageSize" @onchange="OnPageSizeChanged">
+                <select class="form-select" value="@_pageSize" onchange="OnPageSizeChanged">
                     @foreach (var size in _pageSizes)
                     {
                         <option value="@size">@size</option>
@@ -158,7 +158,7 @@
         <div class="layout-editor">
             <div class="mb-2">
                 <label>Éléments par page</label>
-                <input type="number" min="5" max="200" value="@_pageSizeDraft" @onchange="e => OnLayoutPageSizeChanged(e.Value?.ToString())" class="form-control" />
+                <input type="number" min="5" max="200" value="@_pageSizeDraft" onchange="e => OnLayoutPageSizeChanged(e.Value?.ToString())" class="form-control" />
             </div>
             <table class="table table-sm">
                 <thead>
@@ -174,10 +174,10 @@
                         <tr>
                             <td>@column.DisplayName</td>
                             <td>
-                                <input type="checkbox" checked="@column.Visible" @onchange="e => column.Visible = ParseCheckbox(e.Value)" />
+                                <input type="checkbox" checked="@column.Visible" onchange="e => column.Visible = ParseCheckbox(e.Value)" />
                             </td>
                             <td>
-                                <input type="number" class="form-control" value="@column.Order" @onchange="e => OnColumnOrderChanged(column, e.Value?.ToString())" />
+                                <input type="number" class="form-control" value="@column.Order" onchange="e => OnColumnOrderChanged(column, e.Value?.ToString())" />
                             </td>
                         </tr>
                     }
