@@ -1,5 +1,4 @@
 using Microsoft.FluentUI.AspNetCore.Components;
-using Microsoft.JSInterop;
 
 namespace Aion.AppHost.Services
 {
@@ -19,47 +18,89 @@ namespace Aion.AppHost.Services
     {
         private readonly FluentDesignTheme _light = new() { Mode = DesignThemeModes.Light };
         private readonly FluentDesignTheme _dark = new() { Mode = DesignThemeModes.Dark };
+        private readonly FluentDesignTheme _current = new();
 
-        public FluentDesignTheme Current { get; private set; }
+        public FluentDesignTheme Current => _current;
 
         public event Action? ThemeChanged;
 
         public AionThemeService()
         {
-            Current = CloneFrom(_light);
+            ApplyBaseTheme(_light);
         }
 
         public void UseLight()
         {
-            Current = CloneFrom(_light);
-            OnThemeChanged();
+            ApplyBaseTheme(_light);
         }
 
         public void UseDark()
         {
-            Current = CloneFrom(_dark);
-            OnThemeChanged();
+            ApplyBaseTheme(_dark);
         }
 
         public void SetAccent(string accentCssColor, string? neutralBaseCssColor = null)
         {
-            // En v4.x, on utilise CustomColor / NeutralBaseColor (pas Primary/Secondary).
-            Current.CustomColor = accentCssColor;          // ex: "#0f6cbd" ou "rgb(15,108,189)"
-            if (!string.IsNullOrWhiteSpace(neutralBaseCssColor))
-                Current.NeutralBaseColor = neutralBaseCssColor; // optionnel
+            var hasChanges = false;
 
-            OnThemeChanged();
+            if (!string.Equals(_current.CustomColor, accentCssColor, StringComparison.OrdinalIgnoreCase))
+            {
+                _current.CustomColor = accentCssColor; // ex: "#0f6cbd" ou "rgb(15,108,189)"
+                hasChanges = true;
+            }
+
+            if (!string.IsNullOrWhiteSpace(neutralBaseCssColor) &&
+                !string.Equals(_current.NeutralBaseColor, neutralBaseCssColor, StringComparison.OrdinalIgnoreCase))
+            {
+                _current.NeutralBaseColor = neutralBaseCssColor; // optionnel
+                hasChanges = true;
+            }
+
+            if (hasChanges)
+            {
+                OnThemeChanged();
+            }
         }
 
-        private static FluentDesignTheme CloneFrom(FluentDesignTheme baseTheme)
-            => new()
+        private void ApplyBaseTheme(FluentDesignTheme baseTheme)
+        {
+            var hasChanges = false;
+
+            if (_current.Mode != baseTheme.Mode)
             {
-                Mode = baseTheme.Mode,
-                CustomColor = baseTheme.CustomColor,
-                NeutralBaseColor = baseTheme.NeutralBaseColor,
-                OfficeColor = baseTheme.OfficeColor,
-                StorageName = baseTheme.StorageName
-            };
+                _current.Mode = baseTheme.Mode;
+                hasChanges = true;
+            }
+
+            if (!string.Equals(_current.CustomColor, baseTheme.CustomColor, StringComparison.OrdinalIgnoreCase))
+            {
+                _current.CustomColor = baseTheme.CustomColor;
+                hasChanges = true;
+            }
+
+            if (!string.Equals(_current.NeutralBaseColor, baseTheme.NeutralBaseColor, StringComparison.OrdinalIgnoreCase))
+            {
+                _current.NeutralBaseColor = baseTheme.NeutralBaseColor;
+                hasChanges = true;
+            }
+
+            if (!string.Equals(_current.OfficeColor, baseTheme.OfficeColor, StringComparison.OrdinalIgnoreCase))
+            {
+                _current.OfficeColor = baseTheme.OfficeColor;
+                hasChanges = true;
+            }
+
+            if (!string.Equals(_current.StorageName, baseTheme.StorageName, StringComparison.Ordinal))
+            {
+                _current.StorageName = baseTheme.StorageName;
+                hasChanges = true;
+            }
+
+            if (hasChanges)
+            {
+                OnThemeChanged();
+            }
+        }
 
         private void OnThemeChanged() => ThemeChanged?.Invoke();
     }
