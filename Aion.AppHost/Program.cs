@@ -104,8 +104,8 @@ builder.Services.AddSingleton<IModuleBootstrapper, SecurityAdminBootstrapper>();
 builder.Services.AddSingleton<IModuleBootstrapper, ListDynBootstrapper>();
 builder.Services.AddSingleton<IModuleBootstrapper, FormDynBootstrapper>();
 builder.Services.AddScoped<StartupOrchestrator>();
-builder.Services.AddScoped<IAionThemeService, AionThemeService>();
-
+// Changez Scoped à Singleton pour garantir la même instance pour tous les composants
+builder.Services.AddSingleton<IAionThemeService, AionThemeService>();
 // ===== Build Application =====
 var app = builder.Build();
 
