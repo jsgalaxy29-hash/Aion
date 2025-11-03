@@ -16,7 +16,7 @@
 @if (_active is not null)
 {
     <DynamicComponent Type="@RouteRegistry.Resolve(_active.Route)"
-                      Parameters="@(RouteRegistry.ToParameters(_active.Parameters))" />
+                      Parameters="@(RouteRegistry.ToParameters(_active.Route, _active.Parameters))" />
 }
 
 @implements IDisposable
