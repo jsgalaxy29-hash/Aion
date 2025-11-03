@@ -1,3 +1,4 @@
+@using Microsoft.AspNetCore.Components
 @using Microsoft.FluentUI.AspNetCore.Components
 @using Aion.Domain.Contracts
 @using Aion.Domain.UI
@@ -15,8 +16,19 @@
 
 @if (_active is not null)
 {
-    <DynamicComponent Type="@RouteRegistry.Resolve(_active.Route)"
-                      Parameters="@(RouteRegistry.ToParameters(_active.Route, _active.Parameters))" />
+    var componentType = RouteRegistry.Resolve(_active.Route);
+
+    if (componentType is not null && typeof(IComponent).IsAssignableFrom(componentType))
+    {
+        <DynamicComponent Type="componentType"
+                          Parameters="@(RouteRegistry.ToParameters(_active.Route, _active.Parameters))" />
+    }
+    else
+    {
+        <FluentMessageBar Intent="MessageBarIntent.Error">
+            Impossible de charger le module demandé.
+        </FluentMessageBar>
+    }
 }
 
 @implements IDisposable
