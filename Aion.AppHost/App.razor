@@ -1,4 +1,4 @@
-@using Aion.AppHost.Services
+@using static Microsoft.AspNetCore.Components.Web.RenderMode @using Aion.AppHost.Services
 @inject IAionThemeService ThemeService
 @implements IDisposable
 
@@ -6,12 +6,15 @@
 <html lang="fr">
 
 <head>
+
+    <base href="/" />
+
+    <script src="_content/Microsoft.FluentUI.AspNetCore.Components/Microsoft.FluentUI.AspNetCore.Components.lib.module.js" type="module"></script>
+    <link href="_content/Microsoft.FluentUI.AspNetCore.Components/css/reboot.css" rel="stylesheet" />
+
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
-
-    <!-- Fluent UI Styles - OBLIGATOIRE -->
-    <link href="_content/Microsoft.FluentUI.AspNetCore.Components/css/reboot.css" rel="stylesheet" />
 
     <!-- Bootstrap (optionnel si vous l'utilisez) -->
     <link rel="stylesheet"
@@ -38,11 +41,8 @@
         <FluentMenuProvider />
     </FluentProvider>
 
-    <!-- Fluent UI Script - OBLIGATOIRE -->
-    <script src="_content/Microsoft.FluentUI.AspNetCore.Components/js/web-components.min.js" type="module" async></script>
-
-    <!-- Blazor Script -->
     <script src="_framework/blazor.web.js"></script>
+
 </body>
 
 </html>

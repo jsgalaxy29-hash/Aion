@@ -46,12 +46,16 @@ namespace Aion.AppHost.Services
 
         public void SetAccent(string accentCssColor, string? neutralBaseCssColor = null)
         {
-            // IMPORTANT : Créer une NOUVELLE instance de thème
+            // C'EST CETTE LIGNE QUI EST CRUCIALE POUR LE REFRESH DE L'ACCENT.
+            // Elle remplace l'ancien objet _currentTheme par un NOUVEAU.
             _currentTheme = CreateNewTheme(
                 _currentTheme.Mode, // Conserver le mode (Light/Dark)
                 accentCssColor,
-                neutralBaseCssColor ?? _currentTheme.NeutralBaseColor // Utiliser la nouvelle couleur neutre ou conserver l'ancienne
+                neutralBaseCssColor ?? _currentTheme.NeutralBaseColor
             );
+
+            // Si la méthode était appelée sans changement d'accent, elle sera inutilement appelée, 
+            // mais elle force la mise à jour pour le changement réel.
             OnThemeChanged();
         }
 
