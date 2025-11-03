@@ -233,7 +233,7 @@ else
                     continue;
                 }
 
-                var key = NormalizeParameterKey(kv[0]);
+                var key = RouteRegistry.NormalizeParameterKey(kv[0]);
                 var value = kv.Length > 1 ? Uri.UnescapeDataString(kv[1]) : "true";
                 dict[key] = value;
             }
@@ -248,7 +248,7 @@ else
                 var dict = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
                 foreach (var prop in doc.RootElement.EnumerateObject())
                 {
-                    var key = NormalizeParameterKey(prop.Name);
+                    var key = RouteRegistry.NormalizeParameterKey(prop.Name);
                     dict[key] = prop.Value.ValueKind switch
                     {
                         JsonValueKind.String => prop.Value.GetString(),
@@ -269,24 +269,6 @@ else
 
         routeQuery = trimmed.TrimStart('?');
         return null;
-    }
-
-    private static string NormalizeParameterKey(string key)
-    {
-        if (string.IsNullOrWhiteSpace(key))
-        {
-            return key;
-        }
-
-        var lowered = key.Trim().TrimStart('#');
-        return lowered.ToLowerInvariant() switch
-        {
-            "tablename" => "TableName",
-            "table" => "TableName",
-            "rowid" => "RowId",
-            "primarykey" => "PrimaryKey",
-            _ => char.ToUpperInvariant(lowered[0]) + lowered[1..]
-        };
     }
 
     protected override void OnParametersSet()
