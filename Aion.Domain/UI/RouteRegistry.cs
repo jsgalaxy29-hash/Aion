@@ -54,7 +54,7 @@ namespace Aion.Domain.UI
                 }
             }
 
-            return result.Count == 0 ? null : result;
+            return result;
         }
 
         public static string NormalizeParameterKey(string key)
