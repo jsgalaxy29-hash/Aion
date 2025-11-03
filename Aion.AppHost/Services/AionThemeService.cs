@@ -16,92 +16,57 @@ namespace Aion.AppHost.Services
 
     public class AionThemeService : IAionThemeService
     {
-        private readonly FluentDesignTheme _light = new() { Mode = DesignThemeModes.Light };
-        private readonly FluentDesignTheme _dark = new() { Mode = DesignThemeModes.Dark };
-        private readonly FluentDesignTheme _current = new();
+        // _currentTheme stocke l'instance actuelle du thème. Nous la rendons réassignable.
+        private FluentDesignTheme _currentTheme;
 
-        public FluentDesignTheme Current => _current;
+        // Current retourne l'instance actuelle.
+        public FluentDesignTheme Current => _currentTheme;
 
         public event Action? ThemeChanged;
 
         public AionThemeService()
         {
-            ApplyBaseTheme(_light);
+            // Initialisation : on commence avec un nouveau thème clair
+            _currentTheme = CreateNewTheme(DesignThemeModes.Light);
         }
 
         public void UseLight()
         {
-            ApplyBaseTheme(_light);
+            // IMPORTANT : Créer une NOUVELLE instance de thème
+            _currentTheme = CreateNewTheme(DesignThemeModes.Light, _currentTheme.CustomColor, _currentTheme.NeutralBaseColor);
+            OnThemeChanged();
         }
 
         public void UseDark()
         {
-            ApplyBaseTheme(_dark);
+            // IMPORTANT : Créer une NOUVELLE instance de thème
+            _currentTheme = CreateNewTheme(DesignThemeModes.Dark, _currentTheme.CustomColor, _currentTheme.NeutralBaseColor);
+            OnThemeChanged();
         }
 
         public void SetAccent(string accentCssColor, string? neutralBaseCssColor = null)
         {
-            var hasChanges = false;
-
-            if (!string.Equals(_current.CustomColor, accentCssColor, StringComparison.OrdinalIgnoreCase))
-            {
-                _current.CustomColor = accentCssColor; // ex: "#0f6cbd" ou "rgb(15,108,189)"
-                hasChanges = true;
-            }
-
-            if (!string.IsNullOrWhiteSpace(neutralBaseCssColor) &&
-                !string.Equals(_current.NeutralBaseColor, neutralBaseCssColor, StringComparison.OrdinalIgnoreCase))
-            {
-                _current.NeutralBaseColor = neutralBaseCssColor; // optionnel
-                hasChanges = true;
-            }
-
-            if (hasChanges)
-            {
-                OnThemeChanged();
-            }
+            // IMPORTANT : Créer une NOUVELLE instance de thème
+            _currentTheme = CreateNewTheme(
+                _currentTheme.Mode, // Conserver le mode (Light/Dark)
+                accentCssColor,
+                neutralBaseCssColor ?? _currentTheme.NeutralBaseColor // Utiliser la nouvelle couleur neutre ou conserver l'ancienne
+            );
+            OnThemeChanged();
         }
 
-        private void ApplyBaseTheme(FluentDesignTheme baseTheme)
-        {
-            var hasChanges = false;
-
-            if (_current.Mode != baseTheme.Mode)
+        // Méthode utilitaire pour créer une nouvelle instance de thème, assurant une nouvelle référence.
+        private static FluentDesignTheme CreateNewTheme(DesignThemeModes mode, string? customColor = null, string? neutralBaseColor = null)
+            => new()
             {
-                _current.Mode = baseTheme.Mode;
-                hasChanges = true;
-            }
-
-            if (!string.Equals(_current.CustomColor, baseTheme.CustomColor, StringComparison.OrdinalIgnoreCase))
-            {
-                _current.CustomColor = baseTheme.CustomColor;
-                hasChanges = true;
-            }
-
-            if (!string.Equals(_current.NeutralBaseColor, baseTheme.NeutralBaseColor, StringComparison.OrdinalIgnoreCase))
-            {
-                _current.NeutralBaseColor = baseTheme.NeutralBaseColor;
-                hasChanges = true;
-            }
-
-            if (!string.Equals(_current.OfficeColor, baseTheme.OfficeColor, StringComparison.OrdinalIgnoreCase))
-            {
-                _current.OfficeColor = baseTheme.OfficeColor;
-                hasChanges = true;
-            }
-
-            if (!string.Equals(_current.StorageName, baseTheme.StorageName, StringComparison.Ordinal))
-            {
-                _current.StorageName = baseTheme.StorageName;
-                hasChanges = true;
-            }
-
-            if (hasChanges)
-            {
-                OnThemeChanged();
-            }
-        }
+                Mode = mode,
+                CustomColor = customColor,
+                NeutralBaseColor = neutralBaseColor,
+                // Les autres propriétés (comme OfficeColor) peuvent être ajoutées ici si elles sont utilisées
+            };
 
         private void OnThemeChanged() => ThemeChanged?.Invoke();
+
+        // Suppression des champs _light, _dark et de la méthode ApplyBaseTheme, car ils ne sont plus nécessaires avec cette approche.
     }
 }
