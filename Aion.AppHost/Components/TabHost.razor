@@ -21,11 +21,11 @@
     if (componentType is not null && typeof(IComponent).IsAssignableFrom(componentType))
     {
         <DynamicComponent Type="componentType"
-                          Parameters="@(RouteRegistry.ToParameters(_active.Route, _active.Parameters))" />
+                          Parameters="@(new Dictionary<string,object>(RouteRegistry.ToParameters(_active.Route, _active.Parameters)))" />
     }
     else
     {
-        <FluentMessageBar Intent="MessageBarIntent.Error">
+        <FluentMessageBar Intent="MessageIntent.Error">
             Impossible de charger le module demandé.
         </FluentMessageBar>
     }
