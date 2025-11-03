@@ -4,8 +4,10 @@
 */
 
 body {
-    background-color: #f5f5f5;
+    background-color: var(--neutral-layer-1, #f5f5f5);
+    color: var(--neutral-foreground-1, #201f1e);
     min-height: 100vh;
+    transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 main,
