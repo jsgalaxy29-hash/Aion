@@ -37,7 +37,7 @@ else
         @foreach (var column in _columns)
         {
             <div class="form-group">
-                <label>@column.DisplayName</label>
+                <FluentLabel>@column.DisplayName</FluentLabel>
                 @RenderEditor(column)
             </div>
         }

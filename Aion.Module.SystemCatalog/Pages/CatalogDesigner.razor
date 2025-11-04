@@ -112,7 +112,7 @@ else
 
                 <section>
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h2 class="h5 mb-0">Champs</h2>
+                        <FluentLabel Typo="Typography.H5">Champs</FluentLabel>
                         <FluentButton Appearance="Appearance.Accent" Icon="Add16Filled" OnClick="StartCreateField" Disabled="@(_currentTable.Id == 0)">
                             Nouveau champ
                         </FluentButton>
@@ -172,53 +172,53 @@ else
                             <fieldset class="mt-3">
                                 <legend>@(_currentField.Id == 0 ? "Nouveau champ" : $"Champ {_currentField.Libelle}")</legend>
                                 <div class="form-grid">
-                                    <label>Nom interne *</label>
+                                    <FluentLabel>Nom interne *</FluentLabel>
                                     <InputText @bind-Value="_currentField.Libelle" class="form-control" />
                                     <ValidationMessage For="() => _currentField.Libelle" />
 
-                                    <label>Alias</label>
+                                    <FluentLabel>Alias</FluentLabel>
                                     <InputText @bind-Value="_currentField.Alias" class="form-control" />
 
-                                    <label>Type SQL *</label>
+                                    <FluentLabel>Type SQL *</FluentLabel>
                                     <InputText @bind-Value="_currentField.DataType" class="form-control" />
                                     <ValidationMessage For="() => _currentField.DataType" />
 
-                                    <label>Taille</label>
+                                    <FluentLabel>Taille</FluentLabel>
                                     <InputNumber @bind-Value="_currentField.Taille" class="form-control" />
 
-                                    <label>Valeur par défaut</label>
+                                    <FluentLabel>Valeur par défaut</FluentLabel>
                                     <InputText @bind-Value="_currentField.Defaut" class="form-control" />
 
-                                    <label>Ordre</label>
+                                    <FluentLabel>Ordre</FluentLabel>
                                     <InputNumber @bind-Value="_currentField.Ordre" class="form-control" />
 
-                                    <label>Format</label>
+                                    <FluentLabel>Format</FluentLabel>
                                     <InputText @bind-Value="_currentField.Format" class="form-control" />
 
-                                    <label>Masque</label>
+                                    <FluentLabel>Masque</FluentLabel>
                                     <InputText @bind-Value="_currentField.Masque" class="form-control" />
                                 </div>
                                 <div class="mt-3 d-flex flex-wrap gap-3">
-                                    <label class="form-check">
+                                    <FluentLabel class="form-check">
                                         <InputCheckbox @bind-Value="_currentField.IsNulleable" class="form-check-input" />
                                         <span class="form-check-label">Nullable</span>
-                                    </label>
-                                    <label class="form-check">
+                                    </FluentLabel>
+                                    <FluentLabel class="form-check">
                                         <InputCheckbox @bind-Value="_currentField.IsClePrimaire" class="form-check-input" />
                                         <span class="form-check-label">Clé primaire</span>
-                                    </label>
-                                    <label class="form-check">
+                                    </FluentLabel>
+                                    <FluentLabel class="form-check">
                                         <InputCheckbox @bind-Value="_currentField.IsUnique" class="form-check-input" />
                                         <span class="form-check-label">Unique</span>
-                                    </label>
-                                    <label class="form-check">
+                                    </FluentLabel>
+                                    <FluentLabel class="form-check">
                                         <InputCheckbox @bind-Value="_currentField.IsVisible" class="form-check-input" />
                                         <span class="form-check-label">Visible</span>
-                                    </label>
-                                    <label class="form-check">
+                                    </FluentLabel>
+                                    <FluentLabel class="form-check">
                                         <InputCheckbox @bind-Value="_currentField.IsHistorise" class="form-check-input" />
                                         <span class="form-check-label">Historiser</span>
-                                    </label>
+                                    </FluentLabel>
                                 </div>
                                 <div class="mt-3 d-flex gap-2">
                                     <FluentButton Appearance="Appearance.Accent" Type="ButtonType.Submit">Enregistrer le champ</FluentButton>

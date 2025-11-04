@@ -9,7 +9,7 @@
     {
         <FluentTab Id="@tab.Id.ToString()">
             @tab.Title
-            <button type="button" class="close" style="margin-left:0.5rem" @onclick="() => Close(tab)">x</button>
+            <FluentButton type="ButtonType.Button" class="close" style="margin-left:0.5rem" @onclick="() => Close(tab)">x</FluentButton>
         </FluentTab>
     }
 </FluentTabs>
