@@ -1,8 +1,10 @@
 @page "/admin/rights"
 @using Microsoft.AspNetCore.Components.Web
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
-@inject Aion.Security.SecurityDbContext SecurityDb
-@inject Aion.Infrastructure.AionDbContext AppDb
+@using Microsoft.EntityFrameworkCore
+@using Aion.Security
+@inject IDbContextFactory<Aion.Security.SecurityDbContext> SecurityDbFactory
+@inject IDbContextFactory<Aion.Infrastructure.AionDbContext> AppDbFactory
 @inject IUserContext UserContext
 
 <PageTitle>Gestion des droits</PageTitle>
@@ -316,7 +318,9 @@ else
     {
         try
         {
-            _rightTypes = await SecurityDb.SRightType
+            await using var securityDb = await SecurityDbFactory.CreateDbContextAsync();
+
+            _rightTypes = await securityDb.SRightType
                 .AsNoTracking()
                 .Where(t => t.TenantId == UserContext.TenantId)
                 .OrderBy(t => t.Order)
@@ -328,7 +332,7 @@ else
                 _rightStates[type.Code] = new RightTabState(type);
             }
 
-            await LoadGroupsAsync();
+            await LoadGroupsAsync(securityDb);
             _statusMessage = null;
         }
         catch (Exception ex)
@@ -387,9 +391,14 @@ else
         }
     }
 
-    private async Task LoadGroupsAsync(int? keepSelection = null)
+    private async Task LoadGroupsAsync(SecurityDbContext? existingSecurityDb = null, int? keepSelection = null)
     {
-        _groups = await SecurityDb.SGroup
+        var disposeSecurityDb = existingSecurityDb is null;
+        var securityDb = existingSecurityDb ?? await SecurityDbFactory.CreateDbContextAsync();
+
+        try
+        {
+            _groups = await securityDb.SGroup
             .AsNoTracking()
             .Where(g => g.TenantId == UserContext.TenantId)
             .OrderBy(g => g.Name)
@@ -414,14 +423,25 @@ else
             ?? _groups.First().Id;
 
         _selectedGroupId = targetId;
-        await LoadGroupDetailsAsync(targetId);
+        await LoadGroupDetailsAsync(targetId, securityDb);
+        }
+        finally
+        {
+            if (disposeSecurityDb)
+            {
+                await securityDb.DisposeAsync();
+            }
+        }
     }
 
-    private async Task LoadGroupDetailsAsync(int groupId)
+    private async Task LoadGroupDetailsAsync(int groupId, SecurityDbContext? existingSecurityDb = null)
     {
+        var disposeSecurityDb = existingSecurityDb is null;
+        var securityDb = existingSecurityDb ?? await SecurityDbFactory.CreateDbContextAsync();
+
         try
         {
-            var group = await SecurityDb.SGroup
+            var group = await securityDb.SGroup
                 .AsNoTracking()
                 .FirstOrDefaultAsync(g => g.Id == groupId && g.TenantId == UserContext.TenantId);
 
@@ -440,25 +460,32 @@ else
                 Actif = group.Actif
             };
 
-            await LoadGroupMembersAsync(group.Id);
-            await LoadRightsAsync(group.Id);
+            await LoadGroupMembersAsync(group.Id, securityDb);
+            await LoadRightsAsync(group.Id, securityDb);
         }
         catch (Exception ex)
         {
             _errorMessage = $"Erreur lors du chargement du groupe : {ex.Message}";
         }
+        finally
+        {
+            if (disposeSecurityDb)
+            {
+                await securityDb.DisposeAsync();
+            }
+        }
     }
 
-    private async Task LoadGroupMembersAsync(int groupId)
+    private async Task LoadGroupMembersAsync(int groupId, SecurityDbContext securityDb)
     {
         _groupMembers.Clear();
         _availableUsers.Clear();
 
-        var members = await SecurityDb.SUserGroup
+        var members = await securityDb.SUserGroup
             .AsNoTracking()
             .Where(ug => ug.GroupId == groupId && ug.IsLinkActive && ug.TenantId == UserContext.TenantId)
             .Join(
-                SecurityDb.SUser.AsNoTracking().Where(u => u.TenantId == UserContext.TenantId),
+                securityDb.SUser.AsNoTracking().Where(u => u.TenantId == UserContext.TenantId),
                 ug => ug.UserId,
                 u => u.Id,
                 (ug, u) => new
@@ -475,7 +502,7 @@ else
 
         var memberIds = members.Select(m => m.UserId).ToHashSet();
 
-        var availableUsers = await SecurityDb.SUser
+        var availableUsers = await securityDb.SUser
             .AsNoTracking()
             .Where(u => u.TenantId == UserContext.TenantId && !memberIds.Contains(u.Id))
             .OrderBy(u => u.UserName)
@@ -486,8 +513,10 @@ else
         _selectedUserToAdd = null;
     }
 
-    private async Task LoadRightsAsync(int groupId)
+    private async Task LoadRightsAsync(int groupId, SecurityDbContext securityDb)
     {
+        await using var appDb = await AppDbFactory.CreateDbContextAsync();
+
         foreach (var type in _rightTypes)
         {
             if (!_rightStates.TryGetValue(type.Code, out var state))
@@ -496,7 +525,7 @@ else
                 _rightStates[type.Code] = state;
             }
 
-            await state.LoadAsync(SecurityDb, AppDb, groupId, UserContext.TenantId);
+            await state.LoadAsync(securityDb, appDb, groupId, UserContext.TenantId);
         }
     }
 
@@ -509,6 +538,7 @@ else
 
         try
         {
+            await using var securityDb = await SecurityDbFactory.CreateDbContextAsync();
             _errorMessage = null;
             _statusMessage = null;
 
@@ -525,15 +555,15 @@ else
                     UsrCreationId = UserContext.UserId
                 };
 
-                SecurityDb.SGroup.Add(entity);
-                await SecurityDb.SaveChangesAsync();
+                securityDb.SGroup.Add(entity);
+                await securityDb.SaveChangesAsync();
 
                 _statusMessage = "Groupe créé.";
-                await LoadGroupsAsync(entity.Id);
+                await LoadGroupsAsync(securityDb, entity.Id);
             }
             else
             {
-                var entity = await SecurityDb.SGroup.FirstOrDefaultAsync(g => g.Id == _groupModel.Id && g.TenantId == UserContext.TenantId);
+                var entity = await securityDb.SGroup.FirstOrDefaultAsync(g => g.Id == _groupModel.Id && g.TenantId == UserContext.TenantId);
                 if (entity == null)
                 {
                     _errorMessage = "Groupe introuvable.";
@@ -547,10 +577,10 @@ else
                 entity.DtModification = DateTime.UtcNow;
                 entity.UsrModificationId = UserContext.UserId;
 
-                await SecurityDb.SaveChangesAsync();
+                await securityDb.SaveChangesAsync();
 
                 _statusMessage = "Groupe mis à jour.";
-                await LoadGroupsAsync(entity.Id);
+                await LoadGroupsAsync(securityDb, entity.Id);
             }
         }
         catch (Exception ex)
@@ -568,18 +598,20 @@ else
 
         try
         {
-            var entity = await SecurityDb.SGroup.FirstOrDefaultAsync(g => g.Id == _groupModel.Id && g.TenantId == UserContext.TenantId);
+            await using var securityDb = await SecurityDbFactory.CreateDbContextAsync();
+
+            var entity = await securityDb.SGroup.FirstOrDefaultAsync(g => g.Id == _groupModel.Id && g.TenantId == UserContext.TenantId);
             if (entity == null)
             {
                 _errorMessage = "Groupe introuvable.";
                 return;
             }
 
-            SecurityDb.SGroup.Remove(entity);
-            await SecurityDb.SaveChangesAsync();
+            securityDb.SGroup.Remove(entity);
+            await securityDb.SaveChangesAsync();
 
             _statusMessage = "Groupe supprimé.";
-            await LoadGroupsAsync();
+            await LoadGroupsAsync(securityDb);
         }
         catch (Exception ex)
         {
@@ -596,7 +628,9 @@ else
 
         try
         {
-            var exists = await SecurityDb.SUserGroup.AnyAsync(ug =>
+            await using var securityDb = await SecurityDbFactory.CreateDbContextAsync();
+
+            var exists = await securityDb.SUserGroup.AnyAsync(ug =>
                 ug.GroupId == _groupModel.Id &&
                 ug.UserId == _selectedUserToAdd.Value &&
                 ug.TenantId == UserContext.TenantId);
@@ -616,11 +650,11 @@ else
                 UsrCreationId = UserContext.UserId
             };
 
-            SecurityDb.SUserGroup.Add(link);
-            await SecurityDb.SaveChangesAsync();
+            securityDb.SUserGroup.Add(link);
+            await securityDb.SaveChangesAsync();
 
             _statusMessage = "Utilisateur ajouté au groupe.";
-            await LoadGroupMembersAsync(_groupModel.Id);
+            await LoadGroupMembersAsync(_groupModel.Id, securityDb);
         }
         catch (Exception ex)
         {
@@ -637,7 +671,9 @@ else
 
         try
         {
-            var link = await SecurityDb.SUserGroup.FirstOrDefaultAsync(ug =>
+            await using var securityDb = await SecurityDbFactory.CreateDbContextAsync();
+
+            var link = await securityDb.SUserGroup.FirstOrDefaultAsync(ug =>
                 ug.GroupId == _groupModel.Id &&
                 ug.UserId == userId &&
                 ug.TenantId == UserContext.TenantId);
@@ -647,11 +683,11 @@ else
                 return;
             }
 
-            SecurityDb.SUserGroup.Remove(link);
-            await SecurityDb.SaveChangesAsync();
+            securityDb.SUserGroup.Remove(link);
+            await securityDb.SaveChangesAsync();
 
             _statusMessage = "Utilisateur retiré du groupe.";
-            await LoadGroupMembersAsync(_groupModel.Id);
+            await LoadGroupMembersAsync(_groupModel.Id, securityDb);
         }
         catch (Exception ex)
         {
@@ -673,9 +709,11 @@ else
 
         try
         {
+            await using var securityDb = await SecurityDbFactory.CreateDbContextAsync();
+            await using var appDb = await AppDbFactory.CreateDbContextAsync();
             var subjectId = state.SelectedSubjectId.Value;
 
-            var exists = await SecurityDb.SRight.AnyAsync(r =>
+            var exists = await securityDb.SRight.AnyAsync(r =>
                 r.GroupId == _groupModel.Id &&
                 r.Target == code &&
                 r.SubjectId == subjectId &&
@@ -702,11 +740,11 @@ else
                 Actif = true
             };
 
-            SecurityDb.SRight.Add(entity);
-            await SecurityDb.SaveChangesAsync();
+            securityDb.SRight.Add(entity);
+            await securityDb.SaveChangesAsync();
 
             _statusMessage = "Droit ajouté.";
-            await state.LoadAsync(SecurityDb, AppDb, _groupModel.Id, UserContext.TenantId);
+            await state.LoadAsync(securityDb, appDb, _groupModel.Id, UserContext.TenantId);
         }
         catch (Exception ex)
         {
@@ -723,18 +761,21 @@ else
 
         try
         {
-            var entity = await SecurityDb.SRight.FirstOrDefaultAsync(r => r.Id == entry.Id && r.TenantId == UserContext.TenantId);
+            await using var securityDb = await SecurityDbFactory.CreateDbContextAsync();
+            await using var appDb = await AppDbFactory.CreateDbContextAsync();
+
+            var entity = await securityDb.SRight.FirstOrDefaultAsync(r => r.Id == entry.Id && r.TenantId == UserContext.TenantId);
             if (entity == null)
             {
                 _statusMessage = "Droit introuvable.";
                 return;
             }
 
-            SecurityDb.SRight.Remove(entity);
-            await SecurityDb.SaveChangesAsync();
+            securityDb.SRight.Remove(entity);
+            await securityDb.SaveChangesAsync();
 
             _statusMessage = "Droit supprimé.";
-            await state.LoadAsync(SecurityDb, AppDb, _groupModel.Id, UserContext.TenantId);
+            await state.LoadAsync(securityDb, appDb, _groupModel.Id, UserContext.TenantId);
         }
         catch (Exception ex)
         {
@@ -751,7 +792,9 @@ else
 
         try
         {
-            var entity = await SecurityDb.SRight.FirstOrDefaultAsync(r => r.Id == entry.Id && r.TenantId == UserContext.TenantId);
+            await using var securityDb = await SecurityDbFactory.CreateDbContextAsync();
+
+            var entity = await securityDb.SRight.FirstOrDefaultAsync(r => r.Id == entry.Id && r.TenantId == UserContext.TenantId);
             if (entity == null)
             {
                 _statusMessage = "Droit introuvable.";
@@ -785,7 +828,7 @@ else
             entity.DtModification = DateTime.UtcNow;
             entity.UsrModificationId = UserContext.UserId;
 
-            await SecurityDb.SaveChangesAsync();
+            await securityDb.SaveChangesAsync();
 
             _statusMessage = "Droit mis à jour.";
         }

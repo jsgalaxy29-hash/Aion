@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Aion.Domain.Contracts;
+using Microsoft.EntityFrameworkCore;
 
 namespace Aion.Infrastructure.Services
 {
@@ -14,15 +15,15 @@ namespace Aion.Infrastructure.Services
     /// </summary>
     public sealed class DataQueryResolver : IDataQueryResolver
     {
-        private readonly AionDbContext _db;
+        private readonly IDbContextFactory<AionDbContext> _dbFactory;
         private readonly IHttpClientFactory _clientFactory;
 
         // Catalogue de requêtes EF nominatives. Key = nom après "ef:".
         private readonly IDictionary<string, Func<IDictionary<string, object?>?, CancellationToken, Task<object?>>> _efQueries;
 
-        public DataQueryResolver(AionDbContext db, IHttpClientFactory clientFactory)
+        public DataQueryResolver(IDbContextFactory<AionDbContext> dbFactory, IHttpClientFactory clientFactory)
         {
-            _db = db;
+            _dbFactory = dbFactory;
             _clientFactory = clientFactory;
             _efQueries = new Dictionary<string, Func<IDictionary<string, object?>?, CancellationToken, Task<object?>>>(StringComparer.OrdinalIgnoreCase)
             {
@@ -30,7 +31,12 @@ namespace Aion.Infrastructure.Services
                 ["LatestModules"] = async (settings, ct) =>
                 {
                     var top = settings != null && settings.TryGetValue("count", out var v) && v is int n ? n : 5;
-                    return await Task.FromResult(_db.SModule.OrderByDescending(m => m.Id).Take(top).Select(m => new { V = m.Id.ToString(), m.Name }).ToList());
+                    await using var db = await _dbFactory.CreateDbContextAsync(ct);
+                    return await db.SModule
+                        .OrderByDescending(m => m.Id)
+                        .Take(top)
+                        .Select(m => new { V = m.Id.ToString(), m.Name })
+                        .ToListAsync(ct);
                 }
             };
         }

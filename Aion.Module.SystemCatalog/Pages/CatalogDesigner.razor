@@ -1,6 +1,7 @@
 @page "/admin/catalog"
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
-@inject Aion.Infrastructure.AionDbContext Db
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<Aion.Infrastructure.AionDbContext> DbFactory
 @inject IDataEngine DataEngine
 @inject IUserContext UserContext
 
@@ -285,7 +286,9 @@ else
         _tables.Clear();
         try
         {
-            var rows = await Db.STable.AsNoTracking()
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            var rows = await db.STable.AsNoTracking()
                 .OrderBy(t => t.Libelle)
                 .Select(t => new { t.Id, t.Libelle })
                 .ToListAsync();
@@ -324,7 +327,9 @@ else
     {
         try
         {
-            var entity = await Db.STable
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            var entity = await db.STable
                 .Include(t => t.Champs)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(t => t.Id == id);
@@ -373,6 +378,7 @@ else
 
         try
         {
+            await using var db = await DbFactory.CreateDbContextAsync();
             STable entity;
             if (_currentTable.Id == 0)
             {
@@ -382,11 +388,11 @@ else
                     DtCreation = DateTime.UtcNow,
                     UsrCreationId = UserContext.UserId
                 };
-                Db.STable.Add(entity);
+                db.STable.Add(entity);
             }
             else
             {
-                entity = await Db.STable.FirstAsync(t => t.Id == _currentTable.Id);
+                entity = await db.STable.FirstAsync(t => t.Id == _currentTable.Id);
                 entity.DtModification = DateTime.UtcNow;
                 entity.UsrModificationId = UserContext.UserId;
             }
@@ -401,7 +407,7 @@ else
             entity.Actif = _currentTable.Actif;
             entity.Doc = _currentTable.Doc;
 
-            await Db.SaveChangesAsync();
+            await db.SaveChangesAsync();
             await DataEngine.InvalidateMetadataAsync(entity.Id, entity.Libelle);
 
             _statusMessage = $"Table '{entity.Libelle}' enregistrée.";
@@ -422,15 +428,17 @@ else
 
         try
         {
-            var entity = await Db.STable.Include(t => t.Champs).FirstOrDefaultAsync(t => t.Id == _currentTable.Id);
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            var entity = await db.STable.Include(t => t.Champs).FirstOrDefaultAsync(t => t.Id == _currentTable.Id);
             if (entity == null)
             {
                 return;
             }
 
-            Db.SField.RemoveRange(entity.Champs);
-            Db.STable.Remove(entity);
-            await Db.SaveChangesAsync();
+            db.SField.RemoveRange(entity.Champs);
+            db.STable.Remove(entity);
+            await db.SaveChangesAsync();
             await DataEngine.InvalidateMetadataAsync(_currentTable.Id, _currentTable.Libelle);
 
             _statusMessage = $"Table '{_currentTable.Libelle}' supprimée.";
@@ -451,7 +459,9 @@ else
 
         try
         {
-            var entity = await Db.STable.Include(t => t.Champs).FirstAsync(t => t.Id == _currentTable.Id);
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            var entity = await db.STable.Include(t => t.Champs).FirstAsync(t => t.Id == _currentTable.Id);
             await DataEngine.CreatePhysicalTableAsync(entity, entity.Champs);
             await DataEngine.InvalidateMetadataAsync(entity.Id, entity.Libelle);
             _statusMessage = $"Table physique '{entity.Libelle}' créée.";
@@ -503,6 +513,7 @@ else
 
         try
         {
+            await using var db = await DbFactory.CreateDbContextAsync();
             SField entity;
             if (_currentField.Id == 0)
             {
@@ -513,11 +524,11 @@ else
                     DtCreation = DateTime.UtcNow,
                     UsrCreationId = UserContext.UserId
                 };
-                Db.SField.Add(entity);
+                db.SField.Add(entity);
             }
             else
             {
-                entity = await Db.SField.FirstAsync(f => f.Id == _currentField.Id);
+                entity = await db.SField.FirstAsync(f => f.Id == _currentField.Id);
                 entity.DtModification = DateTime.UtcNow;
                 entity.UsrModificationId = UserContext.UserId;
             }
@@ -536,7 +547,7 @@ else
             entity.Format = _currentField.Format;
             entity.Masque = _currentField.Masque;
 
-            await Db.SaveChangesAsync();
+            await db.SaveChangesAsync();
             await DataEngine.InvalidateMetadataAsync(entity.TableId, _currentTable.Libelle);
 
             _statusMessage = $"Champ '{entity.Libelle}' enregistré.";
@@ -561,14 +572,16 @@ else
 
         try
         {
-            var entity = await Db.SField.FirstOrDefaultAsync(f => f.Id == id);
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            var entity = await db.SField.FirstOrDefaultAsync(f => f.Id == id);
             if (entity == null)
             {
                 return;
             }
 
-            Db.SField.Remove(entity);
-            await Db.SaveChangesAsync();
+            db.SField.Remove(entity);
+            await db.SaveChangesAsync();
             await DataEngine.InvalidateMetadataAsync(entity.TableId, _currentTable.Libelle);
 
             _statusMessage = $"Champ '{entity.Libelle}' supprimé.";
