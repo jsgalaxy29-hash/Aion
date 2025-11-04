@@ -5,6 +5,7 @@ namespace Aion.AppHost.Services
     public interface IAionThemeService
     {
         FluentDesignTheme Current { get; }
+        DesignThemeModes CurrentMode { get; }
         event Action? ThemeChanged;
         void UseLight();
         void UseDark();
@@ -18,9 +19,12 @@ namespace Aion.AppHost.Services
     {
         // _currentTheme stocke l'instance actuelle du thème. Nous la rendons réassignable.
         private FluentDesignTheme _currentTheme;
+        private DesignThemeModes _currentThemeMode;
 
         // Current retourne l'instance actuelle.
         public FluentDesignTheme Current => _currentTheme;
+
+        public DesignThemeModes CurrentMode => _currentThemeMode;
 
         public event Action? ThemeChanged;
 
@@ -28,12 +32,14 @@ namespace Aion.AppHost.Services
         {
             // Initialisation : on commence avec un nouveau thème clair
             _currentTheme = CreateNewTheme(DesignThemeModes.Light);
+            _currentThemeMode = _currentTheme.Mode;
         }
 
         public void UseLight()
         {
             // IMPORTANT : Créer une NOUVELLE instance de thème
             _currentTheme = CreateNewTheme(DesignThemeModes.Light, _currentTheme.CustomColor, _currentTheme.NeutralBaseColor);
+            _currentThemeMode = _currentTheme.Mode;
             OnThemeChanged();
         }
 
@@ -41,6 +47,7 @@ namespace Aion.AppHost.Services
         {
             // IMPORTANT : Créer une NOUVELLE instance de thème
             _currentTheme = CreateNewTheme(DesignThemeModes.Dark, _currentTheme.CustomColor, _currentTheme.NeutralBaseColor);
+            _currentThemeMode = _currentTheme.Mode;
             OnThemeChanged();
         }
 

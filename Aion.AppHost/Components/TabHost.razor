@@ -4,15 +4,15 @@
 @using Aion.Domain.UI
 @inject ITabService Tabs
 
-<Tabs ActiveId="@_activeId" OnChange="OnTabChanged">
+<FluentTabs ActiveId="@_activeId" OnChange="OnTabChanged">
     @foreach (var tab in Tabs.Tabs)
     {
-        <Tab Id="@tab.Id.ToString()">
+        <FluentTab Id="@tab.Id.ToString()">
             @tab.Title
             <button type="button" class="close" style="margin-left:0.5rem" @onclick="() => Close(tab)">x</button>
-        </Tab>
+        </FluentTab>
     }
-</Tabs>
+</FluentTabs>
 
 @if (_active is not null)
 {

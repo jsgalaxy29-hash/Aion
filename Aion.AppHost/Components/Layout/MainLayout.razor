@@ -44,8 +44,12 @@
     </div>
 </FluentStack>
 
-
-
+@* Providers FluentUI à mettre en bas du layout *@
+<FluentToastProvider />
+<FluentDialogProvider />
+<FluentTooltipProvider />
+<FluentMessageBarProvider />
+<FluentMenuProvider />
 
 @code {
     private AuthenticationState? _authState;

@@ -1,4 +1,5 @@
 @page "/admin/rights"
+@using Microsoft.AspNetCore.Components.Web
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @inject Aion.Security.SecurityDbContext SecurityDb
 @inject Aion.Infrastructure.AionDbContext AppDb
@@ -6,8 +7,7 @@
 
 <PageTitle>Gestion des droits</PageTitle>
 
-<h1 class="mb-3">Gestion des droits</h1>
-
+<FluentLabel Typo="Typography.H1">Gestion des droits</FluentLabel>
 @if (!string.IsNullOrWhiteSpace(_errorMessage))
 {
     <div class="alert alert-danger" role="alert">@_errorMessage</div>
@@ -32,7 +32,7 @@ else
 
         <div class="d-flex flex-wrap align-items-end gap-3 mb-4">
             <div>
-                <label class="form-label" for="group-select">Sélection d'un groupe</label>
+                <FluentLabel Typo="Typography.H6" for="group-select">Sélection d'un groupe</FluentLabel>
                 <InputSelect id="group-select"
                              class="form-select"
                              @bind-Value="_selectedGroupId"
@@ -59,19 +59,20 @@ else
         </div>
 
         <fieldset class="mb-4">
-            <legend>Informations du groupe</legend>
+            
+            <FluentLabel Typo="Typography.H4" >Informations du groupe</FluentLabel>
             <div class="form-grid">
-                <label>Nom *</label>
+                <FluentLabel>Nom *</FluentLabel>
                 <InputText @bind-Value="_groupModel!.Name" class="form-control" />
                 <ValidationMessage For="() => _groupModel!.Name" />
 
-                <label>Description</label>
+                <FluentLabel>Description</FluentLabel>
                 <InputTextArea @bind-Value="_groupModel!.Description" class="form-control" />
 
-                <label>Actif</label>
+                <FluentLabel>Actif</FluentLabel>
                 <InputCheckbox @bind-Value="_groupModel!.Actif" class="form-check-input" />
 
-                <label>Groupe système</label>
+                <FluentLabel>Groupe système</FluentLabel>
                 <InputCheckbox @bind-Value="_groupModel!.IsSystem" class="form-check-input" />
             </div>
         </fieldset>
@@ -91,9 +92,8 @@ else
     </EditForm>
 
     <section>
-        <h2 class="h5">Membres et droits</h2>
-
-        @if (_groupModel is null || _groupModel.Id == 0)
+        <FluentLabel Typo="Typography.H5" >Membres et droits</FluentLabel>
+         @if (_groupModel is null || _groupModel.Id == 0)
         {
             <div class="alert alert-info">
                 Enregistrez le groupe avant de gérer les utilisateurs et les droits associés.
@@ -140,7 +140,7 @@ else
 
                         <div class="d-flex flex-wrap align-items-end gap-2">
                             <div>
-                                <label class="form-label" for="user-select">Ajouter un utilisateur</label>
+                                <FluentLabel class="form-label" for="user-select">Ajouter un utilisateur</FluentLabel>
                                 <InputSelect id="user-select"
                                              class="form-select"
                                              @bind-Value="_selectedUserToAdd"
@@ -175,7 +175,7 @@ else
                             {
                                 <div class="d-flex flex-wrap align-items-end gap-2 mb-3">
                                     <div>
-                                        <label class="form-label" for="@($"add-{type.Code}")">Ajouter une ressource</label>
+                                        <FluentLabel class="form-label" for="@($"add-{type.Code}")">Ajouter une ressource</FluentLabel>
                                         <InputSelect id="@($"add-{type.Code}")"
                                                      class="form-select"
                                                      @bind-Value="state.SelectedSubjectId"

@@ -19,7 +19,7 @@
     {
         <div class="grid-toolbar">
             <div class="d-flex flex-wrap gap-2 align-items-center">
-                <h2 class="h5 mb-0">@_tableMetadata.Libelle</h2>
+                <FluentLabel Typo="Typography.H5">@_tableMetadata.Libelle</FluentLabel>
                 <FluentButton Appearance="Appearance.Accent" OnClick="CreateRow">Nouvelle ligne</FluentButton>
                 <FluentButton Appearance="Appearance.Stealth" OnClick="ReloadAsync" Icon="ArrowClockwise16Filled">Rafraîchir</FluentButton>
                 <FluentButton Appearance="Appearance.Outline" OnClick="OpenLayoutEditor" Icon="Settings20Regular">Personnaliser</FluentButton>
@@ -30,7 +30,9 @@
         @if (_searchableColumns.Count > 0)
         {
             <div class="search-panel mb-3">
-                <h3 class="h6">Filtres</h3>
+
+                <FluentLabel Typo="Typography.H6">Filtres</FluentLabel>
+
                 <div class="search-grid">
                     @foreach (var column in _searchableColumns)
                     {

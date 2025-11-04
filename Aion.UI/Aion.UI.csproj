@@ -10,6 +10,6 @@
     <ProjectReference Include="..\Aion.Infrastructure\Aion.Infrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.13.0" />
+    <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.13.1" />
   </ItemGroup>
 </Project>
