@@ -14,12 +14,12 @@ namespace Aion.Infrastructure.Services
     public sealed class AuthService : IAuthService
     {
         private readonly IHttpContextAccessor _http;
-        private readonly AionDbContext _db;
+        private readonly IDbContextFactory<AionDbContext> _dbFactory;
 
-        public AuthService(IHttpContextAccessor http, AionDbContext db)
+        public AuthService(IHttpContextAccessor http, IDbContextFactory<AionDbContext> dbFactory)
         {
             _http = http;
-            _db = db;
+            _dbFactory = dbFactory;
         }
 
         public async Task<SignInResult> SignInAsync(string login, string password, CancellationToken ct)
@@ -30,7 +30,9 @@ namespace Aion.Infrastructure.Services
             }
 
             // Retrieve the user for the default tenant (Guid.Empty) with the specified login.
-            var user = await _db.SUser.FirstOrDefaultAsync(u => u.TenantId == 0 && u.Login == login, ct);
+            await using var db = await _dbFactory.CreateDbContextAsync(ct);
+
+            var user = await db.SUser.FirstOrDefaultAsync(u => u.TenantId == 0 && u.Login == login, ct);
             if (user == null)
             {
                 return SignInResult.Fail("Invalid credentials");

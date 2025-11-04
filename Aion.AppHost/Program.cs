@@ -47,6 +47,12 @@ builder.Services.AddDbContext<AionDbContext>(opt =>
 builder.Services.AddDbContext<SecurityDbContext>(opt =>
     opt.UseSqlServer(connectionString));
 
+builder.Services.AddDbContextFactory<AionDbContext>(opt =>
+    opt.UseSqlServer(connectionString));
+
+builder.Services.AddDbContextFactory<SecurityDbContext>(opt =>
+    opt.UseSqlServer(connectionString));
+
 builder.Services.AddServerSideBlazor()
     .AddCircuitOptions(o => { o.DetailedErrors = true; });
 

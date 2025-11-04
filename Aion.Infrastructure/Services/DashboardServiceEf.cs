@@ -14,16 +14,18 @@ namespace Aion.Infrastructure.Services
     /// </summary>
     public sealed class DashboardServiceEf : IUserDashboardService
     {
-        private readonly AionDbContext _db;
+        private readonly IDbContextFactory<AionDbContext> _dbFactory;
 
-        public DashboardServiceEf(AionDbContext db)
+        public DashboardServiceEf(IDbContextFactory<AionDbContext> dbFactory)
         {
-            _db = db;
+            _dbFactory = dbFactory;
         }
 
         public async Task<IReadOnlyList<UserDashboardLayoutEntity>> GetLayoutAsync(Guid tenantId, Guid userId, CancellationToken ct)
         {
-            var layouts = await _db.U_UserDashboardLayout
+            await using var db = await _dbFactory.CreateDbContextAsync(ct);
+
+            var layouts = await db.U_UserDashboardLayout
                 .Where(x => x.TenantId == tenantId && x.UserId == userId)
                 .OrderBy(x => x.Y).ThenBy(x => x.X)
                 .ToListAsync(ct);
@@ -32,11 +34,13 @@ namespace Aion.Infrastructure.Services
 
         public async Task SaveLayoutAsync(Guid tenantId, Guid userId, IEnumerable<UserDashboardLayoutEntity> layout, CancellationToken ct)
         {
+            await using var db = await _dbFactory.CreateDbContextAsync(ct);
+
             // Supprimer les dispositions existantes
-            var existing = await _db.U_UserDashboardLayout
+            var existing = await db.U_UserDashboardLayout
                 .Where(x => x.TenantId == tenantId && x.UserId == userId)
                 .ToListAsync(ct);
-            _db.U_UserDashboardLayout.RemoveRange(existing);
+            db.U_UserDashboardLayout.RemoveRange(existing);
 
             // Ajouter la nouvelle disposition
             foreach (var item in layout)
@@ -44,8 +48,8 @@ namespace Aion.Infrastructure.Services
                 item.TenantId = tenantId;
                 item.UserId = userId;
             }
-            await _db.U_UserDashboardLayout.AddRangeAsync(layout, ct);
-            await _db.SaveChangesAsync(ct);
+            await db.U_UserDashboardLayout.AddRangeAsync(layout, ct);
+            await db.SaveChangesAsync(ct);
         }
     }
 }
