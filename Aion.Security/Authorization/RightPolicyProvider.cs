@@ -2,71 +2,25 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
-using Aion.Security.Models;
 
 namespace Aion.Security.Authorization
 {
-    /// <summary>
-    /// Requirement représentant un droit Aion.
-    /// </summary>
-    public class RightRequirement : IAuthorizationRequirement
+    public sealed class RightPolicyProvider : IAuthorizationPolicyProvider
     {
-        public string Target { get; }
-        public int SubjectId { get; }
-        public RightFlag Flag { get; }
+        private readonly DefaultAuthorizationPolicyProvider _fallback;
+        public RightPolicyProvider(IOptions<AuthorizationOptions> options) => _fallback = new DefaultAuthorizationPolicyProvider(options);
 
-        public RightRequirement(string target, int subjectId, RightFlag flag)
+        public Task<AuthorizationPolicy> GetDefaultPolicyAsync() => _fallback.GetDefaultPolicyAsync();
+        public Task<AuthorizationPolicy?> GetFallbackPolicyAsync() => _fallback.GetFallbackPolicyAsync();
+
+        public Task<AuthorizationPolicy?> GetPolicyAsync(string policyName)
         {
-            Target = target;
-            SubjectId = subjectId;
-            Flag = flag;
-        }
-    }
-
-    /// <summary>
-    /// Policy provider chargé de traduire une policy Right:* en requirement.
-    /// </summary>
-    public class RightPolicyProvider : DefaultAuthorizationPolicyProvider
-    {
-        public const string Prefix = "Right:";
-
-        public RightPolicyProvider(IOptions<AuthorizationOptions> options)
-            : base(options)
-        {
-        }
-
-        public override async Task<AuthorizationPolicy?> GetPolicyAsync(string policyName)
-        {
-            if (!policyName.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase))
+            if (policyName.StartsWith("Right:", StringComparison.OrdinalIgnoreCase))
             {
-                return await base.GetPolicyAsync(policyName);
+                var p = new AuthorizationPolicyBuilder().AddRequirements(new RightRequirement(policyName)).Build();
+                return Task.FromResult<AuthorizationPolicy?>(p);
             }
-
-            var parts = policyName.Split(':', StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length < 4)
-            {
-                return await base.GetPolicyAsync(policyName);
-            }
-
-            var target = parts[1];
-
-            if (!int.TryParse(parts[2], out var subjectId))
-            {
-                return await base.GetPolicyAsync(policyName);
-            }
-
-            if (!Enum.TryParse(parts[3], ignoreCase: true, out RightFlag flag))
-            {
-                return await base.GetPolicyAsync(policyName);
-            }
-
-            var requirement = new RightRequirement(target, subjectId, flag);
-
-            var policy = new AuthorizationPolicyBuilder()
-                .AddRequirements(requirement)
-                .Build();
-
-            return policy;
+            return _fallback.GetPolicyAsync(policyName);
         }
     }
 }

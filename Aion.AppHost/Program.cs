@@ -24,7 +24,6 @@ using Aion.DataEngine.Services;
 using Aion.Infrastructure.Data;
 using System.Linq;
 using Aion.Domain.UI.DynamicLayouts;
-using Microsoft.Extensions.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -42,8 +41,12 @@ builder.Services.AddHttpClient();
 var connectionString = builder.Configuration.GetConnectionString("AionDb")
     ?? "Server=localhost;Database=AionDb;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true;";
 
-// IMPORTANT : on utilise uniquement les factories pour les DbContext.
-// Les services doivent injecter IDbContextFactory<TContext> et créer le contexte à la demande.
+builder.Services.AddDbContext<AionDbContext>(opt =>
+    opt.UseSqlServer(connectionString));
+
+builder.Services.AddDbContext<SecurityDbContext>(opt =>
+    opt.UseSqlServer(connectionString));
+
 builder.Services.AddDbContextFactory<AionDbContext>(opt =>
     opt.UseSqlServer(connectionString));
 
@@ -77,7 +80,7 @@ builder.Services.AddAuthorization(options =>
 // Claims Transformation
 builder.Services.AddScoped<IClaimsTransformation, AionClaimsTransformation>();
 
-// Policy Provider (singleton requis par ASP.NET Core)
+// Policy Provider
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, RightPolicyProvider>();
 builder.Services.AddScoped<IAuthorizationHandler, RightHandler>();
 
@@ -101,11 +104,11 @@ builder.Services.AddScoped<IValidationService, SimpleValidationService>();
 builder.Services.AddScoped<IHistorizationService, NoOpHistorizationService>();
 builder.Services.AddScoped<IDataEngine, DataEngine>();
 builder.Services.AddSingleton<IDynamicLayoutStore, FileDynamicLayoutStore>();
-builder.Services.AddScoped<IModuleBootstrapper, CrmBootstrapper>();
-builder.Services.AddScoped<IModuleBootstrapper, SystemCatalogBootstrapper>();
-builder.Services.AddScoped<IModuleBootstrapper, SecurityAdminBootstrapper>();
-builder.Services.AddScoped<IModuleBootstrapper, ListDynBootstrapper>();
-builder.Services.AddScoped<IModuleBootstrapper, FormDynBootstrapper>();
+builder.Services.AddSingleton<IModuleBootstrapper, CrmBootstrapper>();
+builder.Services.AddSingleton<IModuleBootstrapper, SystemCatalogBootstrapper>();
+builder.Services.AddSingleton<IModuleBootstrapper, SecurityAdminBootstrapper>();
+builder.Services.AddSingleton<IModuleBootstrapper, ListDynBootstrapper>();
+builder.Services.AddSingleton<IModuleBootstrapper, FormDynBootstrapper>();
 builder.Services.AddScoped<StartupOrchestrator>();
 // Changez Scoped à Singleton pour garantir la même instance pour tous les composants
 builder.Services.AddSingleton<IAionThemeService, AionThemeService>();
