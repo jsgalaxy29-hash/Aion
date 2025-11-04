@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
-using Aion.Domain.Contracts;
 using Aion.Security.Services;
+using Aion.Security.Extensions;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Aion.Security.Authorization
@@ -10,28 +10,34 @@ namespace Aion.Security.Authorization
     /// </summary>
     public class RightHandler : AuthorizationHandler<RightRequirement>
     {
-        private readonly IUserContext _userContext;
         private readonly IRightService _rightService;
 
-        public RightHandler(IUserContext userContext, IRightService rightService)
+        public RightHandler(IRightService rightService)
         {
-            _userContext = userContext;
             _rightService = rightService;
         }
 
         protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, RightRequirement requirement)
         {
-            var userId = _userContext.UserId;
-            var tenantId = _userContext.TenantId;
+            var user = context.User;
+            var userId = user.GetUserId();
+            var tenantId = user.GetTenantId();
+
+            if (userId is null || tenantId is null)
+            {
+                context.Fail(new AuthorizationFailureReason(this, "Missing user claims"));
+                return;
+            }
 
             if (userId <= 0 || tenantId <= 0)
             {
+                context.Fail(new AuthorizationFailureReason(this, "Invalid user context"));
                 return;
             }
 
             var hasRight = await _rightService.HasRightAsync(
-                userId,
-                tenantId,
+                userId.Value,
+                tenantId.Value,
                 requirement.Target,
                 requirement.SubjectId,
                 requirement.Flag);
