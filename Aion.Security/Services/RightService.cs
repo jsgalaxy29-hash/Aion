@@ -16,15 +16,15 @@ namespace Aion.Security.Services
     /// </summary>
     public class RightService : IRightService
     {
-        private readonly SecurityDbContext _db;
+        private readonly IDbContextFactory<SecurityDbContext> _dbFactory;
         private readonly IMemoryCache _cache;
         private const string CacheKeyPrefix = "UserRights_";
         private const string CacheIndexKeyPrefix = "UserRightsIndex_";
         private const int CacheExpirationMinutes = 30;
 
-        public RightService(SecurityDbContext db, IMemoryCache cache)
+        public RightService(IDbContextFactory<SecurityDbContext> dbFactory, IMemoryCache cache)
         {
-            _db = db;
+            _dbFactory = dbFactory;
             _cache = cache;
         }
 
@@ -47,7 +47,9 @@ namespace Aion.Security.Services
                 return cached!;
 
             // Récupération des groupes actifs de l'utilisateur
-            var groupIds = await _db.SUserGroup
+            await using var db = await _dbFactory.CreateDbContextAsync(ct);
+
+            var groupIds = await db.SUserGroup
                 .Where(ug => ug.UserId == userId && ug.IsLinkActive && !ug.Deleted && ug.TenantId == tenantId)
                 .Select(ug => ug.GroupId)
                 .ToListAsync(ct);
@@ -56,7 +58,7 @@ namespace Aion.Security.Services
                 return new Dictionary<string, List<UserRights>>();
 
             // Récupération de tous les droits des groupes
-            var rights = await _db.SRight
+            var rights = await db.SRight
                 .Where(r => groupIds.Contains(r.GroupId) && !r.Deleted && r.TenantId == tenantId)
                 .ToListAsync(ct);
 

@@ -14,12 +14,12 @@ namespace Aion.Infrastructure.Services
     /// </summary>
     public class MenuProvider : IMenuProvider
     {
-        private readonly AionDbContext _db;
+        private readonly IDbContextFactory<AionDbContext> _dbFactory;
         private readonly IRightService _rightService;
 
-        public MenuProvider(AionDbContext db, IRightService rightService)
+        public MenuProvider(IDbContextFactory<AionDbContext> dbFactory, IRightService rightService)
         {
-            _db = db;
+            _dbFactory = dbFactory;
             _rightService = rightService;
         }
 
@@ -35,7 +35,9 @@ namespace Aion.Infrastructure.Services
 
             // Récupération des menus depuis la base (table S_Menu ou équivalent)
             // ADAPTATION : Remplacer par votre table réelle
-            var menus = await _db.Set<SMenu>()
+            await using var db = await _dbFactory.CreateDbContextAsync(ct);
+
+            var menus = await db.Set<SMenu>()
                 .Include(m => m.Module)
                 .Where(m => m.Actif && authorizedIds.Contains(m.Id))
                 .OrderBy(m => m.Order)
@@ -56,7 +58,7 @@ namespace Aion.Infrastructure.Services
 
             while (parentIds.Count > 0)
             {
-                var parents = await _db.Set<SMenu>()
+                var parents = await db.Set<SMenu>()
                     .Include(m => m.Module)
                     .Where(m => parentIds.Contains(m.Id))
                     .ToListAsync(ct);
@@ -85,7 +87,8 @@ namespace Aion.Infrastructure.Services
         public async Task<IReadOnlyList<SMenu>> GetAllMenuAsync(int tenantId, CancellationToken ct)
         {
             // ADAPTATION : Ajouter filtre TenantId si multi-tenant
-            var menus = await _db.Set<SMenu>()
+            await using var db = await _dbFactory.CreateDbContextAsync(ct);
+            var menus = await db.Set<SMenu>()
                 .Include(m => m.Module)
                 .Where(m => m.Actif)
                 .OrderBy(m => m.Order)

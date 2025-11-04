@@ -8,8 +8,8 @@ namespace Aion.Security.Claims
 {
     public sealed class DynamicClaimsTransformer : IClaimsTransformation
     {
-        private readonly SecurityDbContext _db;
-        public DynamicClaimsTransformer(SecurityDbContext db) => _db = db;
+        private readonly IDbContextFactory<SecurityDbContext> _dbFactory;
+        public DynamicClaimsTransformer(IDbContextFactory<SecurityDbContext> dbFactory) => _dbFactory = dbFactory;
 
         public async Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal)
         {
@@ -19,11 +19,13 @@ namespace Aion.Security.Claims
             if (string.IsNullOrWhiteSpace(name)) return principal;
 
             // TODO: adjust mapping to your user table; example relies on ApplicationUser by UserName
-            var user = await _db.SUser.FirstOrDefaultAsync(u => u.UserName == name);
+            await using var db = await _dbFactory.CreateDbContextAsync();
+
+            var user = await db.SUser.FirstOrDefaultAsync(u => u.UserName == name);
             if (user == null) return principal;
 
             // Example: build rights from S_DROIT / S_DROIT_TYPE
-            var rights = await _db.SRight.Join(_db.SRightType, r => r.SubjectId, t => t.Id, (r,t) => new { r, t })
+            var rights = await db.SRight.Join(db.SRightType, r => r.SubjectId, t => t.Id, (r,t) => new { r, t })
                 .Where(x => user.UserGroups.Any(g => g.GroupId == x.r.GroupId)) // replace with your actual linkage
                 .ToListAsync();
 

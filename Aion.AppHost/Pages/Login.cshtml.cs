@@ -17,12 +17,12 @@ namespace Aion.AppHost.Pages
     [AllowAnonymous]
     public class LoginModel : PageModel
     {
-        private readonly SecurityDbContext _db;
+        private readonly IDbContextFactory<SecurityDbContext> _dbFactory;
         private readonly ILogger<LoginModel> _logger;
 
-        public LoginModel(SecurityDbContext db, ILogger<LoginModel> logger)
+        public LoginModel(IDbContextFactory<SecurityDbContext> dbFactory, ILogger<LoginModel> logger)
         {
-            _db = db;
+            _dbFactory = dbFactory;
             _logger = logger;
         }
 
@@ -68,7 +68,9 @@ namespace Aion.AppHost.Pages
                 _logger.LogInformation("Tentative de connexion pour {Username}", Input.Username);
 
                 // Recherche de l'utilisateur
-                var user = await _db.SUser
+                await using var db = await _dbFactory.CreateDbContextAsync();
+
+                var user = await db.SUser
                     .AsNoTracking()
                     .FirstOrDefaultAsync(u =>
                         u.NormalizedUserName == Input.Username.ToUpperInvariant() &&
@@ -174,11 +176,13 @@ namespace Aion.AppHost.Pages
         {
             try
             {
-                await _db.Database.ExecuteSqlRawAsync(
-                    @"UPDATE SUser 
+                await using var db = await _dbFactory.CreateDbContextAsync();
+
+                await db.Database.ExecuteSqlRawAsync(
+                    @"UPDATE SUser
                       SET AccessFailedCount = AccessFailedCount + 1,
-                          LockoutEnd = CASE WHEN AccessFailedCount >= 4 
-                                       THEN DATEADD(minute, 30, GETUTCDATE()) 
+                          LockoutEnd = CASE WHEN AccessFailedCount >= 4
+                                       THEN DATEADD(minute, 30, GETUTCDATE())
                                        ELSE LockoutEnd END
                       WHERE Id = {0}",
                     userId);
@@ -193,10 +197,12 @@ namespace Aion.AppHost.Pages
         {
             try
             {
-                await _db.Database.ExecuteSqlRawAsync(
-                    @"UPDATE SUser 
-                      SET AccessFailedCount = 0, 
-                          LockoutEnd = NULL, 
+                await using var db = await _dbFactory.CreateDbContextAsync();
+
+                await db.Database.ExecuteSqlRawAsync(
+                    @"UPDATE SUser
+                      SET AccessFailedCount = 0,
+                          LockoutEnd = NULL,
                           LastLoginDate = GETUTCDATE()
                       WHERE Id = {0}",
                     userId);

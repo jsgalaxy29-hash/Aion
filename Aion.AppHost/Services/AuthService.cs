@@ -26,16 +26,16 @@ namespace Aion.AppHost.Services
     /// </summary>
     public class AuthService : IAuthService
     {
-        private readonly SecurityDbContext _db;
+        private readonly IDbContextFactory<SecurityDbContext> _dbFactory;
         private readonly IHttpContextAccessor _httpContext;
         private readonly ILogger<AuthService> _logger;
 
         public AuthService(
-            SecurityDbContext db,
+            IDbContextFactory<SecurityDbContext> dbFactory,
             IHttpContextAccessor httpContext,
             ILogger<AuthService> logger)
         {
-            _db = db;
+            _dbFactory = dbFactory;
             _httpContext = httpContext;
             _logger = logger;
         }
@@ -62,7 +62,9 @@ namespace Aion.AppHost.Services
                 }
 
                 // Recherche de l'utilisateur (sans tracking pour éviter les conflits)
-                var user = await _db.SUser
+                await using var db = await _dbFactory.CreateDbContextAsync();
+
+                var user = await db.SUser
                     .AsNoTracking()
                     .FirstOrDefaultAsync(u =>
                         u.NormalizedUserName == username.ToUpperInvariant() &&
@@ -171,7 +173,9 @@ namespace Aion.AppHost.Services
                 if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var userId))
                     return null;
 
-                return await _db.SUser
+                await using var db = await _dbFactory.CreateDbContextAsync();
+
+                return await db.SUser
                     .AsNoTracking()
                     .FirstOrDefaultAsync(u => u.Id == userId && !u.Deleted);
             }
@@ -187,8 +191,10 @@ namespace Aion.AppHost.Services
             try
             {
                 // Utiliser ExecuteSqlRaw pour éviter les problèmes de tracking
-                await _db.Database.ExecuteSqlRawAsync(
-                    @"UPDATE SUser 
+                await using var db = await _dbFactory.CreateDbContextAsync();
+
+                await db.Database.ExecuteSqlRawAsync(
+                    @"UPDATE SUser
                       SET AccessFailedCount = AccessFailedCount + 1,
                           LockoutEnd = CASE WHEN AccessFailedCount >= 4 THEN DATEADD(minute, 30, GETUTCDATE()) ELSE LockoutEnd END
                       WHERE Id = {0}",
@@ -205,10 +211,12 @@ namespace Aion.AppHost.Services
             try
             {
                 // Utiliser ExecuteSqlRaw pour éviter les problèmes de tracking
-                await _db.Database.ExecuteSqlRawAsync(
-                    @"UPDATE SUser 
-                      SET AccessFailedCount = 0, 
-                          LockoutEnd = NULL, 
+                await using var db = await _dbFactory.CreateDbContextAsync();
+
+                await db.Database.ExecuteSqlRawAsync(
+                    @"UPDATE SUser
+                      SET AccessFailedCount = 0,
+                          LockoutEnd = NULL,
                           LastLoginDate = GETUTCDATE()
                       WHERE Id = {0}",
                     userId);
