@@ -85,15 +85,15 @@
             else
             {
                 <FluentDataGrid TGridItem="DynamicRow"
-                                Items="@_viewRows"
+                                Items="@_viewRows.AsQueryable()"
                                 GridTemplateColumns="@GridTemplateColumns"
                                 Class="aion-data-grid-table">
                     @foreach (var column in VisibleColumns)
                     {
-                        var isSorted = string.Equals(_sortColumn?.FieldName, column.FieldName, StringComparison.OrdinalIgnoreCase);
-                        <TemplateColumn @key="column.FieldName" Title="@column.DisplayName">
+                        @{ var isSorted = string.Equals(_sortColumn?.FieldName, column.FieldName, StringComparison.OrdinalIgnoreCase); }
+                        <TemplateColumn TGridItem="DynamicRow" @key="column.FieldName" Title="@column.DisplayName">
                             <HeaderTemplate>
-                                <div class="d-flex align-items-center gap-1 sortable-header" role="button" @onclick="() => SortBy(column)">
+                                <div class="d-flex align-items-center gap-1 sortable-header" role="button" @onclick="@(() => SortBy(column))">
                                     <span>@column.DisplayName</span>
                                     @if (isSorted)
                                     {
@@ -116,7 +116,7 @@
                         </TemplateColumn>
                     }
 
-                    <TemplateColumn Title="Actions">
+                    <TemplateColumn TGridItem="DynamicRow" Title="Actions">
                         <HeaderTemplate>
                             <span>Actions</span>
                         </HeaderTemplate>
