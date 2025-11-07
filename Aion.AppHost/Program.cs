@@ -43,16 +43,6 @@ builder.Services.AddHttpClient();
 var connectionString = builder.Configuration.GetConnectionString("AionDb")
     ?? "Server=localhost;Database=AionDb;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true;";
 
-builder.Services.AddDbContext<AionDbContext>(opt =>
-    opt.UseSqlServer(connectionString),
-    ServiceLifetime.Scoped,
-    ServiceLifetime.Singleton);
-
-builder.Services.AddDbContext<SecurityDbContext>(opt =>
-    opt.UseSqlServer(connectionString),
-    ServiceLifetime.Scoped,
-    ServiceLifetime.Singleton);
-
 builder.Services.AddDbContextFactory<AionDbContext>((_, opt) =>
     opt.UseSqlServer(connectionString),
     ServiceLifetime.Scoped);
