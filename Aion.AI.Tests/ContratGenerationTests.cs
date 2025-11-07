@@ -15,7 +15,7 @@ public class ContratGenerationTests
     public async Task ContratScenarioProducesExpectedArtifacts()
     {
         var services = new ServiceCollection();
-        services.AddLogging(builder => builder.AddDebug());
+        services.AddLogging(builder => builder.AddConsole());
         services.AddAionAi();
         var audit = new InMemoryAuditTrailService();
         services.AddSingleton<IAuditTrailService>(audit);
