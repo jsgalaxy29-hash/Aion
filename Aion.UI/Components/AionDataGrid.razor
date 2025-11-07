@@ -1,7 +1,6 @@
+@using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Web
-@inject Aion.DataEngine.Interfaces.IDataEngine DataEngine
-@inject Aion.DataEngine.Interfaces.IUserContext UserContext
-@inject IDynamicLayoutStore LayoutStore
+@using Microsoft.FluentUI.AspNetCore.Components
 
 <div class="aion-grid">
     @if (_isLoading)
@@ -76,67 +75,30 @@
             </div>
         }
 
-        <div class="table-responsive">
-            <table class="table table-sm table-striped">
-                <thead>
-                    <tr>
-                        @foreach (var column in VisibleColumns)
-                        {
-                            var isSorted = string.Equals(_sortColumn?.FieldName, column.FieldName, StringComparison.OrdinalIgnoreCase);
-                            <th role="button" onclick="() => SortBy(column)">
-                                @column.DisplayName
-                                @if (isSorted)
-                                {
-                                    <span>@(_sortDescending ? "▼" : "▲")</span>
-                                }
-                            </th>
-                        }
-                        <th style="width:160px;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (_viewRows.Count == 0)
-                    {
-                        <tr>
-                            <td colspan="@(VisibleColumns.Count + 1)" class="text-center text-muted">Aucune donnée.</td>
-                        </tr>
-                    }
-                    else
-                    {
-                        @foreach (var row in _viewRows)
-                        {
-                            <tr ondblclick="@(async () => await HandleRowDoubleClick(row))">
-                                @foreach (var column in VisibleColumns)
-                                {
-                                    <td>
-                                        @if (row.IsEditing)
-                                        {
-                                            @RenderEditCell(row, column)
-                                        }
-                                        else
-                                        {
-                                            @RenderReadCell(row, column)
-                                        }
-                                    </td>
-                                }
-                                <td class="text-nowrap">
-                                    @if (row.IsEditing)
-                                    {
-                                        <FluentButton Appearance="Appearance.Accent" Size="ControlSize.Small" OnClick="() => SaveRowAsync(row)">Sauver</FluentButton>
-                                        <FluentButton Appearance="Appearance.Stealth" Size="ControlSize.Small" OnClick="() => CancelEdit(row)">Annuler</FluentButton>
-                                    }
-                                    else
-                                    {
-                                        <FluentButton Appearance="Appearance.Stealth" Size="ControlSize.Small" OnClick="() => StartEdit(row)">Modifier</FluentButton>
-                                        <FluentButton Appearance="Appearance.Outline" Size="ControlSize.Small" OnClick="() => DeleteRowAsync(row)">Supprimer</FluentButton>
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    }
-                </tbody>
-            </table>
-        </div>
+        @if (_viewRows.Count == 0)
+        {
+            <div class="text-center text-muted py-4">Aucune donnée.</div>
+        }
+        else
+        {
+            <FluentDataGrid Items="@_viewRows.AsQueryable()"
+                            TItem="DynamicRow"
+                            GridTemplateColumns="@GridTemplateColumns"
+                            SelectionMode="DataGridSelectionMode.None">
+                @foreach (var column in VisibleColumns)
+                {
+                    var col = column;
+                    var isSorted = string.Equals(_sortColumn?.FieldName, col.FieldName, StringComparison.OrdinalIgnoreCase);
+                    <TemplateColumn TGridItem="DynamicRow"
+                                    Title="@col.DisplayName"
+                                    HeaderTemplate="@(() => RenderColumnHeader(col, isSorted))"
+                                    Template="@((DynamicRow row) => RenderColumnCell(row, col))" />
+                }
+                <TemplateColumn TGridItem="DynamicRow"
+                                Title="Actions"
+                                Template="@((DynamicRow row) => RenderActionsCell(row))" />
+            </FluentDataGrid>
+        }
 
         <div class="d-flex justify-content-between align-items-center mt-2">
             <div class="d-flex align-items-center gap-2">
@@ -201,6 +163,10 @@
 </div>
 
 @code {
+    [Inject] public Aion.DataEngine.Interfaces.IDataEngine DataEngine { get; set; } = default!;
+    [Inject] public Aion.DataEngine.Interfaces.IUserContext UserContext { get; set; } = default!;
+    [Inject] public IDynamicLayoutStore LayoutStore { get; set; } = default!;
+
     [Parameter] public string TableName { get; set; } = string.Empty;
     [Parameter] public EventCallback<DynamicRow> OnRowDoubleClick { get; set; }
 
@@ -253,6 +219,16 @@
 
     private IReadOnlyList<DynamicColumnDefinition> VisibleColumns
         => _columns.Where(c => c.Visible).OrderBy(c => c.Order).ToList();
+
+    private string GridTemplateColumns
+    {
+        get
+        {
+            var parts = VisibleColumns.Select(_ => "minmax(120px, 1fr)").ToList();
+            parts.Add("160px");
+            return string.Join(' ', parts);
+        }
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -589,6 +565,74 @@
         }
     }
 
+    private RenderFragment RenderColumnHeader(DynamicColumnDefinition column, bool isSorted) => builder =>
+    {
+        builder.OpenComponent<FluentButton>(0);
+        builder.AddAttribute(1, nameof(FluentButton.Appearance), Appearance.Stealth);
+        builder.AddAttribute(2, "Class", "grid-header");
+        builder.AddAttribute(3, nameof(FluentButton.OnClick), EventCallback.Factory.Create(this, () => SortBy(column)));
+        builder.AddContent(4, column.DisplayName);
+        if (isSorted)
+        {
+            builder.OpenElement(5, "span");
+            builder.AddAttribute(6, "class", "sort-indicator");
+            builder.AddContent(7, _sortDescending ? "▼" : "▲");
+            builder.CloseElement();
+        }
+        builder.CloseComponent();
+    };
+
+    private RenderFragment RenderColumnCell(DynamicRow row, DynamicColumnDefinition column) => builder =>
+    {
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "class", "grid-cell-content");
+        builder.AddAttribute(2, "ondblclick", CreateRowDoubleClickCallback(row));
+        if (row.IsEditing)
+        {
+            builder.AddContent(3, RenderEditCell(row, column));
+        }
+        else
+        {
+            builder.AddContent(4, RenderReadCell(row, column));
+        }
+        builder.CloseElement();
+    };
+
+    private RenderFragment RenderActionsCell(DynamicRow row) => builder =>
+    {
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "class", "grid-cell-actions");
+        if (row.IsEditing)
+        {
+            builder.OpenComponent<FluentButton>(2);
+            builder.AddAttribute(3, nameof(FluentButton.Appearance), Appearance.Accent);
+            builder.AddAttribute(4, nameof(FluentButton.OnClick), EventCallback.Factory.Create(this, () => SaveRowAsync(row)));
+            builder.AddContent(5, "Sauver");
+            builder.CloseComponent();
+
+            builder.OpenComponent<FluentButton>(7);
+            builder.AddAttribute(8, nameof(FluentButton.Appearance), Appearance.Stealth);
+            builder.AddAttribute(9, nameof(FluentButton.OnClick), EventCallback.Factory.Create(this, () => CancelEdit(row)));
+            builder.AddContent(10, "Annuler");
+            builder.CloseComponent();
+        }
+        else
+        {
+            builder.OpenComponent<FluentButton>(12);
+            builder.AddAttribute(13, nameof(FluentButton.Appearance), Appearance.Stealth);
+            builder.AddAttribute(14, nameof(FluentButton.OnClick), EventCallback.Factory.Create(this, () => StartEdit(row)));
+            builder.AddContent(15, "Modifier");
+            builder.CloseComponent();
+
+            builder.OpenComponent<FluentButton>(17);
+            builder.AddAttribute(18, nameof(FluentButton.Appearance), Appearance.Outline);
+            builder.AddAttribute(19, nameof(FluentButton.OnClick), EventCallback.Factory.Create(this, () => DeleteRowAsync(row)));
+            builder.AddContent(20, "Supprimer");
+            builder.CloseComponent();
+        }
+        builder.CloseElement();
+    };
+
     private RenderFragment RenderReadCell(DynamicRow row, DynamicColumnDefinition column) => builder =>
     {
         var value = row.GetValue(column.FieldName);
@@ -822,6 +866,13 @@
         }
 
         return rawValue;
+    }
+
+    private EventCallback<MouseEventArgs> CreateRowDoubleClickCallback(DynamicRow row)
+    {
+        return OnRowDoubleClick.HasDelegate
+            ? EventCallback.Factory.Create<MouseEventArgs>(this, async _ => await HandleRowDoubleClick(row))
+            : default;
     }
 
     private async Task HandleRowDoubleClick(DynamicRow row)
