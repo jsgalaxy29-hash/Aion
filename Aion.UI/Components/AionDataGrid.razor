@@ -1,8 +1,6 @@
+@using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.FluentUI.AspNetCore.Components
-@inject Aion.DataEngine.Interfaces.IDataEngine DataEngine
-@inject Aion.DataEngine.Interfaces.IUserContext UserContext
-@inject IDynamicLayoutStore LayoutStore
 
 <div class="aion-grid">
     @if (_isLoading)
@@ -165,9 +163,9 @@
 </div>
 
 @code {
-    [Inject] private required Aion.DataEngine.Interfaces.IDataEngine DataEngine { get; set; }
-    [Inject] private required Aion.DataEngine.Interfaces.IUserContext UserContext { get; set; }
-    [Inject] private required IDynamicLayoutStore LayoutStore { get; set; }
+    [Inject] public Aion.DataEngine.Interfaces.IDataEngine DataEngine { get; set; } = default!;
+    [Inject] public Aion.DataEngine.Interfaces.IUserContext UserContext { get; set; } = default!;
+    [Inject] public IDynamicLayoutStore LayoutStore { get; set; } = default!;
 
     [Parameter] public string TableName { get; set; } = string.Empty;
     [Parameter] public EventCallback<DynamicRow> OnRowDoubleClick { get; set; }
@@ -608,32 +606,28 @@
         {
             builder.OpenComponent<FluentButton>(2);
             builder.AddAttribute(3, nameof(FluentButton.Appearance), Appearance.Accent);
-            builder.AddAttribute(4, nameof(FluentButton.Size), ControlSize.Small);
-            builder.AddAttribute(5, nameof(FluentButton.OnClick), EventCallback.Factory.Create(this, () => SaveRowAsync(row)));
-            builder.AddContent(6, "Sauver");
+            builder.AddAttribute(4, nameof(FluentButton.OnClick), EventCallback.Factory.Create(this, () => SaveRowAsync(row)));
+            builder.AddContent(5, "Sauver");
             builder.CloseComponent();
 
             builder.OpenComponent<FluentButton>(7);
             builder.AddAttribute(8, nameof(FluentButton.Appearance), Appearance.Stealth);
-            builder.AddAttribute(9, nameof(FluentButton.Size), ControlSize.Small);
-            builder.AddAttribute(10, nameof(FluentButton.OnClick), EventCallback.Factory.Create(this, () => CancelEdit(row)));
-            builder.AddContent(11, "Annuler");
+            builder.AddAttribute(9, nameof(FluentButton.OnClick), EventCallback.Factory.Create(this, () => CancelEdit(row)));
+            builder.AddContent(10, "Annuler");
             builder.CloseComponent();
         }
         else
         {
             builder.OpenComponent<FluentButton>(12);
             builder.AddAttribute(13, nameof(FluentButton.Appearance), Appearance.Stealth);
-            builder.AddAttribute(14, nameof(FluentButton.Size), ControlSize.Small);
-            builder.AddAttribute(15, nameof(FluentButton.OnClick), EventCallback.Factory.Create(this, () => StartEdit(row)));
-            builder.AddContent(16, "Modifier");
+            builder.AddAttribute(14, nameof(FluentButton.OnClick), EventCallback.Factory.Create(this, () => StartEdit(row)));
+            builder.AddContent(15, "Modifier");
             builder.CloseComponent();
 
             builder.OpenComponent<FluentButton>(17);
             builder.AddAttribute(18, nameof(FluentButton.Appearance), Appearance.Outline);
-            builder.AddAttribute(19, nameof(FluentButton.Size), ControlSize.Small);
-            builder.AddAttribute(20, nameof(FluentButton.OnClick), EventCallback.Factory.Create(this, () => DeleteRowAsync(row)));
-            builder.AddContent(21, "Supprimer");
+            builder.AddAttribute(19, nameof(FluentButton.OnClick), EventCallback.Factory.Create(this, () => DeleteRowAsync(row)));
+            builder.AddContent(20, "Supprimer");
             builder.CloseComponent();
         }
         builder.CloseElement();
