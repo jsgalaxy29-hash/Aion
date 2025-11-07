@@ -89,14 +89,20 @@
                 {
                     var col = column;
                     var isSorted = string.Equals(_sortColumn?.FieldName, col.FieldName, StringComparison.OrdinalIgnoreCase);
-                    <TemplateColumn TGridItem="DynamicRow"
-                                    Title="@col.DisplayName"
-                                    HeaderTemplate="@(() => RenderColumnHeader(col, isSorted))"
-                                    Template="@((DynamicRow row) => RenderColumnCell(row, col))" />
+                    <TemplateColumn TGridItem="DynamicRow" Title="@col.DisplayName">
+                        <HeaderTemplate>
+                            @RenderColumnHeader(col, isSorted)
+                        </HeaderTemplate>
+                        <Template Context="row">
+                            @RenderColumnCell(row, col)
+                        </Template>
+                    </TemplateColumn>
                 }
-                <TemplateColumn TGridItem="DynamicRow"
-                                Title="Actions"
-                                Template="@((DynamicRow row) => RenderActionsCell(row))" />
+                <TemplateColumn TGridItem="DynamicRow" Title="Actions">
+                    <Template Context="row">
+                        @RenderActionsCell(row)
+                    </Template>
+                </TemplateColumn>
             </FluentDataGrid>
         }
 
