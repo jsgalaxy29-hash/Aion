@@ -1,9 +1,14 @@
 using Microsoft.EntityFrameworkCore;
 using Aion.DataEngine.Interfaces;
 using System;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using Aion.DataEngine.Entities;
+using Aion.Domain.AI;
+using Aion.Domain.Common;
 
 namespace Aion.Infrastructure
 {
@@ -32,6 +37,14 @@ namespace Aion.Infrastructure
         public DbSet<SHistoChange> SHistoChange => Set<SHistoChange>();
         public DbSet<STenant> STenant => Set<STenant>();
         public DbSet<SWidget> SWidget => Set<SWidget>();
+
+        public DbSet<SXGenerationLog> SXGenerationLogs => Set<SXGenerationLog>();
+
+        public DbSet<SXAiConfig> SXAiConfigs => Set<SXAiConfig>();
+
+        public DbSet<SXSynonym> SXSynonyms => Set<SXSynonym>();
+
+        public DbSet<SXTemplate> SXTemplates => Set<SXTemplate>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -63,6 +76,15 @@ namespace Aion.Infrastructure
             modelBuilder.Entity<Aion.DataEngine.Entities.SHistoVersion>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
             modelBuilder.Entity<Aion.DataEngine.Entities.SHistoChange>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
             modelBuilder.Entity<Aion.DataEngine.Entities.STenant>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
+
+            modelBuilder.ApplyConfigurationsFromAssembly(typeof(AionDbContext).Assembly);
+
+            foreach (var entityType in modelBuilder.Model.GetEntityTypes()
+                         .Where(t => typeof(BaseEntity).IsAssignableFrom(t.ClrType)))
+            {
+                var method = typeof(AionDbContext).GetMethod(nameof(ApplySoftDeleteFilter), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+                method?.MakeGenericMethod(entityType.ClrType).Invoke(null, new object[] { modelBuilder });
+            }
         }
 
         public static string Sha256(string input)
@@ -72,6 +94,40 @@ namespace Aion.Infrastructure
             var sb = new StringBuilder();
             foreach (var b in bytes) sb.Append(b.ToString("x2"));
             return sb.ToString();
+        }
+
+        public override int SaveChanges()
+        {
+            UpdateAuditInformation();
+            return base.SaveChanges();
+        }
+
+        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            UpdateAuditInformation();
+            return base.SaveChangesAsync(cancellationToken);
+        }
+
+        private void UpdateAuditInformation()
+        {
+            var utcNow = DateTimeOffset.UtcNow;
+            foreach (var entry in ChangeTracker.Entries<BaseEntity>())
+            {
+                if (entry.State == EntityState.Added)
+                {
+                    entry.Entity.CreatedAt = utcNow;
+                    entry.Entity.UpdatedAt = utcNow;
+                }
+                else if (entry.State == EntityState.Modified)
+                {
+                    entry.Entity.UpdatedAt = utcNow;
+                }
+            }
+        }
+
+        private static void ApplySoftDeleteFilter<TEntity>(ModelBuilder builder) where TEntity : BaseEntity
+        {
+            builder.Entity<TEntity>().HasQueryFilter(entity => !entity.IsDeleted);
         }
     }
 }
