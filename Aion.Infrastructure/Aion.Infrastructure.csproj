@@ -10,12 +10,14 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Aion.DataEngine\Aion.DataEngine.csproj" />
+    <ProjectReference Include="..\Aion.AI\Aion.AI.csproj" />
     <ProjectReference Include="..\Aion.Domain\Aion.Domain.csproj" />
     <ProjectReference Include="..\Aion.Security\Aion.Security.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.10" PrivateAssets="all" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.10" />
   </ItemGroup>
   <ItemGroup>
