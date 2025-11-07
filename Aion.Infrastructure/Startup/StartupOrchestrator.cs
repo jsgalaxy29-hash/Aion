@@ -50,8 +50,8 @@ namespace Aion.Infrastructure.Startup
                 // ====== PHASE 1 : Structure SQL via AionProvisioningService ======
                 _logger.LogInformation("📊 Phase 1 : Création de la structure SQL...");
                 await _provisioning.EnsureDatabaseReadyAsync();
-                await appDb.Database.EnsureCreatedAsync(ct);
-                await securityDb.Database.EnsureCreatedAsync(ct);
+                await appDb.Database.MigrateAsync(ct);
+                await securityDb.Database.MigrateAsync(ct);
                 _logger.LogInformation("✅ Structure SQL créée");
 
                 // ====== PHASE 2 : Données de sécurité via EF Core ======

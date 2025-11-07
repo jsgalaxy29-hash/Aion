@@ -1,0 +1,23 @@
+.grid-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0;
+    min-height: auto;
+}
+
+.grid-header .sort-indicator {
+    font-size: 0.75rem;
+}
+
+.grid-cell-content {
+    display: flex;
+    align-items: center;
+    min-height: 100%;
+}
+
+.grid-cell-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}

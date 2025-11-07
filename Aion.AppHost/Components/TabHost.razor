@@ -4,10 +4,10 @@
 @using Aion.Domain.UI
 @inject ITabService Tabs
 
-<FluentTabs ActiveId="@_activeId" OnChange="OnTabChanged">
+<FluentTabs ActiveId="@GetActiveTabHtmlId()" OnChange="OnTabChanged">
     @foreach (var tab in Tabs.Tabs)
     {
-        <FluentTab Id="@tab.Id.ToString()">
+        <FluentTab Id="@GetTabHtmlId(tab.Id)">
             @tab.Title
             <FluentButton type="ButtonType.Button" class="close" style="margin-left:0.5rem" @onclick="() => Close(tab)">x</FluentButton>
         </FluentTab>
@@ -86,7 +86,7 @@
 
     private Task OnTabChanged(Microsoft.FluentUI.AspNetCore.Components.TabChangeEventArgs e)
     {
-        if (Guid.TryParse(e.ActiveId, out var id))
+        if (TryParseTabHtmlId(e.ActiveId, out var id))
         {
             _active = Tabs.Tabs.FirstOrDefault(t => t.Id == id);
             _activeId = id;
@@ -109,5 +109,24 @@
             _active = null;
             _activeId = null;
         }
+    }
+
+    private static string GetTabHtmlId(Guid id) => $"tab-{id}";
+
+    private string? GetActiveTabHtmlId() => _activeId is Guid id ? GetTabHtmlId(id) : null;
+
+    private static bool TryParseTabHtmlId(string? value, out Guid id)
+    {
+        const string prefix = "tab-";
+
+        if (!string.IsNullOrEmpty(value)
+            && value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+            && Guid.TryParse(value[prefix.Length..], out id))
+        {
+            return true;
+        }
+
+        id = Guid.Empty;
+        return false;
     }
 }
