@@ -91,47 +91,14 @@
                 {
                     var col = column;
                     var isSorted = string.Equals(_sortColumn?.FieldName, col.FieldName, StringComparison.OrdinalIgnoreCase);
-                    <TemplateColumn Title="@col.DisplayName" Key="@col.FieldName">
-                        <HeaderTemplate>
-                            <FluentButton Appearance="Appearance.Stealth" Class="grid-header" OnClick="() => SortBy(col)">
-                                <span>@col.DisplayName</span>
-                                @if (isSorted)
-                                {
-                                    <span class="sort-indicator">@(_sortDescending ? "▼" : "▲")</span>
-                                }
-                            </FluentButton>
-                        </HeaderTemplate>
-                        <Template Context="row">
-                            <div class="grid-cell-content"
-                                 @ondblclick="CreateRowDoubleClickCallback(row)">
-                                @if (row.IsEditing)
-                                {
-                                    @RenderEditCell(row, col)
-                                }
-                                else
-                                {
-                                    @RenderReadCell(row, col)
-                                }
-                            </div>
-                        </Template>
-                    </TemplateColumn>
+                    <TemplateColumn TGridItem="DynamicRow"
+                                    Title="@col.DisplayName"
+                                    HeaderTemplate="@RenderColumnHeader(col, isSorted)"
+                                    Template="@(row => RenderColumnCell(row, col))" />
                 }
-                <TemplateColumn Title="Actions" Key="__actions">
-                    <Template Context="row">
-                        <div class="grid-cell-actions">
-                            @if (row.IsEditing)
-                            {
-                                <FluentButton Appearance="Appearance.Accent" Size="ControlSize.Small" OnClick="() => SaveRowAsync(row)">Sauver</FluentButton>
-                                <FluentButton Appearance="Appearance.Stealth" Size="ControlSize.Small" OnClick="() => CancelEdit(row)">Annuler</FluentButton>
-                            }
-                            else
-                            {
-                                <FluentButton Appearance="Appearance.Stealth" Size="ControlSize.Small" OnClick="() => StartEdit(row)">Modifier</FluentButton>
-                                <FluentButton Appearance="Appearance.Outline" Size="ControlSize.Small" OnClick="() => DeleteRowAsync(row)">Supprimer</FluentButton>
-                            }
-                        </div>
-                    </Template>
-                </TemplateColumn>
+                <TemplateColumn TGridItem="DynamicRow"
+                                Title="Actions"
+                                Template="@(row => RenderActionsCell(row))" />
             </FluentDataGrid>
         }
 
@@ -595,6 +562,78 @@
             ApplyFilters();
         }
     }
+
+    private RenderFragment RenderColumnHeader(DynamicColumnDefinition column, bool isSorted) => builder =>
+    {
+        builder.OpenComponent<FluentButton>(0);
+        builder.AddAttribute(1, nameof(FluentButton.Appearance), Appearance.Stealth);
+        builder.AddAttribute(2, "Class", "grid-header");
+        builder.AddAttribute(3, nameof(FluentButton.OnClick), EventCallback.Factory.Create(this, () => SortBy(column)));
+        builder.AddContent(4, column.DisplayName);
+        if (isSorted)
+        {
+            builder.OpenElement(5, "span");
+            builder.AddAttribute(6, "class", "sort-indicator");
+            builder.AddContent(7, _sortDescending ? "▼" : "▲");
+            builder.CloseElement();
+        }
+        builder.CloseComponent();
+    };
+
+    private RenderFragment RenderColumnCell(DynamicRow row, DynamicColumnDefinition column) => builder =>
+    {
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "class", "grid-cell-content");
+        builder.AddAttribute(2, "ondblclick", CreateRowDoubleClickCallback(row));
+        if (row.IsEditing)
+        {
+            builder.AddContent(3, RenderEditCell(row, column));
+        }
+        else
+        {
+            builder.AddContent(4, RenderReadCell(row, column));
+        }
+        builder.CloseElement();
+    };
+
+    private RenderFragment RenderActionsCell(DynamicRow row) => builder =>
+    {
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "class", "grid-cell-actions");
+        if (row.IsEditing)
+        {
+            builder.OpenComponent<FluentButton>(2);
+            builder.AddAttribute(3, nameof(FluentButton.Appearance), Appearance.Accent);
+            builder.AddAttribute(4, nameof(FluentButton.Size), ControlSize.Small);
+            builder.AddAttribute(5, nameof(FluentButton.OnClick), EventCallback.Factory.Create(this, () => SaveRowAsync(row)));
+            builder.AddContent(6, "Sauver");
+            builder.CloseComponent();
+
+            builder.OpenComponent<FluentButton>(7);
+            builder.AddAttribute(8, nameof(FluentButton.Appearance), Appearance.Stealth);
+            builder.AddAttribute(9, nameof(FluentButton.Size), ControlSize.Small);
+            builder.AddAttribute(10, nameof(FluentButton.OnClick), EventCallback.Factory.Create(this, () => CancelEdit(row)));
+            builder.AddContent(11, "Annuler");
+            builder.CloseComponent();
+        }
+        else
+        {
+            builder.OpenComponent<FluentButton>(12);
+            builder.AddAttribute(13, nameof(FluentButton.Appearance), Appearance.Stealth);
+            builder.AddAttribute(14, nameof(FluentButton.Size), ControlSize.Small);
+            builder.AddAttribute(15, nameof(FluentButton.OnClick), EventCallback.Factory.Create(this, () => StartEdit(row)));
+            builder.AddContent(16, "Modifier");
+            builder.CloseComponent();
+
+            builder.OpenComponent<FluentButton>(17);
+            builder.AddAttribute(18, nameof(FluentButton.Appearance), Appearance.Outline);
+            builder.AddAttribute(19, nameof(FluentButton.Size), ControlSize.Small);
+            builder.AddAttribute(20, nameof(FluentButton.OnClick), EventCallback.Factory.Create(this, () => DeleteRowAsync(row)));
+            builder.AddContent(21, "Supprimer");
+            builder.CloseComponent();
+        }
+        builder.CloseElement();
+    };
 
     private RenderFragment RenderReadCell(DynamicRow row, DynamicColumnDefinition column) => builder =>
     {
