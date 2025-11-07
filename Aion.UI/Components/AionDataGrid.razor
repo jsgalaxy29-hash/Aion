@@ -1,6 +1,7 @@
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.FluentUI.AspNetCore.Components
+@using Microsoft.FluentUI.AspNetCore.Components.Icons
 
 <div class="aion-grid">
     @if (_isLoading)
@@ -9,11 +10,11 @@
     }
     else if (!string.IsNullOrEmpty(_errorMessage))
     {
-        <div class="text-danger">@_errorMessage</div>
+        <FluentMessageBar Intent="MessageIntent.Error">@_errorMessage</FluentMessageBar>
     }
     else if (_tableMetadata is null)
     {
-        <div class="text-muted">Table inconnue.</div>
+        <FluentMessageBar Intent="MessageIntent.Info">Table inconnue.</FluentMessageBar>
     }
     else
     {
@@ -24,40 +25,53 @@
                 <FluentButton Appearance="Appearance.Stealth" OnClick="ReloadAsync" Icon="ArrowClockwise16Filled">Rafraîchir</FluentButton>
                 <FluentButton Appearance="Appearance.Outline" OnClick="OpenLayoutEditor" Icon="Settings20Regular">Personnaliser</FluentButton>
             </div>
-            <div class="text-muted small">@(_filteredCount) ligne(s) - page @_page / @_pageCount</div>
+            <FluentLabel Typo="Typography.Body">@(_filteredCount) ligne(s) - page @_page / @_pageCount</FluentLabel>
         </div>
 
         @if (_searchableColumns.Count > 0)
         {
             <div class="search-panel mb-3">
-
                 <FluentLabel Typo="Typography.H6">Filtres</FluentLabel>
-
                 <div class="search-grid">
                     @foreach (var column in _searchableColumns)
                     {
                         <div class="search-item">
-                            <label>@column.DisplayName</label>
+                            <FluentLabel>@column.DisplayName</FluentLabel>
                             @switch (column.InputKind)
                             {
                                 case DynamicColumnInputKind.Boolean:
-                                    <FluentSelect TOption="string" Value="GetSearchValue(column.FieldName)" ValueChanged="(string? value) => OnSearchChanged(column.FieldName, value)" Style="min-width:120px;">
+                                    <FluentSelect TOption="string"
+                                                  Value="@GetSearchValue(column.FieldName)"
+                                                  ValueChanged="@((string? value) => OnSearchChanged(column.FieldName, value))"
+                                                  Style="min-width:120px;">
                                         <FluentOption Value="">(Tous)</FluentOption>
                                         <FluentOption Value="true">Oui</FluentOption>
                                         <FluentOption Value="false">Non</FluentOption>
                                     </FluentSelect>
                                     break;
                                 case DynamicColumnInputKind.Date:
-                                    <input type="date" class="form-control" value="@GetSearchValue(column.FieldName)" onchange="e => OnSearchChanged(column.FieldName, e.Value?.ToString())" />
+                                    <input type="date"
+                                           class="form-control"
+                                           value="@GetSearchValue(column.FieldName)"
+                                           @onchange="@(e => OnSearchChanged(column.FieldName, e.Value?.ToString()))" />
                                     break;
                                 case DynamicColumnInputKind.DateTime:
-                                    <input type="datetime-local" class="form-control" value="@GetSearchValue(column.FieldName)" onchange="e => OnSearchChanged(column.FieldName, e.Value?.ToString())" />
+                                    <input type="datetime-local"
+                                           class="form-control"
+                                           value="@GetSearchValue(column.FieldName)"
+                                           @onchange="@(e => OnSearchChanged(column.FieldName, e.Value?.ToString()))" />
                                     break;
                                 case DynamicColumnInputKind.Number or DynamicColumnInputKind.Decimal:
-                                    <input type="number" class="form-control" value="@GetSearchValue(column.FieldName)" onchange="e => OnSearchChanged(column.FieldName, e.Value?.ToString())" />
+                                    <input type="number"
+                                           class="form-control"
+                                           value="@GetSearchValue(column.FieldName)"
+                                           @onchange="@(e => OnSearchChanged(column.FieldName, e.Value?.ToString()))" />
                                     break;
                                 case DynamicColumnInputKind.Select when column.Options is not null:
-                                    <FluentSelect TOption="string" Value="GetSearchValue(column.FieldName)" ValueChanged="(string? value) => OnSearchChanged(column.FieldName, value)" Style="min-width:180px;">
+                                    <FluentSelect TOption="string"
+                                                  Value="@GetSearchValue(column.FieldName)"
+                                                  ValueChanged="@((string? value) => OnSearchChanged(column.FieldName, value))"
+                                                  Style="min-width:180px;">
                                         <FluentOption Value="">(Tous)</FluentOption>
                                         @foreach (var option in column.Options)
                                         {
@@ -66,7 +80,8 @@
                                     </FluentSelect>
                                     break;
                                 default:
-                                    <input type="text" class="form-control" value="@GetSearchValue(column.FieldName)" onchange="e => OnSearchChanged(column.FieldName, e.Value?.ToString())" />
+                                    <FluentTextField Value="@GetSearchValue(column.FieldName)"
+                                                     ValueChanged="@((string? value) => OnSearchChanged(column.FieldName, value))" />
                                     break;
                             }
                         </div>
@@ -77,94 +92,137 @@
 
         @if (_viewRows.Count == 0)
         {
-            <div class="text-center text-muted py-4">Aucune donnée.</div>
+            <FluentCard class="text-center py-4">
+                <FluentLabel Typo="Typography.Body">Aucune donnée.</FluentLabel>
+            </FluentCard>
         }
         else
         {
             <FluentDataGrid Items="@_viewRows.AsQueryable()"
-                            TItem="DynamicRow"
+                            TGridItem="DynamicRow"
                             GridTemplateColumns="@GridTemplateColumns"
                             SelectionMode="DataGridSelectionMode.None">
                 @foreach (var column in VisibleColumns)
                 {
                     var col = column;
                     var isSorted = string.Equals(_sortColumn?.FieldName, col.FieldName, StringComparison.OrdinalIgnoreCase);
-                    <TemplateColumn TGridItem="DynamicRow" Title="@col.DisplayName">
-                        <HeaderTemplate>
-                            @RenderColumnHeader(col, isSorted)
-                        </HeaderTemplate>
-                        <Template Context="row">
-                            @RenderColumnCell(row, col)
-                        </Template>
+                    <TemplateColumn TGridItem="DynamicRow" Title="@col.DisplayName" Sortable="isSorted" >
+                        <ChildContent Context="row">
+                            <div class="grid-cell-content" @ondblclick="@(() => HandleRowDoubleClick(row))">
+                                @if (row.IsEditing)
+                                {
+                                    @RenderEditCell(row, col)
+                                }
+                                else
+                                {
+                                    @RenderReadCell(row, col)
+                                }
+                            </div>
+                        </ChildContent>
                     </TemplateColumn>
                 }
                 <TemplateColumn TGridItem="DynamicRow" Title="Actions">
-                    <Template Context="row">
-                        @RenderActionsCell(row)
-                    </Template>
+                    <ChildContent Context="row">
+                        <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="4">
+                            @if (row.IsEditing)
+                            {
+                                <FluentButton Appearance="Appearance.Accent"
+                                              OnClick="@(() => SaveRowAsync(row))">
+                                    💾 Sauver
+                                </FluentButton>
+                                <FluentButton Appearance="Appearance.Stealth"
+                                              OnClick="@(() => CancelEdit(row))">
+                                    ✖ Annuler
+                                </FluentButton>
+                            }
+                            else
+                            {
+                                <FluentButton Appearance="Appearance.Stealth"
+                                              OnClick="@(() => StartEdit(row))">
+                                    ✏ Modifier
+                                </FluentButton>
+                                <FluentButton Appearance="Appearance.Outline"
+                                              OnClick="@(() => DeleteRowAsync(row))">
+                                    🗑 Supprimer
+                                </FluentButton>
+                            }
+                        </FluentStack>
+                    </ChildContent>
                 </TemplateColumn>
             </FluentDataGrid>
         }
 
-        <div class="d-flex justify-content-between align-items-center mt-2">
-            <div class="d-flex align-items-center gap-2">
-                <label>Page</label>
-                <FluentButton Appearance="Appearance.Stealth" Disabled="@(_page <= 1)" OnClick="PrevPage">◀</FluentButton>
-                <span>@_page / @_pageCount</span>
-                <FluentButton Appearance="Appearance.Stealth" Disabled="@(_page >= _pageCount)" OnClick="NextPage">▶</FluentButton>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-                <label>Elements / page</label>
-                <select class="form-select" value="@_pageSize" onchange="OnPageSizeChanged">
-                    @foreach (var size in _pageSizes)
-                    {
-                        <option value="@size">@size</option>
-                    }
-                </select>
-            </div>
-        </div>
+        <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.SpaceBetween" class="mt-2">
+            <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8">
+                <FluentLabel>Page</FluentLabel>
+                <FluentButton Appearance="Appearance.Stealth"
+                              Disabled="@(_page <= 1)"
+                              OnClick="PrevPage">
+                    ◀
+                </FluentButton>
+                <FluentLabel>@_page / @_pageCount</FluentLabel>
+                <FluentButton Appearance="Appearance.Stealth"
+                              Disabled="@(_page >= _pageCount)"
+                              OnClick="NextPage">
+                    ▶
+                </FluentButton>
+            </FluentStack>
+            <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8">
+                <FluentLabel>Elements / page</FluentLabel>
+                <FluentSelect TOption="int"
+                              Items="@_pageSizes"
+                              SelectedOption="@_pageSize"
+                              SelectedOptionChanged="@OnPageSizeChangedFluent">
+                    <OptionTemplate>@context</OptionTemplate>
+                </FluentSelect>
+            </FluentStack>
+        </FluentStack>
     }
 
     <FluentDialog @ref="_layoutEditorDialog"
-              @bind-Hidden="LayoutEditorHidden"
-              aria-label="Personnalisation de la grille"
-              Modal="true"
-              TrapFocus="true"
-              @ondialogdismiss="OnLayoutEditorDismiss">
+                  @bind-Hidden="LayoutEditorHidden"
+                  aria-label="Personnalisation de la grille"
+                  Modal="true"
+                  TrapFocus="true"
+                  @ondialogdismiss="OnLayoutEditorDismiss">
+        <FluentDialogHeader>
+            <FluentLabel Typo="Typography.H5">Personnalisation de la grille</FluentLabel>
+        </FluentDialogHeader>
+        <FluentDialogBody>
+            <FluentStack Orientation="Orientation.Vertical" VerticalGap="12">
+                <FluentStack Orientation="Orientation.Vertical" VerticalGap="4">
+                    <FluentLabel>Éléments par page</FluentLabel>
+                    <FluentNumberField TValue="int"
+                                       Min="5"
+                                       Max="200"
+                                       Value="@_pageSizeDraft"
+                                       ValueChanged="@((int value) => _pageSizeDraft = value)" />
+                </FluentStack>
 
-        <div class="layout-editor">
-            <div class="mb-2">
-                <label>Éléments par page</label>
-                <input type="number" min="5" max="200" value="@_pageSizeDraft" onchange="e => OnLayoutPageSizeChanged(e.Value?.ToString())" class="form-control" />
-            </div>
-            <table class="table table-sm">
-                <thead>
-                    <tr>
-                        <th>Colonne</th>
-                        <th>Visible</th>
-                        <th>Ordre</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var column in _columnsDraft)
-                    {
-                        <tr>
-                            <td>@column.DisplayName</td>
-                            <td>
-                                <input type="checkbox" checked="@column.Visible" onchange="e => column.Visible = ParseCheckbox(e.Value)" />
-                            </td>
-                            <td>
-                                <input type="number" class="form-control" value="@column.Order" onchange="e => OnColumnOrderChanged(column, e.Value?.ToString())" />
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-            <div class="d-flex justify-content-end gap-2">
+                <FluentDataGrid Items="@_columnsDraft.AsQueryable()" TGridItem="DynamicColumnDefinition">
+                    <PropertyColumn Property="@(c => c.DisplayName)" Title="Colonne" />
+                    <TemplateColumn Title="Visible">
+                        <ChildContent Context="column">
+                            <FluentCheckbox @bind-Value="column.Visible" />
+                        </ChildContent>
+                    </TemplateColumn>
+                    <TemplateColumn Title="Ordre">
+                        <ChildContent Context="column">
+                            <FluentNumberField TValue="int"
+                                               Value="@column.Order"
+                                               ValueChanged="@((int value) => column.Order = value)"
+                                               Style="width: 80px;" />
+                        </ChildContent>
+                    </TemplateColumn>
+                </FluentDataGrid>
+            </FluentStack>
+        </FluentDialogBody>
+        <FluentDialogFooter>
+            <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8">
                 <FluentButton Appearance="Appearance.Accent" OnClick="SaveLayoutAsync">Sauvegarder</FluentButton>
                 <FluentButton Appearance="Appearance.Stealth" OnClick="CloseLayoutEditor">Fermer</FluentButton>
-            </div>
-        </div>
+            </FluentStack>
+        </FluentDialogFooter>
     </FluentDialog>
 </div>
 
@@ -198,7 +256,6 @@
     private FluentDialog? _layoutEditorDialog;
     private bool _layoutEditorOpen;
 
-    // Propriété utilisée par @bind-Hidden
     private bool LayoutEditorHidden
     {
         get => !_layoutEditorOpen;
@@ -208,20 +265,18 @@
     private void OpenLayoutEditor()
     {
         PrepareLayoutDraft();
-        _layoutEditorOpen = true;     // => Hidden = false => le dialog s’affiche
+        _layoutEditorOpen = true;
     }
 
     private void CloseLayoutEditor()
     {
-        _layoutEditorOpen = false;    // => Hidden = true => le dialog se ferme
+        _layoutEditorOpen = false;
     }
 
     private void OnLayoutEditorDismiss(DialogEventArgs args)
     {
-        // Dismiss via croix, clic sur l’overlay, etc.
         CloseLayoutEditor();
     }
-
 
     private IReadOnlyList<DynamicColumnDefinition> VisibleColumns
         => _columns.Where(c => c.Visible).OrderBy(c => c.Order).ToList();
@@ -231,7 +286,7 @@
         get
         {
             var parts = VisibleColumns.Select(_ => "minmax(120px, 1fr)").ToList();
-            parts.Add("160px");
+            parts.Add("200px");
             return string.Join(' ', parts);
         }
     }
@@ -560,9 +615,9 @@
         }
     }
 
-    private void OnPageSizeChanged(ChangeEventArgs e)
+    private void OnPageSizeChangedFluent(int size)
     {
-        if (int.TryParse(e.Value?.ToString(), out var size) && size > 0)
+        if (size > 0)
         {
             _pageSize = size;
             _pageSizeDraft = size;
@@ -571,90 +626,36 @@
         }
     }
 
-    private RenderFragment RenderColumnHeader(DynamicColumnDefinition column, bool isSorted) => builder =>
+    private decimal? ParseDecimalOrNull(string? value)
     {
-        builder.OpenComponent<FluentButton>(0);
-        builder.AddAttribute(1, nameof(FluentButton.Appearance), Appearance.Stealth);
-        builder.AddAttribute(2, "Class", "grid-header");
-        builder.AddAttribute(3, nameof(FluentButton.OnClick), EventCallback.Factory.Create(this, () => SortBy(column)));
-        builder.AddContent(4, column.DisplayName);
-        if (isSorted)
-        {
-            builder.OpenElement(5, "span");
-            builder.AddAttribute(6, "class", "sort-indicator");
-            builder.AddContent(7, _sortDescending ? "▼" : "▲");
-            builder.CloseElement();
-        }
-        builder.CloseComponent();
-    };
-
-    private RenderFragment RenderColumnCell(DynamicRow row, DynamicColumnDefinition column) => builder =>
-    {
-        builder.OpenElement(0, "div");
-        builder.AddAttribute(1, "class", "grid-cell-content");
-        builder.AddAttribute(2, "ondblclick", CreateRowDoubleClickCallback(row));
-        if (row.IsEditing)
-        {
-            builder.AddContent(3, RenderEditCell(row, column));
-        }
-        else
-        {
-            builder.AddContent(4, RenderReadCell(row, column));
-        }
-        builder.CloseElement();
-    };
-
-    private RenderFragment RenderActionsCell(DynamicRow row) => builder =>
-    {
-        builder.OpenElement(0, "div");
-        builder.AddAttribute(1, "class", "grid-cell-actions");
-        if (row.IsEditing)
-        {
-            builder.OpenComponent<FluentButton>(2);
-            builder.AddAttribute(3, nameof(FluentButton.Appearance), Appearance.Accent);
-            builder.AddAttribute(4, nameof(FluentButton.OnClick), EventCallback.Factory.Create(this, () => SaveRowAsync(row)));
-            builder.AddContent(5, "Sauver");
-            builder.CloseComponent();
-
-            builder.OpenComponent<FluentButton>(7);
-            builder.AddAttribute(8, nameof(FluentButton.Appearance), Appearance.Stealth);
-            builder.AddAttribute(9, nameof(FluentButton.OnClick), EventCallback.Factory.Create(this, () => CancelEdit(row)));
-            builder.AddContent(10, "Annuler");
-            builder.CloseComponent();
-        }
-        else
-        {
-            builder.OpenComponent<FluentButton>(12);
-            builder.AddAttribute(13, nameof(FluentButton.Appearance), Appearance.Stealth);
-            builder.AddAttribute(14, nameof(FluentButton.OnClick), EventCallback.Factory.Create(this, () => StartEdit(row)));
-            builder.AddContent(15, "Modifier");
-            builder.CloseComponent();
-
-            builder.OpenComponent<FluentButton>(17);
-            builder.AddAttribute(18, nameof(FluentButton.Appearance), Appearance.Outline);
-            builder.AddAttribute(19, nameof(FluentButton.OnClick), EventCallback.Factory.Create(this, () => DeleteRowAsync(row)));
-            builder.AddContent(20, "Supprimer");
-            builder.CloseComponent();
-        }
-        builder.CloseElement();
-    };
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+        return decimal.TryParse(value, out var result) ? result : null;
+    }
 
     private RenderFragment RenderReadCell(DynamicRow row, DynamicColumnDefinition column) => builder =>
     {
         var value = row.GetValue(column.FieldName);
         if (column.InputKind == DynamicColumnInputKind.Boolean && value is bool boolValue)
         {
-            builder.AddContent(0, boolValue ? "Oui" : "Non");
+            builder.OpenComponent<FluentBadge>(0);
+            builder.AddAttribute(1, nameof(FluentBadge.Appearance), boolValue ? Appearance.Accent : Appearance.Neutral);
+            builder.AddAttribute(2, "ChildContent", (RenderFragment)((b) => b.AddContent(3, boolValue ? "Oui" : "Non")));
+            builder.CloseComponent();
         }
         else if (column.IsReference && column.Options is not null)
         {
             var strValue = value?.ToString();
             var label = column.Options.FirstOrDefault(o => string.Equals(o.Value, strValue, StringComparison.OrdinalIgnoreCase))?.Label ?? strValue;
-            builder.AddContent(1, label);
+            builder.OpenComponent<FluentLabel>(0);
+            builder.AddAttribute(1, "ChildContent", (RenderFragment)((b) => b.AddContent(2, label)));
+            builder.CloseComponent();
         }
         else
         {
-            builder.AddContent(2, row.GetValueAsString(column.FieldName));
+            builder.OpenComponent<FluentLabel>(0);
+            builder.AddAttribute(1, "ChildContent", (RenderFragment)((b) => b.AddContent(2, row.GetValueAsString(column.FieldName))));
+            builder.CloseComponent();
         }
     };
 
@@ -663,11 +664,10 @@
         switch (column.InputKind)
         {
             case DynamicColumnInputKind.Boolean:
-                builder.OpenElement(0, "input");
-                builder.AddAttribute(1, "type", "checkbox");
-                builder.AddAttribute(2, "checked", row.GetEditBool(column.FieldName));
-                builder.AddAttribute(3, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this, e => row.SetEditBool(column.FieldName, ParseCheckbox(e.Value))));
-                builder.CloseElement();
+                builder.OpenComponent<FluentCheckbox>(0);
+                builder.AddAttribute(1, "Value", row.GetEditBool(column.FieldName));
+                builder.AddAttribute(2, "ValueChanged", EventCallback.Factory.Create<bool>(this, value => row.SetEditBool(column.FieldName, value)));
+                builder.CloseComponent();
                 break;
             case DynamicColumnInputKind.Date:
                 builder.OpenElement(0, "input");
@@ -685,38 +685,41 @@
                 builder.AddAttribute(4, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this, e => row.SetEditValue(column.FieldName, e.Value?.ToString())));
                 builder.CloseElement();
                 break;
-            case DynamicColumnInputKind.Number or DynamicColumnInputKind.Decimal:
-                builder.OpenElement(0, "input");
-                builder.AddAttribute(1, "type", "number");
-                builder.AddAttribute(2, "class", "form-control");
-                builder.AddAttribute(3, "value", row.GetEditValue(column.FieldName));
-                builder.AddAttribute(4, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this, e => row.SetEditValue(column.FieldName, e.Value?.ToString())));
-                builder.CloseElement();
+            case DynamicColumnInputKind.Number:
+                builder.OpenComponent<FluentNumberField<int?>>(0);
+                builder.AddAttribute(1, "Value", ParseIntOrNull(row.GetEditValue(column.FieldName)));
+                builder.AddAttribute(2, "ValueChanged", EventCallback.Factory.Create<int?>(this, value => row.SetEditValue(column.FieldName, value?.ToString())));
+                builder.CloseComponent();
+                break;
+            case DynamicColumnInputKind.Decimal:
+                builder.OpenComponent<FluentNumberField<decimal?>>(0);
+                builder.AddAttribute(1, "Value", ParseDecimalOrNull(row.GetEditValue(column.FieldName)));
+                builder.AddAttribute(2, "ValueChanged", EventCallback.Factory.Create<decimal?>(this, value => row.SetEditValue(column.FieldName, value?.ToString())));
+                builder.CloseComponent();
                 break;
             case DynamicColumnInputKind.Select when column.Options is not null:
-                builder.OpenElement(0, "select");
-                builder.AddAttribute(1, "class", "form-select");
-                builder.AddAttribute(2, "value", row.GetEditValue(column.FieldName));
-                builder.AddAttribute(3, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this, e => row.SetEditValue(column.FieldName, e.Value?.ToString())));
-                foreach (var option in column.Options)
-                {
-                    builder.OpenElement(4, "option");
-                    builder.AddAttribute(5, "value", option.Value);
-                    builder.AddContent(6, option.Label);
-                    builder.CloseElement();
-                }
-                builder.CloseElement();
+                builder.OpenComponent<FluentSelect<string>>(0);
+                builder.AddAttribute(1, "Value", row.GetEditValue(column.FieldName));
+                builder.AddAttribute(2, "ValueChanged", EventCallback.Factory.Create<string?>(this, value => row.SetEditValue(column.FieldName, value)));
+                builder.AddAttribute(3, "Items", column.Options.Select(o => o.Value));
+                builder.AddAttribute(4, "OptionText", (Func<string, string>)(val => column.Options.FirstOrDefault(o => o.Value == val)?.Label ?? val));
+                builder.CloseComponent();
                 break;
             default:
-                builder.OpenElement(0, "input");
-                builder.AddAttribute(1, "type", "text");
-                builder.AddAttribute(2, "class", "form-control");
-                builder.AddAttribute(3, "value", row.GetEditValue(column.FieldName));
-                builder.AddAttribute(4, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this, e => row.SetEditValue(column.FieldName, e.Value?.ToString())));
-                builder.CloseElement();
+                builder.OpenComponent<FluentTextField>(0);
+                builder.AddAttribute(1, "Value", row.GetEditValue(column.FieldName));
+                builder.AddAttribute(2, "ValueChanged", EventCallback.Factory.Create<string?>(this, value => row.SetEditValue(column.FieldName, value)));
+                builder.CloseComponent();
                 break;
         }
     };
+
+    private int? ParseIntOrNull(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+        return int.TryParse(value, out var result) ? result : null;
+    }
 
     private async Task SaveRowAsync(DynamicRow row)
     {
@@ -725,7 +728,6 @@
             var values = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
             foreach (var column in _columns)
             {
-
                 if (column.IsPrimaryKey && !row.IsNew)
                 {
                     continue;
@@ -874,34 +876,11 @@
         return rawValue;
     }
 
-    private EventCallback<MouseEventArgs> CreateRowDoubleClickCallback(DynamicRow row)
-    {
-        return OnRowDoubleClick.HasDelegate
-            ? EventCallback.Factory.Create<MouseEventArgs>(this, async _ => await HandleRowDoubleClick(row))
-            : default;
-    }
-
     private async Task HandleRowDoubleClick(DynamicRow row)
     {
         if (OnRowDoubleClick.HasDelegate)
         {
             await OnRowDoubleClick.InvokeAsync(row);
-        }
-    }
-
-    private void OnLayoutPageSizeChanged(string? value)
-    {
-        if (int.TryParse(value, out var pageSize) && pageSize > 0)
-        {
-            _pageSizeDraft = pageSize;
-        }
-    }
-
-    private void OnColumnOrderChanged(DynamicColumnDefinition column, string? value)
-    {
-        if (int.TryParse(value, out var order))
-        {
-            column.Order = order;
         }
     }
 
@@ -950,17 +929,4 @@
         }
         _pageSizeDraft = _pageSize;
     }
-
-    private static bool ParseCheckbox(object? value)
-    {
-        return value switch
-        {
-            bool b => b,
-            string s => s.Equals("true", StringComparison.OrdinalIgnoreCase) || s.Equals("on", StringComparison.OrdinalIgnoreCase),
-            _ => false
-        };
-    }
-
-    private string? GetDisplayValue(DynamicRow row, DynamicColumnDefinition column)
-        => row.GetValueAsString(column.FieldName);
 }
