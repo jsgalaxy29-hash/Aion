@@ -83,57 +83,55 @@
         }
         else
         {
-            <FluentDataGrid Items="@_viewRows"
+            <FluentDataGrid Items="@_viewRows.AsQueryable()"
                             TItem="DynamicRow"
                             GridTemplateColumns="@GridTemplateColumns"
                             SelectionMode="DataGridSelectionMode.None">
-                <Columns>
-                    @foreach (var column in VisibleColumns)
-                    {
-                        var col = column;
-                        var isSorted = string.Equals(_sortColumn?.FieldName, col.FieldName, StringComparison.OrdinalIgnoreCase);
-                        <TemplateColumn Title="@col.DisplayName">
-                            <HeaderTemplate>
-                                <FluentButton Appearance="Appearance.Stealth" Class="grid-header" OnClick="() => SortBy(col)">
-                                    <span>@col.DisplayName</span>
-                                    @if (isSorted)
-                                    {
-                                        <span class="sort-indicator">@(_sortDescending ? "▼" : "▲")</span>
-                                    }
-                                </FluentButton>
-                            </HeaderTemplate>
-                            <Template Context="row">
-                                <div class="grid-cell-content"
-                                     @ondblclick="CreateRowDoubleClickCallback(row)">
-                                    @if (row.IsEditing)
-                                    {
-                                        @RenderEditCell(row, col)
-                                    }
-                                    else
-                                    {
-                                        @RenderReadCell(row, col)
-                                    }
-                                </div>
-                            </Template>
-                        </TemplateColumn>
-                    }
-                    <TemplateColumn Title="Actions">
+                @foreach (var column in VisibleColumns)
+                {
+                    var col = column;
+                    var isSorted = string.Equals(_sortColumn?.FieldName, col.FieldName, StringComparison.OrdinalIgnoreCase);
+                    <TemplateColumn Title="@col.DisplayName" Key="@col.FieldName">
+                        <HeaderTemplate>
+                            <FluentButton Appearance="Appearance.Stealth" Class="grid-header" OnClick="() => SortBy(col)">
+                                <span>@col.DisplayName</span>
+                                @if (isSorted)
+                                {
+                                    <span class="sort-indicator">@(_sortDescending ? "▼" : "▲")</span>
+                                }
+                            </FluentButton>
+                        </HeaderTemplate>
                         <Template Context="row">
-                            <div class="grid-cell-actions">
+                            <div class="grid-cell-content"
+                                 @ondblclick="CreateRowDoubleClickCallback(row)">
                                 @if (row.IsEditing)
                                 {
-                                    <FluentButton Appearance="Appearance.Accent" Size="ControlSize.Small" OnClick="() => SaveRowAsync(row)">Sauver</FluentButton>
-                                    <FluentButton Appearance="Appearance.Stealth" Size="ControlSize.Small" OnClick="() => CancelEdit(row)">Annuler</FluentButton>
+                                    @RenderEditCell(row, col)
                                 }
                                 else
                                 {
-                                    <FluentButton Appearance="Appearance.Stealth" Size="ControlSize.Small" OnClick="() => StartEdit(row)">Modifier</FluentButton>
-                                    <FluentButton Appearance="Appearance.Outline" Size="ControlSize.Small" OnClick="() => DeleteRowAsync(row)">Supprimer</FluentButton>
+                                    @RenderReadCell(row, col)
                                 }
                             </div>
                         </Template>
                     </TemplateColumn>
-                </Columns>
+                }
+                <TemplateColumn Title="Actions" Key="__actions">
+                    <Template Context="row">
+                        <div class="grid-cell-actions">
+                            @if (row.IsEditing)
+                            {
+                                <FluentButton Appearance="Appearance.Accent" Size="ControlSize.Small" OnClick="() => SaveRowAsync(row)">Sauver</FluentButton>
+                                <FluentButton Appearance="Appearance.Stealth" Size="ControlSize.Small" OnClick="() => CancelEdit(row)">Annuler</FluentButton>
+                            }
+                            else
+                            {
+                                <FluentButton Appearance="Appearance.Stealth" Size="ControlSize.Small" OnClick="() => StartEdit(row)">Modifier</FluentButton>
+                                <FluentButton Appearance="Appearance.Outline" Size="ControlSize.Small" OnClick="() => DeleteRowAsync(row)">Supprimer</FluentButton>
+                            }
+                        </div>
+                    </Template>
+                </TemplateColumn>
             </FluentDataGrid>
         }
 
