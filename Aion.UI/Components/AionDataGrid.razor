@@ -165,6 +165,10 @@
 </div>
 
 @code {
+    [Inject] private required Aion.DataEngine.Interfaces.IDataEngine DataEngine { get; set; }
+    [Inject] private required Aion.DataEngine.Interfaces.IUserContext UserContext { get; set; }
+    [Inject] private required IDynamicLayoutStore LayoutStore { get; set; }
+
     [Parameter] public string TableName { get; set; } = string.Empty;
     [Parameter] public EventCallback<DynamicRow> OnRowDoubleClick { get; set; }
 
