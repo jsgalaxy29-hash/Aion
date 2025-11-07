@@ -7,21 +7,21 @@ namespace Aion.AI.Models;
 /// </summary>
 public sealed class AuditRecord
 {
-    public string RequestText { get; init; } = string.Empty;
+    public string RequestText { get; set; } = string.Empty;
 
-    public string? IntentsJson { get; init; }
+    public string? IntentsJson { get; set; }
 
-    public string? PlanJson { get; init; }
+    public string? PlanJson { get; set; }
 
-    public string? PatchYaml { get; init; }
+    public string? PatchYaml { get; set; }
 
-    public string? ArtifactsSummary { get; init; }
+    public string? ArtifactsSummary { get; set; }
 
-    public GenerationStatus Status { get; init; } = GenerationStatus.Draft;
+    public GenerationStatus Status { get; set; } = GenerationStatus.Draft;
 
-    public string? ErrorMessage { get; init; }
+    public string? ErrorMessage { get; set; }
 
-    public string ModelVersion { get; init; } = "mock-gpt";
+    public string ModelVersion { get; set; } = "mock-gpt";
 
-    public IDictionary<string, string> AdditionalMetadata { get; init; } = new Dictionary<string, string>();
+    public IDictionary<string, string> AdditionalMetadata { get; set; } = new Dictionary<string, string>();
 }

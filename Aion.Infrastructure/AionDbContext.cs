@@ -8,7 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Aion.DataEngine.Entities;
 using Aion.Domain.AI;
-using Aion.Domain.Common;
 
 namespace Aion.Infrastructure
 {
@@ -115,19 +114,19 @@ namespace Aion.Infrastructure
             {
                 if (entry.State == EntityState.Added)
                 {
-                    entry.Entity.CreatedAt = utcNow;
-                    entry.Entity.UpdatedAt = utcNow;
+                    entry.Entity.DtCreation = DateTime.UtcNow;
+                    entry.Entity.DtModification = DateTime.UtcNow;
                 }
                 else if (entry.State == EntityState.Modified)
                 {
-                    entry.Entity.UpdatedAt = utcNow;
+                    entry.Entity.DtModification = DateTime.UtcNow;
                 }
             }
         }
 
         private static void ApplySoftDeleteFilter<TEntity>(ModelBuilder builder) where TEntity : BaseEntity
         {
-            builder.Entity<TEntity>().HasQueryFilter(entity => !entity.IsDeleted);
+            builder.Entity<TEntity>().HasQueryFilter(entity => !entity.Deleted);
         }
     }
 }

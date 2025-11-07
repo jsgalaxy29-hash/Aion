@@ -1,5 +1,6 @@
 using Aion.Domain.AI;
 using Aion.Infrastructure.Configurations.Common;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Aion.Infrastructure.Configurations.Ai;

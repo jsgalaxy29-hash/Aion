@@ -76,67 +76,65 @@
         }
 
         <div class="table-responsive">
-            @if (_viewRows.Count == 0)
-            {
-                <FluentMessageBar Intent="MessageIntent.Info" Class="my-3">
-                    Aucune donnée.
-                </FluentMessageBar>
-            }
-            else
-            {
-                <FluentDataGrid TGridItem="DynamicRow"
-                                Items="@_viewRows.AsQueryable()"
-                                GridTemplateColumns="@GridTemplateColumns"
-                                Class="aion-data-grid-table">
-                    @foreach (var column in VisibleColumns)
+            <table class="table table-sm table-striped">
+                <thead>
+                    <tr>
+                        @foreach (var column in VisibleColumns)
+                        {
+                            var isSorted = string.Equals(_sortColumn?.FieldName, column.FieldName, StringComparison.OrdinalIgnoreCase);
+                            <th role="button" onclick="() => SortBy(column)">
+                                @column.DisplayName
+                                @if (isSorted)
+                                {
+                                    <span>@(_sortDescending ? "▼" : "▲")</span>
+                                }
+                            </th>
+                        }
+                        <th style="width:160px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (_viewRows.Count == 0)
                     {
-                        @{ var isSorted = string.Equals(_sortColumn?.FieldName, column.FieldName, StringComparison.OrdinalIgnoreCase); }
-                        <TemplateColumn TGridItem="DynamicRow" @key="column.FieldName" Title="@column.DisplayName">
-                            <HeaderTemplate>
-                                <div class="d-flex align-items-center gap-1 sortable-header" role="button" @onclick="@(() => SortBy(column))">
-                                    <span>@column.DisplayName</span>
-                                    @if (isSorted)
-                                    {
-                                        <span>@(_sortDescending ? "▼" : "▲")</span>
-                                    }
-                                </div>
-                            </HeaderTemplate>
-                            <CellTemplate Context="row">
-                                <div class="cell-value" @ondblclick="async _ => await HandleRowDoubleClick(row)">
+                        <tr>
+                            <td colspan="@(VisibleColumns.Count + 1)" class="text-center text-muted">Aucune donnée.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var row in _viewRows)
+                        {
+                            <tr ondblclick="@(async () => await HandleRowDoubleClick(row))">
+                                @foreach (var column in VisibleColumns)
+                                {
+                                    <td>
+                                        @if (row.IsEditing)
+                                        {
+                                            @RenderEditCell(row, column)
+                                        }
+                                        else
+                                        {
+                                            @RenderReadCell(row, column)
+                                        }
+                                    </td>
+                                }
+                                <td class="text-nowrap">
                                     @if (row.IsEditing)
                                     {
-                                        @RenderEditCell(row, column)
+                                        <FluentButton Appearance="Appearance.Accent" Size="ControlSize.Small" OnClick="() => SaveRowAsync(row)">Sauver</FluentButton>
+                                        <FluentButton Appearance="Appearance.Stealth" Size="ControlSize.Small" OnClick="() => CancelEdit(row)">Annuler</FluentButton>
                                     }
                                     else
                                     {
-                                        @RenderReadCell(row, column)
+                                        <FluentButton Appearance="Appearance.Stealth" Size="ControlSize.Small" OnClick="() => StartEdit(row)">Modifier</FluentButton>
+                                        <FluentButton Appearance="Appearance.Outline" Size="ControlSize.Small" OnClick="() => DeleteRowAsync(row)">Supprimer</FluentButton>
                                     }
-                                </div>
-                            </CellTemplate>
-                        </TemplateColumn>
+                                </td>
+                            </tr>
+                        }
                     }
-
-                    <TemplateColumn TGridItem="DynamicRow" Title="Actions">
-                        <HeaderTemplate>
-                            <span>Actions</span>
-                        </HeaderTemplate>
-                        <CellTemplate Context="row">
-                            <div class="d-flex gap-1 text-nowrap">
-                                @if (row.IsEditing)
-                                {
-                                    <FluentButton Appearance="Appearance.Accent" Size="ControlSize.Small" OnClick="() => SaveRowAsync(row)">Sauver</FluentButton>
-                                    <FluentButton Appearance="Appearance.Stealth" Size="ControlSize.Small" OnClick="() => CancelEdit(row)">Annuler</FluentButton>
-                                }
-                                else
-                                {
-                                    <FluentButton Appearance="Appearance.Stealth" Size="ControlSize.Small" OnClick="() => StartEdit(row)">Modifier</FluentButton>
-                                    <FluentButton Appearance="Appearance.Outline" Size="ControlSize.Small" OnClick="() => DeleteRowAsync(row)">Supprimer</FluentButton>
-                                }
-                            </div>
-                        </CellTemplate>
-                    </TemplateColumn>
-                </FluentDataGrid>
-            }
+                </tbody>
+            </table>
         </div>
 
         <div class="d-flex justify-content-between align-items-center mt-2">
@@ -219,16 +217,6 @@
     private int _filteredCount = 0;
     private string? _errorMessage;
     private string? _loadedTableName;
-
-    private string GridTemplateColumns
-    {
-        get
-        {
-            var segments = VisibleColumns.Select(_ => "minmax(120px, 1fr)").ToList();
-            segments.Add("160px");
-            return string.Join(" ", segments);
-        }
-    }
 
     private IReadOnlyList<DynamicColumnDefinition> VisibleColumns
         => _columns.Where(c => c.Visible).OrderBy(c => c.Order).ToList();
@@ -654,7 +642,7 @@
             var values = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
             foreach (var column in _columns)
             {
-               
+
                 if (column.IsPrimaryKey && !row.IsNew)
                 {
                     continue;

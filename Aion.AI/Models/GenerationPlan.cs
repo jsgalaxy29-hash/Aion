@@ -8,11 +8,11 @@ namespace Aion.AI.Models;
 /// </summary>
 public sealed class GenerationPlan
 {
-    public Guid PlanId { get; init; } = Guid.NewGuid();
+    public Guid PlanId { get; set; } = Guid.NewGuid();
 
     public string ModuleName { get; init; } = string.Empty;
 
-    public IList<GenerationPlanStep> Steps { get; init; } = new List<GenerationPlanStep>();
+    public IList<GenerationPlanStep> Steps { get; set; } = new List<GenerationPlanStep>();
 
-    public IList<PlannedArtifact> Artifacts { get; init; } = new List<PlannedArtifact>();
+    public IList<PlannedArtifact> Artifacts { get; set; } = new List<PlannedArtifact>();
 }

@@ -7,7 +7,7 @@ namespace Aion.AI.Models;
 /// </summary>
 public sealed class ArtifactGenerationResult
 {
-    public IList<GeneratedArtifact> Artifacts { get; init; } = new List<GeneratedArtifact>();
+    public IList<GeneratedArtifact> Artifacts { get; set; } = new List<GeneratedArtifact>();
 
     public IList<string> Warnings { get; init; } = new List<string>();
 }

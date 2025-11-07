@@ -1,4 +1,4 @@
-using Aion.Domain.Common;
+using Aion.DataEngine.Entities;
 
 namespace Aion.Domain.AI;
 

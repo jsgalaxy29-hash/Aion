@@ -1,4 +1,4 @@
-using Aion.Domain.Common;
+using Aion.DataEngine.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -10,11 +10,11 @@ public abstract class BaseEntityConfiguration<TEntity> : IEntityTypeConfiguratio
     {
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).ValueGeneratedNever();
-        builder.Property(x => x.CreatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
-        builder.Property(x => x.UpdatedAt).HasDefaultValueSql("SYSUTCDATETIME()");
-        builder.Property(x => x.CreatedBy).HasMaxLength(200);
-        builder.Property(x => x.UpdatedBy).HasMaxLength(200);
-        builder.Property(x => x.IsDeleted).HasDefaultValue(false);
+        builder.Property(x => x.DtCreation).HasDefaultValueSql("SYSUTCDATETIME()");
+        builder.Property(x => x.DtModification).HasDefaultValueSql("SYSUTCDATETIME()");
+        builder.Property(x => x.UsrCreationId).HasMaxLength(200);
+        builder.Property(x => x.UsrModificationId).HasMaxLength(200);
+        builder.Property(x => x.Deleted).HasDefaultValue(false);
 
         ConfigureEntity(builder);
     }

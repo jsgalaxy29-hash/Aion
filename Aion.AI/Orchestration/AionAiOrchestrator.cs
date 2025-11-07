@@ -53,6 +53,7 @@ public sealed class AionAiOrchestrator : IAionAiOrchestrator
 
         _logger.LogInformation("🤖 Processing AI generation request: {Request}", requestText);
 
+        // record est visible dans try + catch
         var record = new AuditRecord
         {
             RequestText = requestText,
@@ -76,6 +77,7 @@ public sealed class AionAiOrchestrator : IAionAiOrchestrator
 
             var artifacts = await _artifactGenerator.GenerateAsync(plan, patch, simulation, ct).ConfigureAwait(false);
             record.ArtifactsSummary = JsonSerializer.Serialize(artifacts, SerializerOptions);
+
             if (simulation.IsSuccessful)
             {
                 record.Status = GenerationStatus.Applied;
@@ -109,9 +111,19 @@ public sealed class AionAiOrchestrator : IAionAiOrchestrator
         {
             record.Status = GenerationStatus.Failed;
             record.ErrorMessage = ex.ToString();
-            await _auditTrail.RecordAsync(record, ct).ConfigureAwait(false);
+
+            try
+            {
+                await _auditTrail.RecordAsync(record, ct).ConfigureAwait(false);
+            }
+            catch (Exception auditEx)
+            {
+                _logger.LogError(auditEx, "❌ Failed to record audit trail after error");
+            }
+
             _logger.LogError(ex, "❌ AI generation failed");
             throw;
         }
     }
+
 }

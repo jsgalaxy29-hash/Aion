@@ -7,7 +7,7 @@ namespace Aion.AI.Models;
 /// </summary>
 public sealed class SimulationResult
 {
-    public bool IsSuccessful { get; init; }
+    public bool IsSuccessful { get; set; }
 
     public IList<string> Warnings { get; init; } = new List<string>();
 
