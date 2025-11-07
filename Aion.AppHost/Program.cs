@@ -53,11 +53,13 @@ builder.Services.AddDbContext<SecurityDbContext>(opt =>
     ServiceLifetime.Scoped,
     ServiceLifetime.Singleton);
 
-builder.Services.AddDbContextFactory<AionDbContext>(opt =>
-    opt.UseSqlServer(connectionString));
+builder.Services.AddDbContextFactory<AionDbContext>((_, opt) =>
+    opt.UseSqlServer(connectionString),
+    ServiceLifetime.Scoped);
 
-builder.Services.AddDbContextFactory<SecurityDbContext>(opt =>
-    opt.UseSqlServer(connectionString));
+builder.Services.AddDbContextFactory<SecurityDbContext>((_, opt) =>
+    opt.UseSqlServer(connectionString),
+    ServiceLifetime.Scoped);
 
 builder.Services.AddServerSideBlazor()
     .AddCircuitOptions(o => { o.DetailedErrors = true; });
