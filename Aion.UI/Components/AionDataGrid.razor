@@ -1,3 +1,4 @@
+@using Microsoft.AspNetCore.Components.Web
 @inject Aion.DataEngine.Interfaces.IDataEngine DataEngine
 @inject Aion.DataEngine.Interfaces.IUserContext UserContext
 @inject IDynamicLayoutStore LayoutStore
@@ -156,7 +157,13 @@
         </div>
     }
 
-    <FluentDialog IsOpen="@_layoutEditorOpen" Title="Personnalisation de la grille" OnDismiss="CloseLayoutEditor">
+    <FluentDialog @ref="_layoutEditorDialog"
+              @bind-Hidden="LayoutEditorHidden"
+              aria-label="Personnalisation de la grille"
+              Modal="true"
+              TrapFocus="true"
+              @ondialogdismiss="OnLayoutEditorDismiss">
+
         <div class="layout-editor">
             <div class="mb-2">
                 <label>Éléments par page</label>
@@ -209,7 +216,6 @@
     private DynamicColumnDefinition? _sortColumn;
     private bool _sortDescending;
     private bool _isLoading = true;
-    private bool _layoutEditorOpen;
     private int _page = 1;
     private int _pageSize = 20;
     private int _pageSizeDraft = 20;
@@ -217,6 +223,33 @@
     private int _filteredCount = 0;
     private string? _errorMessage;
     private string? _loadedTableName;
+    private FluentDialog? _layoutEditorDialog;
+    private bool _layoutEditorOpen;
+
+    // Propriété utilisée par @bind-Hidden
+    private bool LayoutEditorHidden
+    {
+        get => !_layoutEditorOpen;
+        set => _layoutEditorOpen = !value;
+    }
+
+    private void OpenLayoutEditor()
+    {
+        PrepareLayoutDraft();
+        _layoutEditorOpen = true;     // => Hidden = false => le dialog s’affiche
+    }
+
+    private void CloseLayoutEditor()
+    {
+        _layoutEditorOpen = false;    // => Hidden = true => le dialog se ferme
+    }
+
+    private void OnLayoutEditorDismiss(DialogEventArgs args)
+    {
+        // Dismiss via croix, clic sur l’overlay, etc.
+        CloseLayoutEditor();
+    }
+
 
     private IReadOnlyList<DynamicColumnDefinition> VisibleColumns
         => _columns.Where(c => c.Visible).OrderBy(c => c.Order).ToList();
@@ -799,11 +832,6 @@
         }
     }
 
-    private void CloseLayoutEditor()
-    {
-        _layoutEditorOpen = false;
-    }
-
     private void OnLayoutPageSizeChanged(string? value)
     {
         if (int.TryParse(value, out var pageSize) && pageSize > 0)
@@ -864,12 +892,6 @@
             });
         }
         _pageSizeDraft = _pageSize;
-    }
-
-    private void OpenLayoutEditor()
-    {
-        PrepareLayoutDraft();
-        _layoutEditorOpen = true;
     }
 
     private static bool ParseCheckbox(object? value)

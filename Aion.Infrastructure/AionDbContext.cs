@@ -36,13 +36,9 @@ namespace Aion.Infrastructure
         public DbSet<SHistoChange> SHistoChange => Set<SHistoChange>();
         public DbSet<STenant> STenant => Set<STenant>();
         public DbSet<SWidget> SWidget => Set<SWidget>();
-
         public DbSet<SXGenerationLog> SXGenerationLogs => Set<SXGenerationLog>();
-
         public DbSet<SXAiConfig> SXAiConfigs => Set<SXAiConfig>();
-
         public DbSet<SXSynonym> SXSynonyms => Set<SXSynonym>();
-
         public DbSet<SXTemplate> SXTemplates => Set<SXTemplate>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
