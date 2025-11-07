@@ -91,20 +91,14 @@
                 {
                     var col = column;
                     var isSorted = string.Equals(_sortColumn?.FieldName, col.FieldName, StringComparison.OrdinalIgnoreCase);
-                    <TemplateColumn TGridItem="DynamicRow" Title="@col.DisplayName">
-                        <HeaderTemplate>
-                            @RenderColumnHeader(col, isSorted)
-                        </HeaderTemplate>
-                        <CellTemplate Context="row">
-                            @RenderColumnCell(row, col)
-                        </CellTemplate>
-                    </TemplateColumn>
+                    <TemplateColumn TGridItem="DynamicRow"
+                                    Title="@col.DisplayName"
+                                    HeaderTemplate="@(() => RenderColumnHeader(col, isSorted))"
+                                    Template="@((DynamicRow row) => RenderColumnCell(row, col))" />
                 }
-                <TemplateColumn TGridItem="DynamicRow" Title="Actions">
-                    <CellTemplate Context="row">
-                        @RenderActionsCell(row)
-                    </CellTemplate>
-                </TemplateColumn>
+                <TemplateColumn TGridItem="DynamicRow"
+                                Title="Actions"
+                                Template="@((DynamicRow row) => RenderActionsCell(row))" />
             </FluentDataGrid>
         }
 
@@ -614,28 +608,32 @@
         {
             builder.OpenComponent<FluentButton>(2);
             builder.AddAttribute(3, nameof(FluentButton.Appearance), Appearance.Accent);
-            builder.AddAttribute(4, nameof(FluentButton.OnClick), EventCallback.Factory.Create(this, () => SaveRowAsync(row)));
-            builder.AddContent(5, "Sauver");
+            builder.AddAttribute(4, nameof(FluentButton.Size), ControlSize.Small);
+            builder.AddAttribute(5, nameof(FluentButton.OnClick), EventCallback.Factory.Create(this, () => SaveRowAsync(row)));
+            builder.AddContent(6, "Sauver");
             builder.CloseComponent();
 
             builder.OpenComponent<FluentButton>(7);
-            builder.AddAttribute(6, nameof(FluentButton.Appearance), Appearance.Stealth);
-            builder.AddAttribute(7, nameof(FluentButton.OnClick), EventCallback.Factory.Create(this, () => CancelEdit(row)));
-            builder.AddContent(8, "Annuler");
+            builder.AddAttribute(8, nameof(FluentButton.Appearance), Appearance.Stealth);
+            builder.AddAttribute(9, nameof(FluentButton.Size), ControlSize.Small);
+            builder.AddAttribute(10, nameof(FluentButton.OnClick), EventCallback.Factory.Create(this, () => CancelEdit(row)));
+            builder.AddContent(11, "Annuler");
             builder.CloseComponent();
         }
         else
         {
             builder.OpenComponent<FluentButton>(12);
-            builder.AddAttribute(9, nameof(FluentButton.Appearance), Appearance.Stealth);
-            builder.AddAttribute(10, nameof(FluentButton.OnClick), EventCallback.Factory.Create(this, () => StartEdit(row)));
-            builder.AddContent(11, "Modifier");
+            builder.AddAttribute(13, nameof(FluentButton.Appearance), Appearance.Stealth);
+            builder.AddAttribute(14, nameof(FluentButton.Size), ControlSize.Small);
+            builder.AddAttribute(15, nameof(FluentButton.OnClick), EventCallback.Factory.Create(this, () => StartEdit(row)));
+            builder.AddContent(16, "Modifier");
             builder.CloseComponent();
 
             builder.OpenComponent<FluentButton>(17);
-            builder.AddAttribute(12, nameof(FluentButton.Appearance), Appearance.Outline);
-            builder.AddAttribute(13, nameof(FluentButton.OnClick), EventCallback.Factory.Create(this, () => DeleteRowAsync(row)));
-            builder.AddContent(14, "Supprimer");
+            builder.AddAttribute(18, nameof(FluentButton.Appearance), Appearance.Outline);
+            builder.AddAttribute(19, nameof(FluentButton.Size), ControlSize.Small);
+            builder.AddAttribute(20, nameof(FluentButton.OnClick), EventCallback.Factory.Create(this, () => DeleteRowAsync(row)));
+            builder.AddContent(21, "Supprimer");
             builder.CloseComponent();
         }
         builder.CloseElement();
