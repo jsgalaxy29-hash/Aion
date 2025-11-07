@@ -12,9 +12,124 @@ public static class AiSystemSeeder
 {
     public static async Task SeedAsync(AionDbContext dbContext, CancellationToken cancellationToken = default)
     {
+        await EnsureAiTablesExistAsync(dbContext, cancellationToken).ConfigureAwait(false);
         await SeedConfigAsync(dbContext, cancellationToken).ConfigureAwait(false);
         await SeedSynonymsAsync(dbContext, cancellationToken).ConfigureAwait(false);
         await SeedTemplatesAsync(dbContext, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task EnsureAiTablesExistAsync(AionDbContext dbContext, CancellationToken cancellationToken)
+    {
+        const string ensureConfigSql = @"
+IF OBJECT_ID(N'dbo.SXAiConfig', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.SXAiConfig
+    (
+        Id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_SXAiConfig PRIMARY KEY,
+        TenantId INT NOT NULL DEFAULT(1),
+        Actif BIT NOT NULL DEFAULT(1),
+        Doc BIT NOT NULL DEFAULT(0),
+        Deleted BIT NOT NULL DEFAULT(0),
+        DtCreation DATETIME2 NOT NULL DEFAULT(GETUTCDATE()),
+        DtModification DATETIME2 NULL,
+        DtSuppression DATETIME2 NULL,
+        UsrCreationId INT NULL,
+        UsrModificationId INT NULL,
+        UsrSuppressionId INT NULL,
+        RowVersion ROWVERSION NULL,
+        Provider NVARCHAR(50) NOT NULL,
+        ApiKey NVARCHAR(200) NULL,
+        BaseUrl NVARCHAR(200) NULL,
+        ModelName NVARCHAR(100) NOT NULL,
+        Temperature FLOAT NOT NULL,
+        MaxTokens INT NOT NULL,
+        IsEnabled BIT NOT NULL DEFAULT(1)
+    );
+END";
+
+        const string ensureSynonymSql = @"
+IF OBJECT_ID(N'dbo.SXSynonym', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.SXSynonym
+    (
+        Id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_SXSynonym PRIMARY KEY,
+        TenantId INT NOT NULL DEFAULT(1),
+        Actif BIT NOT NULL DEFAULT(1),
+        Doc BIT NOT NULL DEFAULT(0),
+        Deleted BIT NOT NULL DEFAULT(0),
+        DtCreation DATETIME2 NOT NULL DEFAULT(GETUTCDATE()),
+        DtModification DATETIME2 NULL,
+        DtSuppression DATETIME2 NULL,
+        UsrCreationId INT NULL,
+        UsrModificationId INT NULL,
+        UsrSuppressionId INT NULL,
+        RowVersion ROWVERSION NULL,
+        DomainTerm NVARCHAR(100) NOT NULL,
+        SynonymsCsv NVARCHAR(500) NOT NULL,
+        Category NVARCHAR(50) NOT NULL
+    );
+
+    CREATE UNIQUE INDEX IX_SXSynonym_DomainTerm ON dbo.SXSynonym(DomainTerm);
+END";
+
+        const string ensureTemplateSql = @"
+IF OBJECT_ID(N'dbo.SXTemplate', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.SXTemplate
+    (
+        Id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_SXTemplate PRIMARY KEY,
+        TenantId INT NOT NULL DEFAULT(1),
+        Actif BIT NOT NULL DEFAULT(1),
+        Doc BIT NOT NULL DEFAULT(0),
+        Deleted BIT NOT NULL DEFAULT(0),
+        DtCreation DATETIME2 NOT NULL DEFAULT(GETUTCDATE()),
+        DtModification DATETIME2 NULL,
+        DtSuppression DATETIME2 NULL,
+        UsrCreationId INT NULL,
+        UsrModificationId INT NULL,
+        UsrSuppressionId INT NULL,
+        RowVersion ROWVERSION NULL,
+        TemplateKey NVARCHAR(100) NOT NULL,
+        TemplateType NVARCHAR(50) NOT NULL,
+        Content NVARCHAR(MAX) NOT NULL,
+        IsActive BIT NOT NULL DEFAULT(1)
+    );
+
+    CREATE UNIQUE INDEX IX_SXTemplate_TemplateKey ON dbo.SXTemplate(TemplateKey);
+END";
+
+        const string ensureGenerationLogSql = @"
+IF OBJECT_ID(N'dbo.SXGenerationLog', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.SXGenerationLog
+    (
+        Id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_SXGenerationLog PRIMARY KEY,
+        TenantId INT NOT NULL DEFAULT(1),
+        Actif BIT NOT NULL DEFAULT(1),
+        Doc BIT NOT NULL DEFAULT(0),
+        Deleted BIT NOT NULL DEFAULT(0),
+        DtCreation DATETIME2 NOT NULL DEFAULT(GETUTCDATE()),
+        DtModification DATETIME2 NULL,
+        DtSuppression DATETIME2 NULL,
+        UsrCreationId INT NULL,
+        UsrModificationId INT NULL,
+        UsrSuppressionId INT NULL,
+        RowVersion ROWVERSION NULL,
+        RequestText NVARCHAR(MAX) NOT NULL,
+        IntentsJson NVARCHAR(MAX) NULL,
+        PlanJson NVARCHAR(MAX) NULL,
+        PatchYaml NVARCHAR(MAX) NULL,
+        ArtifactsSummary NVARCHAR(MAX) NULL,
+        Status NVARCHAR(32) NOT NULL,
+        ErrorMessage NVARCHAR(MAX) NULL,
+        ModelVersion NVARCHAR(64) NOT NULL
+    );
+END";
+
+        await dbContext.Database.ExecuteSqlRawAsync(ensureConfigSql, cancellationToken).ConfigureAwait(false);
+        await dbContext.Database.ExecuteSqlRawAsync(ensureSynonymSql, cancellationToken).ConfigureAwait(false);
+        await dbContext.Database.ExecuteSqlRawAsync(ensureTemplateSql, cancellationToken).ConfigureAwait(false);
+        await dbContext.Database.ExecuteSqlRawAsync(ensureGenerationLogSql, cancellationToken).ConfigureAwait(false);
     }
 
     private static async Task SeedConfigAsync(AionDbContext dbContext, CancellationToken cancellationToken)
