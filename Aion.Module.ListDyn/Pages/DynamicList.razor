@@ -3,7 +3,7 @@
 @inject IDataEngine DataEngine
 @inject ITabService Tabs
 
-<PageTitle>@(_tableTitle ?? TableName ?? "Liste dynamique")</PageTitle>
+<FluentLabel Typo="Typography.PageTitle">@(_tableTitle ?? TableName ?? "Liste dynamique")</FluentLabel>
 
 @if (string.IsNullOrWhiteSpace(TableName))
 {
@@ -20,8 +20,8 @@ else if (!string.IsNullOrEmpty(_errorMessage))
 else
 {
     <div class="mb-3">
-        <h1 class="h4 mb-1">@(_tableTitle ?? TableName)</h1>
-        <p class="text-muted">Affichage dynamique de la table <strong>@TableName</strong>.</p>
+        <FluentLabel class="h4 mb-1">@(_tableTitle ?? TableName)</FluentLabel>
+        <FluentLabel class="text-muted">Affichage dynamique de la table <strong>@TableName</strong></FluentLabel>
     </div>
     <AionDataGrid TableName="@TableName" OnRowDoubleClick="OnRowDoubleClick" />
 }

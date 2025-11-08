@@ -106,7 +106,10 @@
                 {
                     var col = column;
                     var isSorted = string.Equals(_sortColumn?.FieldName, col.FieldName, StringComparison.OrdinalIgnoreCase);
-                    <TemplateColumn TGridItem="DynamicRow" Title="@col.DisplayName" Sortable="isSorted" >
+                    <TemplateColumn TGridItem="DynamicRow" Sortable="true" >
+                        <HeaderCellTitleTemplate>
+                            <FluentLabel>@col.DisplayName</FluentLabel>
+                        </HeaderCellTitleTemplate>
                         <ChildContent Context="row">
                             <div class="grid-cell-content" @ondblclick="@(() => HandleRowDoubleClick(row))">
                                 @if (row.IsEditing)
@@ -121,7 +124,11 @@
                         </ChildContent>
                     </TemplateColumn>
                 }
-                <TemplateColumn TGridItem="DynamicRow" Title="Actions">
+                <TemplateColumn TGridItem="DynamicRow" >
+                    <HeaderCellTitleTemplate>
+                        <FluentLabel>Actions</FluentLabel>
+                    </HeaderCellTitleTemplate>
+
                     <ChildContent Context="row">
                         <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="4">
                             @if (row.IsEditing)
