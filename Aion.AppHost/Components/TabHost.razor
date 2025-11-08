@@ -4,11 +4,11 @@
 @using Aion.Domain.UI
 @inject ITabService Tabs
 
-<FluentTabs ActiveId="@GetActiveTabHtmlId()" OnChange="OnTabChanged">
+<FluentTabs ActiveTabId="@GetActiveTabHtmlId()" OnTabChange="OnTabChange" >
     @foreach (var tab in Tabs.Tabs)
     {
         <FluentTab Id="@GetTabHtmlId(tab.Id)">
-            @tab.Title
+            <FluentLabel Typo="Typography.Subject" >@tab.Title</FluentLabel>
             <FluentButton type="ButtonType.Button" class="close" style="margin-left:0.5rem" @onclick="() => Close(tab)">x</FluentButton>
         </FluentTab>
     }
@@ -50,7 +50,7 @@
 
     void OnTabsChanged()
     {
-        
+
         //if (_activeId is null || Tabs.Tabs.All(t => t.Id != _activeId))
         var activeTab = Tabs.Tabs.FirstOrDefault(t => t.Id == _activeId);
 
@@ -79,22 +79,11 @@
 
         InvokeAsync(StateHasChanged);
     }
-   
+
 
 
     public void Dispose() => Tabs.TabsChanged -= OnTabsChanged;
-
-    private Task OnTabChanged(Microsoft.FluentUI.AspNetCore.Components.TabChangeEventArgs e)
-    {
-        if (TryParseTabHtmlId(e.ActiveId, out var id))
-        {
-            _active = Tabs.Tabs.FirstOrDefault(t => t.Id == id);
-            _activeId = id;
-            Tabs.Activate(id);
-        }
-        return Task.CompletedTask;
-    }
-
+  
     private async Task Close(TabDescriptor tab)
     {
         await Tabs.CloseAsync(tab.Id, CancellationToken.None);
@@ -128,5 +117,16 @@
 
         id = Guid.Empty;
         return false;
+    }
+    private Task OnTabChange(FluentTab args)
+    {
+        
+        if (TryParseTabHtmlId(args.Id, out var id))
+        {
+            _active = Tabs.Tabs.FirstOrDefault(t => t.Id == id);
+            _activeId = id;
+            Tabs.Activate(id);
+        }
+        return Task.CompletedTask;
     }
 }
