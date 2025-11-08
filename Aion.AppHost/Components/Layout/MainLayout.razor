@@ -14,7 +14,7 @@
                    OfficeColor="@ThemeService.Current.OfficeColor"
                    CustomColor="@ThemeService.Current.CustomColor" >
                
-    <FluentStack Horizontal="true" Style="height:100vh">
+    <FluentStack Horizontal="true" Style="height:100vh" >
         <!-- Outlook bar (menu) -->
         <div class="p-2" style="width:260px; overflow:auto">
             @if (_authState?.User.Identity?.IsAuthenticated == true)

@@ -4,12 +4,15 @@
 @using Aion.Domain.UI
 @inject ITabService Tabs
 
-<FluentTabs ActiveTabId="@GetActiveTabHtmlId()" OnTabChange="OnTabChange" >
+<FluentTabs 
+            ActiveTabId="@SelectedTabId"
+            OnTabClose="@ClosedTab"
+            OnTabChange="OnTabChange" Class="w-100" ShowClose="true" >
     @foreach (var tab in Tabs.Tabs)
     {
-        <FluentTab Id="@GetTabHtmlId(tab.Id)">
-            <FluentLabel Typo="Typography.Subject" >@tab.Title</FluentLabel>
-            <FluentButton type="ButtonType.Button" class="close" style="margin-left:0.5rem" @onclick="() => Close(tab)">x</FluentButton>
+        <FluentTab Id="@GetTabHtmlId(tab.Id)"    
+                   Label="@tab.Title"
+                   Data="@tab" >
         </FluentTab>
     }
 </FluentTabs>
@@ -34,12 +37,15 @@
 @implements IDisposable
 
 @code {
+    
     private Guid? _activeId;
     private TabDescriptor? _active;
-
+    string SelectedTabId = "";
+    
     protected override void OnInitialized()
     {
         Tabs.TabsChanged += OnTabsChanged;
+    
         if (Tabs.Tabs.Count > 0)
         {
             _active = Tabs.Tabs[^1];
@@ -50,14 +56,13 @@
 
     void OnTabsChanged()
     {
-
-        //if (_activeId is null || Tabs.Tabs.All(t => t.Id != _activeId))
-        var activeTab = Tabs.Tabs.FirstOrDefault(t => t.Id == _activeId);
-
+        
+        var activeTab = Tabs.Tabs.FirstOrDefault(t => t.IsActive);
         if (activeTab is not null)
         {
             _active = activeTab;
             _activeId = activeTab.Id;
+            SelectedTabId = GetActiveTabHtmlId() ?? "";
         }
         else if (_activeId is null || Tabs.Tabs.All(t => t.Id != _activeId))
         {
@@ -65,16 +70,19 @@
             {
                 _active = Tabs.Tabs[^1];
                 _activeId = _active.Id;
+                SelectedTabId = GetActiveTabHtmlId() ?? "";
             }
             else
             {
                 _active = null;
                 _activeId = null;
+                SelectedTabId = GetActiveTabHtmlId() ?? "";
             }
         }
         else if (_activeId is not null)
         {
             _active = Tabs.Tabs.FirstOrDefault(t => t.Id == _activeId);
+            SelectedTabId = GetActiveTabHtmlId() ?? "";
         }
 
         InvokeAsync(StateHasChanged);
@@ -83,22 +91,6 @@
 
 
     public void Dispose() => Tabs.TabsChanged -= OnTabsChanged;
-  
-    private async Task Close(TabDescriptor tab)
-    {
-        await Tabs.CloseAsync(tab.Id, CancellationToken.None);
-        if (Tabs.Tabs.Count > 0)
-        {
-            _active = Tabs.Tabs[^1];
-            _activeId = _active.Id;
-            Tabs.Activate(_active.Id);
-        }
-        else
-        {
-            _active = null;
-            _activeId = null;
-        }
-    }
 
     private static string GetTabHtmlId(Guid id) => $"tab-{id}";
 
@@ -118,9 +110,10 @@
         id = Guid.Empty;
         return false;
     }
+    
     private Task OnTabChange(FluentTab args)
     {
-        
+
         if (TryParseTabHtmlId(args.Id, out var id))
         {
             _active = Tabs.Tabs.FirstOrDefault(t => t.Id == id);
@@ -129,4 +122,25 @@
         }
         return Task.CompletedTask;
     }
+    
+    private async Task ClosedTab(FluentTab args)
+    {
+        if (TryParseTabHtmlId(args.Id, out var id))
+        {
+            await Tabs.CloseAsync(id, CancellationToken.None);
+            if (Tabs.Tabs.Count > 0)
+            {
+                _active = Tabs.Tabs[^1];
+                _activeId = _active.Id;
+                Tabs.Activate(_active.Id);
+            }
+            else
+            {
+                _active = null;
+                _activeId = null;
+            }
+        }
+    }
+
+  
 }

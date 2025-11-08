@@ -3,34 +3,33 @@
 @page "/dynamic/form/{TableName}/{RowId}"
 @inject IDataEngine DataEngine
 
-<PageTitle>@(_tableTitle ?? TableName ?? "Formulaire")</PageTitle>
-
+<FluentLabel Typo="Typography.PageTitle">@(_tableTitle ?? TableName ?? "Formulaire")</FluentLabel>
 @if (string.IsNullOrWhiteSpace(TableName))
 {
-    <div class="alert alert-info">Aucune table spécifiée.</div>
+    <FluentLabel class="alert alert-info">Aucune table spécifiée.</FluentLabel>
 }
 else if (_isLoading)
 {
-    <div class="d-flex align-items-center gap-2"><FluentProgressRing /> Chargement...</div>
+    <FluentLabel class="d-flex align-items-center gap-2"><FluentProgressRing /> Chargement...</FluentLabel>
 }
 else if (!string.IsNullOrEmpty(_errorMessage))
 {
-    <div class="text-danger">@_errorMessage</div>
+    <FluentLabel class="text-danger">@_errorMessage</FluentLabel>
 }
 else if (_table is null)
 {
-    <div class="alert alert-warning">Table introuvable.</div>
+    <FluentLabel class="alert alert-warning">Table introuvable.</FluentLabel>
 }
 else
 {
     <div class="mb-3">
-        <h1 class="h4 mb-1">@(_tableTitle ?? TableName)</h1>
-        <p class="text-muted">Edition d'un enregistrement de <strong>@TableName</strong>.</p>
+        <FluentLabel Typo="Typography.H4" class="h4 mb-1">@(_tableTitle ?? TableName)</FluentLabel>
+        <FluentLabel Typo="Typography.Body" class="text-muted">Edition d'un enregistrement de <strong>@TableName</strong>.</FluentLabel>
     </div>
 
     @if (!string.IsNullOrEmpty(_statusMessage))
     {
-        <div class="alert alert-success">@_statusMessage</div>
+        <FluentLabel Typo="Typography.Body" class="alert alert-success">@_statusMessage</FluentLabel>
     }
 
     <div class="form-grid">

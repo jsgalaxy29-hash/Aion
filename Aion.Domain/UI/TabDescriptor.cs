@@ -8,7 +8,6 @@ namespace Aion.Domain.UI
     /// </summary>
     public sealed class TabDescriptor
     {
-
         public TabDescriptor(Guid id, string title, string route, IDictionary<string, object?>? parameters,  bool isDirty)
         {
             Id = id;
