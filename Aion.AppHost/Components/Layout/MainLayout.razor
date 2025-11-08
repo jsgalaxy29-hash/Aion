@@ -9,47 +9,54 @@
 @inject IAionThemeService ThemeService
 @implements IDisposable
 
-<FluentStack Horizontal="true" Style="height:100vh">
-    <!-- Outlook bar (menu) -->
-    <div class="p-2" style="width:260px; overflow:auto">
-        @if (_authState?.User.Identity?.IsAuthenticated == true)
-        {
-            <OutlookBar />
-        }
-    </div>
-    <FluentDivider Vertical="true" />
-    <!-- Main content area -->
-    <div class="flex-grow p-2 overflow-auto">
-        @if (_authState?.User.Identity?.IsAuthenticated == true)
-        {
-            <TabHost />
-        }
-        else
-        {
-            @Body
-        }
-    </div>
-    <!-- Simple header with user info and sign out -->
-    <div class="position-fixed top-0 end-0 p-2" style="z-index:1000">
-        @if (_authState?.User.Identity?.IsAuthenticated == true)
-        {
-            <div class="d-flex gap-2 align-items-center">
-                <FluentSelect TOption="string" Value="_selectedTheme" ValueChanged="OnThemeSelectionChanged" Style="min-width: 140px;">
-                    <FluentOption Value="light">Thème clair</FluentOption>
-                    <FluentOption Value="dark">Thème sombre</FluentOption>
-                </FluentSelect>
-                <FluentButton OnClick="Logout">Se déconnecter (@_authState.User.Identity?.Name)</FluentButton>
-            </div>
-        }
-    </div>
-</FluentStack>
+<FluentDesignTheme Mode="@ThemeService.Current.Mode" 
+    NeutralBaseColor="@ThemeService.Current.NeutralBaseColor"
+                   OfficeColor="@ThemeService.Current.OfficeColor"
+                   CustomColor="@ThemeService.Current.CustomColor" >
+               
+    <FluentStack Horizontal="true" Style="height:100vh">
+        <!-- Outlook bar (menu) -->
+        <div class="p-2" style="width:260px; overflow:auto">
+            @if (_authState?.User.Identity?.IsAuthenticated == true)
+            {
+                <OutlookBar />
+            }
+        </div>
+        <FluentDivider Vertical="true" />
+        <!-- Main content area -->
+        <div class="flex-grow p-2 overflow-auto">
+            @if (_authState?.User.Identity?.IsAuthenticated == true)
+            {
+                <TabHost />
+            }
+            else
+            {
+                @Body
+            }
+        </div>
+        <!-- Simple header with user info and sign out -->
+        <div class="position-fixed top-0 end-0 p-2" style="z-index:1000">
+            @if (_authState?.User.Identity?.IsAuthenticated == true)
+            {
+                <div class="d-flex gap-2 align-items-center">
+                    <FluentSelect TOption="string" Value="_selectedTheme" ValueChanged="OnThemeSelectionChanged" Style="min-width: 140px;">
+                        <FluentOption Value="light">Thème clair</FluentOption>
+                        <FluentOption Value="dark">Thème sombre</FluentOption>
+                    </FluentSelect>
+                    <FluentButton OnClick="Logout">Se déconnecter (@_authState.User.Identity?.Name)</FluentButton>
+                </div>
+            }
+        </div>
+    </FluentStack>
 
-@* Providers FluentUI à mettre en bas du layout *@
-<FluentToastProvider />
-<FluentDialogProvider />
-<FluentTooltipProvider />
-<FluentMessageBarProvider />
-<FluentMenuProvider />
+    @* Providers FluentUI à mettre en bas du layout *@
+    <FluentToastProvider />
+    <FluentDialogProvider />
+    <FluentTooltipProvider />
+    <FluentMessageBarProvider />
+    <FluentMenuProvider />
+
+</FluentDesignTheme>
 
 @code {
     private AuthenticationState? _authState;
