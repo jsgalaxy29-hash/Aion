@@ -54,6 +54,9 @@ namespace Aion.DataEngine.Services
             await _db.ExecuteNonQueryAsync(SqlAddBaseEntityColumnsMacro());
             Console.WriteLine("   ✅ Colonnes BaseEntity ajoutées");
 
+            await EnsureAgendaSchemaAsync();
+            Console.WriteLine("   ✅ Tables Agendas ajoutées");
+
             Console.WriteLine("✅ Structure SQL complète créée");
 
             foreach (var observer in _observers)
@@ -64,6 +67,7 @@ namespace Aion.DataEngine.Services
             // Catalogue des tables existantes dans STable et SField
             DataEngine dataEngine = new(_db, _userContext, _clock);
             await dataEngine.SynchronizeSystemCatalogAsync().ConfigureAwait(false);
+            await dataEngine.SynchronizeCatalogAsync().ConfigureAwait(false);
 
         }
 
