@@ -11,15 +11,15 @@
 @inject IDbContextFactory<AionDbContext> DbContextFactory
 @attribute [Authorize]
 
-<h2>Agenda</h2>
+<FluentLabel Typo="Typography.H2">Agenda</FluentLabel>
 
 @if (!_loaded)
 {
-    <p>Chargement des agendas...</p>
+    <FluentLabel>Chargement des agendas...</FluentLabel>
 }
 else if (!_agendas.Any())
 {
-    <p>Aucun agenda disponible pour votre compte.</p>
+    <FluentLabel>Aucun agenda disponible pour votre compte.</FluentLabel>
 }
 else
 {
@@ -28,7 +28,7 @@ else
         <ValidationSummary />
 
         <div class="agenda-form">
-            <label>Agenda</label>
+            <FluentLabel>Agenda</FluentLabel>
             <select @bind="_formModel.AgendaId">
                 @foreach (var agenda in _agendas)
                 {
@@ -36,24 +36,24 @@ else
                 }
             </select>
 
-            <label>Titre</label>
+            <FluentLabel>Titre</FluentLabel>
             <InputText @bind-Value="_formModel.Libelle" class="form-input" />
 
-            <label>Description</label>
+            <FluentLabel>Description</FluentLabel>
             <InputTextArea @bind-Value="_formModel.Description" class="form-input" />
 
             <div class="form-grid">
                 <div>
-                    <label>Début (UTC)</label>
+                    <FluentLabel>Début (UTC)</FluentLabel>
                     <InputDate @bind-Value="_formModel.StartUtc" class="form-input" />
                 </div>
                 <div>
-                    <label>Fin (UTC)</label>
+                    <FluentLabel>Fin (UTC)</FluentLabel>
                     <InputDate @bind-Value="_formModel.EndUtc" class="form-input" />
                 </div>
             </div>
 
-            <label>Status</label>
+            <FluentLabel>Status</FluentLabel>
             <select @bind="_formModel.StatusId">
                 @foreach (var status in _statuses)
                 {
@@ -63,17 +63,17 @@ else
 
             <div class="form-check">
                 <input type="checkbox" @bind="_formModel.AllDay" />
-                <label>Journée entière</label>
+                <FluentLabel>Journée entière</FluentLabel>
             </div>
 
             <div class="form-check">
                 <input type="checkbox" @bind="_formModel.IsPrivate" />
-                <label>Privé</label>
+                <FluentLabel>Privé</FluentLabel>
             </div>
 
             <div class="form-check">
                 <input type="checkbox" @bind="_enableReminders" />
-                <label>Activer les rappels</label>
+                <FluentLabel>Activer les rappels</FluentLabel>
             </div>
 
             @if (_enableReminders)
@@ -103,7 +103,7 @@ else
     <h3>Événements à venir</h3>
     @if (!_events.Any())
     {
-        <p>Aucun événement planifié.</p>
+        <FluentLabel>Aucun événement planifié.</FluentLabel>
     }
     else
     {

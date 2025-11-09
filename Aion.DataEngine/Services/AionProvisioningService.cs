@@ -66,7 +66,6 @@ namespace Aion.DataEngine.Services
 
             // Catalogue des tables existantes dans STable et SField
             DataEngine dataEngine = new(_db, _userContext, _clock);
-            await dataEngine.SynchronizeSystemCatalogAsync().ConfigureAwait(false);
             await dataEngine.SynchronizeCatalogAsync().ConfigureAwait(false);
 
         }

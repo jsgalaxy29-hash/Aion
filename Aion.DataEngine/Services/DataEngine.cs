@@ -12,7 +12,7 @@ namespace Aion.DataEngine.Services
 {
     public partial class DataEngine : IDataEngine
     {
-        
+
         private readonly IDataProvider _db;
         private readonly IValidationService _validator;
         private readonly IHistorizationService _historizer;
@@ -50,17 +50,24 @@ namespace Aion.DataEngine.Services
             _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         }
 
+ 
         /// <summary>
         /// Catalogs the database schema into the STable and SField metadata tables.
         /// </summary>
         /// <returns></returns>
-        public async Task SynchronizeSystemCatalogAsync()
+        public async Task SynchronizeCatalogAsync(string? tablename = null)
         {
             // Retrieve all user tables from the database excluding system tables and the catalog itself.
-            const string tablesQuery = @"
+            string tablesQuery = @"
                 SELECT name
                 FROM sys.tables
-                WHERE type = 'U' AND name LIKE 'S%'";
+                WHERE type = 'U'";
+
+            if (tablename != null)
+            {
+                tablesQuery += " AND  = '" + tablename + "'";
+            }
+
             var tables = await _db.ExecuteQueryAsync(tablesQuery).ConfigureAwait(false);
 
             foreach (DataRow row in tables.Rows)
@@ -90,9 +97,76 @@ namespace Aion.DataEngine.Services
 
                 // Synchronize columns for this table.
                 const string columnsQuery = @"
-                    SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, IS_NULLABLE
-                    FROM INFORMATION_SCHEMA.COLUMNS
-                    WHERE TABLE_NAME = @tableName";
+                                           SELECT 
+                                            c.TABLE_SCHEMA,
+                                            c.TABLE_NAME,
+                                            c.COLUMN_NAME,
+                                            c.ORDINAL_POSITION,
+                                            c.COLUMN_DEFAULT,
+                                            c.IS_NULLABLE,
+                                            c.DATA_TYPE,
+                                            c.CHARACTER_MAXIMUM_LENGTH,
+                                            c.NUMERIC_PRECISION,
+                                            c.NUMERIC_SCALE,
+
+                                            -- Clé primaire ?
+                                            CASE WHEN pk.COLUMN_NAME IS NOT NULL THEN 'Oui' ELSE 'Non' END AS IsPrimaryKey,
+
+                                            -- Contrainte UNIQUE ?
+                                            CASE WHEN uq.COLUMN_NAME IS NOT NULL THEN 'Oui' ELSE 'Non' END AS IsUnique,
+
+                                            -- Table référencée par la FK (uniquement si le nom de colonne finit par 'Id')
+                                            CASE 
+                                                WHEN c.COLUMN_NAME LIKE '%Id' THEN fk.ReferencedTableName
+                                                ELSE NULL
+                                            END AS FKTable
+
+                                        FROM INFORMATION_SCHEMA.COLUMNS c
+
+                                        -- PK
+                                        LEFT JOIN (
+                                            SELECT ku.TABLE_SCHEMA, ku.TABLE_NAME, ku.COLUMN_NAME
+                                            FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
+                                            JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE ku
+                                                ON tc.CONSTRAINT_NAME = ku.CONSTRAINT_NAME
+                                               AND tc.TABLE_SCHEMA   = ku.TABLE_SCHEMA
+                                            WHERE tc.CONSTRAINT_TYPE = 'PRIMARY KEY'
+                                        ) pk ON  c.TABLE_SCHEMA = pk.TABLE_SCHEMA
+                                           AND c.TABLE_NAME   = pk.TABLE_NAME
+                                           AND c.COLUMN_NAME  = pk.COLUMN_NAME
+
+                                        -- UNIQUE
+                                        LEFT JOIN (
+                                            SELECT ku.TABLE_SCHEMA, ku.TABLE_NAME, ku.COLUMN_NAME
+                                            FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
+                                            JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE ku
+                                                ON tc.CONSTRAINT_NAME = ku.CONSTRAINT_NAME
+                                               AND tc.TABLE_SCHEMA   = ku.TABLE_SCHEMA
+                                            WHERE tc.CONSTRAINT_TYPE = 'UNIQUE'
+                                        ) uq ON  c.TABLE_SCHEMA = uq.TABLE_SCHEMA
+                                           AND c.TABLE_NAME   = uq.TABLE_NAME
+                                           AND c.COLUMN_NAME  = uq.COLUMN_NAME
+
+                                        -- FK → table référencée
+                                        LEFT JOIN (
+                                            SELECT 
+                                                OBJECT_SCHEMA_NAME(fk.parent_object_id)     AS SchemaName,
+                                                OBJECT_NAME(fk.parent_object_id)            AS TableName,
+                                                pc.name                                     AS ColumnName,
+                                                OBJECT_SCHEMA_NAME(fk.referenced_object_id) AS ReferencedSchemaName,
+                                                OBJECT_NAME(fk.referenced_object_id)        AS ReferencedTableName
+                                            FROM sys.foreign_keys fk
+                                            JOIN sys.foreign_key_columns fkc 
+                                                ON fk.object_id = fkc.constraint_object_id
+                                            JOIN sys.columns pc
+                                                ON fkc.parent_object_id = pc.object_id 
+                                               AND fkc.parent_column_id = pc.column_id
+                                        ) fk ON  c.TABLE_SCHEMA = fk.SchemaName
+                                            AND c.TABLE_NAME   = fk.TableName
+                                            AND c.COLUMN_NAME  = fk.ColumnName
+
+                                        WHERE c.TABLE_NAME = @tableName
+                                        ORDER BY c.ORDINAL_POSITION;";
                 var columns = await _db.ExecuteQueryAsync(columnsQuery, new Dictionary<string, object?> { ["@tableName"] = tableName }).ConfigureAwait(false);
 
                 foreach (DataRow colRow in columns.Rows)
@@ -100,102 +174,33 @@ namespace Aion.DataEngine.Services
                     var colName = colRow["COLUMN_NAME"].ToString()!;
                     var dataType = colRow["DATA_TYPE"].ToString()!;
                     var maxLengthObj = colRow["CHARACTER_MAXIMUM_LENGTH"];
-                    var maxLength = maxLengthObj != DBNull.Value ? Convert.ToInt32(maxLengthObj) : 0;
-                    var isNullable = string.Equals(colRow["IS_NULLABLE"].ToString(), "YES", StringComparison.OrdinalIgnoreCase);
 
-                    const string checkColumnSql = "SELECT Id FROM SField WHERE TableId = @tableId AND LIBELLE = @colName";
-                    var exists = await _db.ExecuteQueryAsync(checkColumnSql, new Dictionary<string, object?>
+                    var maxLength = maxLengthObj != DBNull.Value ? Convert.ToInt32(maxLengthObj) : 0;
+                    if (maxLength == 0)
                     {
-                        ["@tableId"] = tableId,
-                        ["@colName"] = colName
-                    }).ConfigureAwait(false);
-                    if (exists.Rows.Count == 0)
-                    {
-                        // Insert column metadata.  We assume no primary key or unique constraints for discovered columns.
-                        const string insertColSql = @"
-                            INSERT INTO SField (
-                                TableId, Libelle, Alias, DataType,
-                                IsClePrimaire, IsUnique, Taille, Referentiel,
-                                ReferentielWhereClause, Defaut, IsNulleable
-                                )
-                            VALUES (
-                                @tableId, @libelle, @alias, @dataType,
-                                0, 0, @taille, NULL,
-                                NULL, NULL, @isNullable
-                            );
-                        SELECT CAST(SCOPE_IDENTITY() AS INT);";
-                        var colParams = new Dictionary<string, object?>
+                        if (dataType != null)
                         {
-                            ["@tableId"] = tableId,
-                            ["@libelle"] = colName,
-                            ["@alias"] = colName,
-                            ["@dataType"] = dataType,
-                            ["@taille"] = maxLength,
-                            ["@isNullable"] = isNullable ? 1 : 0
-                        };
-                        await _db.ExecuteQueryAsync(insertColSql, colParams).ConfigureAwait(false);
+                            switch (dataType)
+                            {
+                                case "int":
+                                case "smalint":
+                                case "float":
+                                    maxLength = int.Parse(colRow["NUMERIC_PRECISION"].ToString()!);
+                                    break;
+
+                            }
+                        }
                     }
-                }
-            }
+                    else if (maxLength == -1)
+                    {
+                        maxLength = 9999;
+                    }
+                    var defaultvalue = colRow["COLUMN_DEFAULT"].ToString()!;
 
-            // Invalidate cached metadata.
-            await _cache.RemoveAsync(TablesCacheKey).ConfigureAwait(false);
-        }
-
-
-        /// <summary>
-        /// Catalogs the database schema into the STable and SField metadata tables.
-        /// </summary>
-        /// <returns></returns>
-        public async Task SynchronizeCatalogAsync()
-        {
-            // Retrieve all user tables from the database excluding system tables and the catalog itself.
-            const string tablesQuery = @"
-                SELECT name
-                FROM sys.tables
-                WHERE type = 'U' AND name NOT LIKE 'S_%'";
-            var tables = await _db.ExecuteQueryAsync(tablesQuery).ConfigureAwait(false);
-
-            foreach (DataRow row in tables.Rows)
-            {
-                var tableName = row["name"].ToString()!;
-
-                // Insert table metadata into STable if it does not already exist.
-                // Use an upsert pattern: first check for existence.
-                const string checkTableExistsSql = "SELECT Id FROM STable WHERE Libelle = @name";
-                var existing = await _db.ExecuteQueryAsync(checkTableExistsSql, new Dictionary<string, object?> { ["@name"] = tableName }).ConfigureAwait(false);
-                int tableId;
-                if (existing.Rows.Count == 0)
-                {
-                    const string insertTableSql = @"
-                        INSERT INTO STable (
-                            Libelle, Description, Parent, ParentLiaison, ReferentielLibelle, Type)
-                        VALUES (@libelle, @description, NULL, NULL, NULL, 'F')
-                        );
-                        SELECT CAST(SCOPE_IDENTITY() AS INT);";
-                    var param = new Dictionary<string, object?> { ["@libelle"] = tableName, ["@description"] = (object?)null };
-                    var dt = await _db.ExecuteQueryAsync(insertTableSql, param).ConfigureAwait(false);
-                    tableId = Convert.ToInt32(dt.Rows[0][0]);
-                }
-                else
-                {
-                    tableId = Convert.ToInt32(existing.Rows[0][0]);
-                }
-
-                // Synchronize columns for this table.
-                const string columnsQuery = @"
-                    SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, IS_NULLABLE
-                    FROM INFORMATION_SCHEMA.COLUMNS
-                    WHERE TABLE_NAME = @tableName";
-                var columns = await _db.ExecuteQueryAsync(columnsQuery, new Dictionary<string, object?> { ["@tableName"] = tableName }).ConfigureAwait(false);
-
-                foreach (DataRow colRow in columns.Rows)
-                {
-                    var colName = colRow["COLUMN_NAME"].ToString()!;
-                    var dataType = colRow["DATA_TYPE"].ToString()!;
-                    var maxLengthObj = colRow["CHARACTER_MAXIMUM_LENGTH"];
-                    var maxLength = maxLengthObj != DBNull.Value ? Convert.ToInt32(maxLengthObj) : 0;
                     var isNullable = string.Equals(colRow["IS_NULLABLE"].ToString(), "YES", StringComparison.OrdinalIgnoreCase);
+                    var IsPrimaryKey = string.Equals(colRow["IsPrimaryKey"].ToString(), "OUI", StringComparison.OrdinalIgnoreCase);
+                    var IsUnique = string.Equals(colRow["IsUnique"].ToString(), "OUI", StringComparison.OrdinalIgnoreCase);
+                    var FKTable = colRow["FKTable"].ToString()!;
 
                     const string checkColumnSql = "SELECT Id FROM SField WHERE TableId = @tableId AND LIBELLE = @colName";
                     var exists = await _db.ExecuteQueryAsync(checkColumnSql, new Dictionary<string, object?>
@@ -210,22 +215,26 @@ namespace Aion.DataEngine.Services
                             INSERT INTO SFIELD (
                                 TableId, Libelle, Alias, DataType,
                                 IsClePrimaire, IsUnique, Taille, Referentiel,
-                                ReferentielWhereClause, Defaut, IsNulleable,
+                                Defaut, IsNulleable
                                 )
                             VALUES (
                                 @tableId, @libelle, @alias, @dataType,
-                                0, 0, @taille, NULL,
-                                NULL, NULL, @isNullable
+                                @IsPrimaryKey, @IsUnique, @taille, @FKTable,
+                                @defaultvalue, @isNullable
                             );
                         SELECT CAST(SCOPE_IDENTITY() AS INT);";
                         var colParams = new Dictionary<string, object?>
                         {
                             ["@tableId"] = tableId,
                             ["@libelle"] = colName,
-                            ["@alias"] = (object?)null,
+                            ["@alias"] = colName,
                             ["@dataType"] = dataType,
+                            ["@FKTable"] = FKTable,
                             ["@taille"] = maxLength,
-                            ["@isNullable"] = isNullable ? 1 : 0
+                            ["@isNullable"] = isNullable ? 1 : 0,
+                            ["@IsPrimaryKey"] = isNullable ? 1 : 0,
+                            ["@IsUnique"] = isNullable ? 1 : 0,
+                            ["@defaultvalue"] = defaultvalue,
                         };
                         await _db.ExecuteQueryAsync(insertColSql, colParams).ConfigureAwait(false);
                     }
@@ -235,6 +244,7 @@ namespace Aion.DataEngine.Services
             // Invalidate cached metadata.
             await _cache.RemoveAsync(TablesCacheKey).ConfigureAwait(false);
         }
+
 
         /// <summary>
         /// Synchronises the physical database by creating the specified table with its fields.

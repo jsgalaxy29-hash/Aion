@@ -18,14 +18,7 @@ namespace Aion.DataEngine.Interfaces
         /// synchronises them into the catalog tables (STABLE, SFIELD).  
         /// This operation populates metadata for existing legacy tables.
         /// </summary>
-        Task SynchronizeSystemCatalogAsync();
-
-        /// <summary>
-        /// Scans the underlying database for existing tables and columns and
-        /// synchronises them into the catalog tables (STABLE, SFIELD).  
-        /// This operation populates metadata for existing legacy tables.
-        /// </summary>
-        Task SynchronizeCatalogAsync();
+        Task SynchronizeCatalogAsync(string? tablename = null);
 
         /// <summary>
         /// Materialises a new table in the physical database based on the
