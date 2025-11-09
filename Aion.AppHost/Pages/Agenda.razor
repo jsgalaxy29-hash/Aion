@@ -241,6 +241,58 @@ else
     </FluentDialogFooter>
 </FluentDialog>
 
+<style>
+    html, body {
+        height: 100%;
+    }
+
+    .agenda-layout {
+        display: flex;
+        gap: 16px;
+        /* On prend quasiment toute la hauteur de la fenêtre,
+               en laissant un peu pour le titre / marges.
+               Tu peux ajuster la valeur si besoin. */
+        height: calc(100vh - 140px);
+    }
+
+    .agenda-sidebar {
+        width: 280px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .agenda-sidebar-card {
+        flex: 0 0 auto;
+    }
+
+    .agenda-main {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+        .agenda-main > .fluent-stack {
+            /* Le stack qui contient les boutons + le calendrier */
+            flex: 1;
+            min-height: 0;
+        }
+
+        .agenda-main {
+            flex: 1;
+            min-height: 0;
+            /* Pour que FullCalendar puisse s’étirer */
+        }
+
+        /* Calendrier pleine hauteur de la fenêtre (en laissant un peu pour le titre / toolbar) */
+        .agenda-calendar {
+            height: calc(100vh - 200px); /* ajuste 200 si tu veux + ou - haut */
+        }
+
+</style>
+
 @code {
     private readonly AgendaEventFormModel _formModel = new();
     private readonly List<SAgenda> _agendas = new();
@@ -260,6 +312,7 @@ else
     private string? _selectedAgendaKey;
     private DateTime? _visibleRangeStartUtc;
     private DateTime? _visibleRangeEndUtc;
+    private bool _calendarInitialized;
 
     private IEnumerable<SAgendaEvent> UpcomingEvents => _events
         .Where(e => !_selectedAgendaId.HasValue || e.AgendaId == _selectedAgendaId)
@@ -268,6 +321,13 @@ else
         .Take(5);
 
     private int? _selectedAgendaId => int.TryParse(_selectedAgendaKey, out var value) ? value : _agendas.FirstOrDefault()?.Id;
+
+    protected override void OnInitialized()
+    {
+        // EditContext non nul dès le 1er rendu, pour éviter l'exception EditForm
+        _editContext = new EditContext(_formModel);
+        base.OnInitialized();
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -330,14 +390,39 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        // Tant que les données ne sont pas chargées (_loaded == false),
+        // le <div id="aion-agenda-calendar"> n'existe pas, donc on NE FAIT RIEN.
+        if (!_loaded || _calendarInitialized)
         {
-            _dotNetRef = DotNetObjectReference.Create(this);
-            _agendaModule = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "/js/aionAgenda.js");
-            await _agendaModule.InvokeVoidAsync("initCalendar", _dotNetRef, _selectedAgendaId, _selectedView);
+            return;
+        }
+
+        _calendarInitialized = true;
+
+        try
+        {
+            _dotNetRef ??= DotNetObjectReference.Create(this);
+
+            // Chemin ABSOLU vers wwwroot/js/aionAgenda.js
+            _agendaModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>(
+                "import", "/js/aionAgenda.js");
+
+            await _agendaModule.InvokeVoidAsync(
+                "initCalendar",
+                _dotNetRef,
+                _selectedAgendaId,
+                _selectedView);
+
             await PushEventsToCalendarAsync();
         }
+        catch (Exception ex)
+        {
+            // Si jamais l'import JS échoue, on affiche un message
+            _errorMessage = $"Erreur lors de l'initialisation du calendrier : {ex.Message}";
+            await InvokeAsync(StateHasChanged);
+        }
     }
+
 
     public async ValueTask DisposeAsync()
     {

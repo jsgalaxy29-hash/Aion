@@ -1,24 +1,30 @@
-// wwwroot/js/aionAgenda.js
+ï»¿// wwwroot/js/aionAgenda.js
 
 let calendar;
 let dotNetRef;
 export function initCalendar(dotNetRef, selectedAgendaId, defaultView) {
     const calendarEl = document.getElementById("aion-agenda-calendar");
     if (!calendarEl) {
-        console.error("Élément #aion-agenda-calendar introuvable");
+        console.error("Ã‰lÃ©ment #aion-agenda-calendar introuvable");
         return;
     }
 
     if (!window.FullCalendar || !window.FullCalendar.Calendar) {
-        console.error("FullCalendar global n'est pas chargé");
+        console.error("FullCalendar global n'est pas chargÃ©");
         return;
     }
 
     const calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: defaultView || "timeGridWeek",
+        locale: "fr",
         selectable: true,
         editable: false,
-        locale: "fr",
+
+        // ðŸ‘‰ pour occuper toute la hauteur de son conteneur
+        height: "100%", 
+        width: "100%",
+        expandRows: true,
+
         events: [],
         datesSet: (info) => {
             dotNetRef.invokeMethodAsync(
@@ -42,6 +48,7 @@ export function initCalendar(dotNetRef, selectedAgendaId, defaultView) {
             );
         }
     });
+
 
     calendar.render();
     window.aionAgendaCalendar = calendar;
