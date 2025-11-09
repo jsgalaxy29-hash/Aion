@@ -4,35 +4,61 @@ using System.Data;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Data.SqlClient;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Configuration;
 
 namespace Aion.Infrastructure.Data
 {
     /// <summary>
-    /// Implémentation de IDataProvider pour SQL Server.
+    /// Implémentation de IDataProvider pour SQLite.
     /// </summary>
-    public class SqlDataProvider : DataEngine.Interfaces.IDataProvider
+    public class SqliteDataProvider : DataEngine.Interfaces.IDataProvider
     {
-        private readonly string _connectionString;
+        private string _connectionString;
         private readonly SemaphoreSlim _initializationSemaphore = new(1, 1);
         private bool _databaseInitialized;
 
-        public SqlDataProvider(IConfiguration configuration)
+        public SqliteDataProvider(IConfiguration configuration)
         {
             _connectionString = configuration.GetConnectionString("AionDb")
                 ?? throw new InvalidOperationException("Connection string 'AionDb' not found");
+
+            var builder = new SqliteConnectionStringBuilder(_connectionString);
+            var dataSource = builder.DataSource;
+
+            if (!string.IsNullOrWhiteSpace(dataSource)
+                && !string.Equals(dataSource, ":memory:", StringComparison.OrdinalIgnoreCase)
+                && !dataSource.StartsWith("file:", StringComparison.OrdinalIgnoreCase))
+            {
+                var databasePath = dataSource;
+                if (!Path.IsPathRooted(databasePath))
+                {
+                    databasePath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, databasePath));
+                }
+
+                databasePath = Path.GetFullPath(databasePath);
+                var directory = Path.GetDirectoryName(databasePath);
+                if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                builder.DataSource = databasePath;
+                _connectionString = builder.ConnectionString;
+            }
         }
 
         public async Task<int> ExecuteNonQueryAsync(string sql, IDictionary<string, object?>? parameters = null)
         {
             await EnsureDatabaseExistsAsync().ConfigureAwait(false);
 
-            await using var connection = new SqlConnection(_connectionString);
+            await using var connection = new SqliteConnection(_connectionString);
             await connection.OpenAsync().ConfigureAwait(false);
 
-            using var command = new SqlCommand(sql, connection);
-            command.CommandTimeout = 120; // 2 minutes pour les scripts complexes
+            using var command = new SqliteCommand(sql, connection)
+            {
+                CommandTimeout = 120
+            };
 
             if (parameters != null)
             {
@@ -42,8 +68,7 @@ namespace Aion.Infrastructure.Data
                 }
             }
 
-            int result = await command.ExecuteNonQueryAsync().ConfigureAwait(false);
-
+            var result = await command.ExecuteNonQueryAsync().ConfigureAwait(false);
             return result;
         }
 
@@ -51,11 +76,13 @@ namespace Aion.Infrastructure.Data
         {
             await EnsureDatabaseExistsAsync().ConfigureAwait(false);
 
-            await using var connection = new SqlConnection(_connectionString);
+            await using var connection = new SqliteConnection(_connectionString);
             await connection.OpenAsync().ConfigureAwait(false);
 
-            using var command = new SqlCommand(sql, connection);
-            command.CommandTimeout = 120;
+            using var command = new SqliteCommand(sql, connection)
+            {
+                CommandTimeout = 120
+            };
 
             if (parameters != null)
             {
@@ -73,11 +100,13 @@ namespace Aion.Infrastructure.Data
         {
             await EnsureDatabaseExistsAsync().ConfigureAwait(false);
 
-            await using var connection = new SqlConnection(_connectionString);
+            await using var connection = new SqliteConnection(_connectionString);
             await connection.OpenAsync().ConfigureAwait(false);
 
-            using var command = new SqlCommand(sql, connection);
-            command.CommandTimeout = 120;
+            using var command = new SqliteCommand(sql, connection)
+            {
+                CommandTimeout = 120
+            };
 
             if (parameters != null)
             {
@@ -87,9 +116,9 @@ namespace Aion.Infrastructure.Data
                 }
             }
 
+            using var reader = await command.ExecuteReaderAsync().ConfigureAwait(false);
             var dataTable = new DataTable();
-            using var adapter = new SqlDataAdapter(command);
-            adapter.Fill(dataTable);
+            dataTable.Load(reader);
 
             return dataTable;
         }
@@ -109,44 +138,23 @@ namespace Aion.Infrastructure.Data
                     return;
                 }
 
-                var builder = new SqlConnectionStringBuilder(_connectionString);
-                var databaseName = builder.InitialCatalog;
+                var builder = new SqliteConnectionStringBuilder(_connectionString);
+                var dataSource = builder.DataSource;
 
-                if (!string.IsNullOrWhiteSpace(databaseName))
+                if (!string.IsNullOrWhiteSpace(dataSource)
+                    && !string.Equals(dataSource, ":memory:", StringComparison.OrdinalIgnoreCase)
+                    && !dataSource.StartsWith("file:", StringComparison.OrdinalIgnoreCase))
                 {
-                    var masterBuilder = new SqlConnectionStringBuilder(_connectionString)
+                    if (!File.Exists(dataSource))
                     {
-                        InitialCatalog = "master"
-                    };
-
-                    await using var connection = new SqlConnection(masterBuilder.ConnectionString);
-                    await connection.OpenAsync().ConfigureAwait(false);
-
-                    var commandText = "IF DB_ID(@databaseName) IS NULL BEGIN CREATE DATABASE [" + databaseName + "] END;";
-                    using var command = new SqlCommand(commandText, connection);
-                    command.Parameters.AddWithValue("@databaseName", databaseName);
-                    await command.ExecuteNonQueryAsync().ConfigureAwait(false);
-                }
-                else if (!string.IsNullOrWhiteSpace(builder.AttachDBFilename))
-                {
-                    var databasePath = builder.AttachDBFilename;
-
-                    if (!Path.IsPathRooted(databasePath))
-                    {
-                        databasePath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, databasePath));
-                    }
-
-                    var directory = Path.GetDirectoryName(databasePath);
-                    if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
-                    {
-                        Directory.CreateDirectory(directory);
-                    }
-
-                    if (!File.Exists(databasePath))
-                    {
-                        await using var connection = new SqlConnection(_connectionString);
+                        await using var connection = new SqliteConnection(_connectionString);
                         await connection.OpenAsync().ConfigureAwait(false);
                     }
+                }
+                else
+                {
+                    await using var connection = new SqliteConnection(_connectionString);
+                    await connection.OpenAsync().ConfigureAwait(false);
                 }
 
                 _databaseInitialized = true;
@@ -158,3 +166,4 @@ namespace Aion.Infrastructure.Data
         }
     }
 }
+
