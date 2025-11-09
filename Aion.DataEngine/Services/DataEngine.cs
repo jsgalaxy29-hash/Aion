@@ -261,37 +261,47 @@ namespace Aion.DataEngine.Services
             // Build CREATE TABLE SQL dynamically.
             var builder = new StringBuilder();
             builder.Append($"CREATE TABLE [{table.Libelle}] (\n");
-            var pkColumns = new List<string>();
+
             var fieldList = fields.ToList();
-            for (int i = 0; i < fieldList.Count; i++)
+            var pkColumns = new List<string>();
+            var columnDefinitions = new List<string>(fieldList.Count);
+            var foreignKeys = new List<string>();
+
+            foreach (var f in fieldList)
             {
-                var f = fieldList[i];
-                builder.Append($"    [{f.Libelle}] {BuildSqlDataType(f)} {BuildNullability(f)}");
-                if (!string.IsNullOrEmpty(f.Defaut))
+                var columnBuilder = new StringBuilder();
+                columnBuilder.Append($"    [{f.Libelle}] {BuildSqlDataType(f)} {BuildNullability(f)}");
+
+                if (!string.IsNullOrWhiteSpace(f.Defaut))
                 {
-                    builder.Append($" DEFAULT {FormatDefaultValue(f)}");
+                    columnBuilder.Append($" DEFAULT {FormatDefaultValue(f)}");
                 }
-                if (f.IsUnique)
+
+                if (f.IsUnique && !f.IsClePrimaire)
                 {
-                    builder.Append(" UNIQUE");
+                    columnBuilder.Append(" UNIQUE");
                 }
-                if (i < fieldList.Count - 1 || fieldList.Any(ff => ff.IsClePrimaire))
-                {
-                    builder.AppendLine(",");
-                }
-                else
-                {
-                    builder.AppendLine();
-                }
+
+                columnDefinitions.Add(columnBuilder.ToString());
+
                 if (f.IsClePrimaire)
                 {
                     pkColumns.Add(f.Libelle);
                 }
+
+                if (!string.IsNullOrWhiteSpace(f.Referentiel))
+                {
+                    foreignKeys.Add($"    CONSTRAINT FK_{table.Libelle}_{f.Libelle} FOREIGN KEY ([{f.Libelle}]) REFERENCES [{f.Referentiel}]([Id])");
+                }
             }
+
             if (pkColumns.Count > 0)
             {
-                builder.AppendLine($"    CONSTRAINT PK_{table.Libelle} PRIMARY KEY ({string.Join(", ", pkColumns.Select(c => $"[{c}]"))})");
+                foreignKeys.Insert(0, $"    CONSTRAINT PK_{table.Libelle} PRIMARY KEY ({string.Join(", ", pkColumns.Select(c => $"[{c}]"))})");
             }
+
+            var allDefinitions = columnDefinitions.Concat(foreignKeys);
+            builder.AppendLine(string.Join(",\n", allDefinitions));
             builder.AppendLine(")");
 
             var createSql = builder.ToString();
