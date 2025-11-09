@@ -296,7 +296,7 @@ namespace Aion.Infrastructure.Seeders
             {
                 designerMenu = new SMenu
                 {
-                    ModuleId = adminModule.Id,
+                    ModuleId = adminModule?.Id,
                     Libelle = "Liste des tables",
                     ParentId = adminRootMenu.Id,
                     Icon = "DatabaseLink20Regular",
@@ -316,7 +316,7 @@ namespace Aion.Infrastructure.Seeders
             {
                 rightsMenu = new SMenu
                 {
-                    ModuleId = rightsModule.Id,
+                    ModuleId = rightsModule?.Id,
                     Libelle = "Gestion des droits",
                     ParentId = adminRootMenu.Id,
                     Icon = "ShieldCheckmark20Regular",
