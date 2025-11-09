@@ -21,3 +21,45 @@
     gap: 0.5rem;
     align-items: center;
 }
+
+/* Conteneur global du body du dialog (optionnel mais propre) */
+.layout-dialog-body {
+    max-width: 900px; /* limite la largeur du contenu */
+    width: 90vw; /* responsive */
+}
+
+/* Zone qui contient la grille : c'est elle qui va scroller si besoin */
+.field-dialog-scroll {
+    overflow-y: auto;
+    max-height: 60vh; /* valeur par défaut sur desktop */
+}
+
+/* Tablette : un peu plus de hauteur dispo */
+@media (max-width: 1024px) {
+    .layout-dialog-body {
+        width: 95vw;
+        max-width: 100%;
+    }
+
+    .field-dialog-scroll {
+        max-height: 55vh;
+    }
+}
+
+/* Mobile : dialog plus large mais un peu moins haut pour laisser respirer */
+@media (max-width: 768px) {
+    .layout-dialog-body {
+        width: 96vw;
+    }
+
+    .field-dialog-scroll {
+        max-height: 50vh;
+    }
+}
+
+/* Très petit écran / smartphone en paysage par ex. */
+@media (max-width: 480px) {
+    .field-dialog-scroll {
+        max-height: 45vh;
+    }
+}

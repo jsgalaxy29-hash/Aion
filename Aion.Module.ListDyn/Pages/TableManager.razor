@@ -3,9 +3,8 @@
 @inject IDbContextFactory<Aion.Infrastructure.AionDbContext> DbFactory
 @inject ITabService Tabs
 
-<PageTitle>Mes tables</PageTitle>
+<FluentLabel Typo="Typography.PageTitle">Mes tables</FluentLabel>
 
-<h1 class="h4 mb-3">Mes tables</h1>
 <FluentTextField Placeholder="Filtrer" @bind-Value="_filter" Class="mb-3" />
 
 @if (_tables is null)

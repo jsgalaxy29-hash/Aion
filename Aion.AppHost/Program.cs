@@ -131,6 +131,10 @@ app.UseAuthorization();
 
 app.UseAntiforgery();
 
+//app.MapControllers();
+//app.MapBlazorHub();
+//app.MapFallbackToPage("/_Host");
+
 // ===== Database Initialization =====
 using (var scope = app.Services.CreateScope())
 {

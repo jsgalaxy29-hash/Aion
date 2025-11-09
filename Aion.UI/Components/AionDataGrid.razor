@@ -105,11 +105,30 @@
                 @foreach (var column in VisibleColumns)
                 {
                     var col = column;
-                    var isSorted = string.Equals(_sortColumn?.FieldName, col.FieldName, StringComparison.OrdinalIgnoreCase);
-                    <TemplateColumn TGridItem="DynamicRow" Sortable="true" >
+                    var sortIndex = _sortDescriptors.FindIndex(s => string.Equals(s.FieldName, col.FieldName, StringComparison.OrdinalIgnoreCase));
+                    var descriptor = sortIndex >= 0 ? _sortDescriptors[sortIndex] : null;
+                    var isSorted = descriptor is not null;
+
+                    <TemplateColumn TGridItem="DynamicRow">
                         <HeaderCellTitleTemplate>
-                            <FluentLabel>@col.DisplayName</FluentLabel>
+                            <FluentButton Appearance="Appearance.Stealth"
+                                          Size="ButtonSize.Small"
+                                          OnClick="@((MouseEventArgs e) => OnColumnHeaderClick(col, e))">
+                                @col.DisplayName
+
+                                @if (isSorted)
+                                {
+                                    <span style="margin-left:4px;">
+                                        @((descriptor!.Descending ? "▼" : "▲"))
+                                        @if (_sortDescriptors.Count > 1)
+                                        {
+                                            <sup>@(sortIndex + 1)</sup> @* ordre de tri : 1,2,3... *@
+                                        }
+                                    </span>
+                                }
+                            </FluentButton>
                         </HeaderCellTitleTemplate>
+
                         <ChildContent Context="row">
                             <div class="grid-cell-content" @ondblclick="@(() => HandleRowDoubleClick(row))">
                                 @if (row.IsEditing)
@@ -192,38 +211,49 @@
                   Modal="true"
                   TrapFocus="true"
                   @ondialogdismiss="OnLayoutEditorDismiss">
+
         <FluentDialogHeader>
             <FluentLabel Typo="Typography.H5">Personnalisation de la grille</FluentLabel>
         </FluentDialogHeader>
-        <FluentDialogBody>
-            <FluentStack Orientation="Orientation.Vertical" VerticalGap="12">
-                <FluentStack Orientation="Orientation.Vertical" VerticalGap="4">
-                    <FluentLabel>Éléments par page</FluentLabel>
-                    <FluentNumberField TValue="int"
-                                       Min="5"
-                                       Max="200"
-                                       Value="@_pageSizeDraft"
-                                       ValueChanged="@((int value) => _pageSizeDraft = value)" />
-                </FluentStack>
 
-                <FluentDataGrid Items="@_columnsDraft.AsQueryable()" TGridItem="DynamicColumnDefinition">
-                    <PropertyColumn Property="@(c => c.DisplayName)" Title="Colonne" />
-                    <TemplateColumn Title="Visible">
-                        <ChildContent Context="column">
-                            <FluentCheckbox @bind-Value="column.Visible" />
-                        </ChildContent>
-                    </TemplateColumn>
-                    <TemplateColumn Title="Ordre">
-                        <ChildContent Context="column">
-                            <FluentNumberField TValue="int"
-                                               Value="@column.Order"
-                                               ValueChanged="@((int value) => column.Order = value)"
-                                               Style="width: 80px;" />
-                        </ChildContent>
-                    </TemplateColumn>
-                </FluentDataGrid>
-            </FluentStack>
+        <FluentDialogBody>
+            <div class="layout-dialog-body">
+                <FluentStack Orientation="Orientation.Vertical" VerticalGap="12">
+                    <FluentStack Orientation="Orientation.Vertical" VerticalGap="4">
+                        <FluentLabel>Éléments par page</FluentLabel>
+                        <FluentNumberField TValue="int"
+                                           Min="5"
+                                           Max="200"
+                                           Value="@_pageSizeDraft"
+                                           ValueChanged="@((int value) => _pageSizeDraft = value)" />
+                    </FluentStack>
+
+                    @* 👉 Zone scrollable responsive *@
+                    <div class="field-dialog-scroll">
+                        <FluentDataGrid Items="@_columnsDraft.AsQueryable()"
+                                        TGridItem="DynamicColumnDefinition"
+                                        Style="min-width:100%;">
+                            <PropertyColumn Property="@(c => c.DisplayName)" Title="Colonne" />
+                            <TemplateColumn Title="Visible">
+                                <ChildContent Context="column">
+                                    <FluentCheckbox @bind-Value="column.Visible" />
+                                </ChildContent>
+                            </TemplateColumn>
+
+                            <TemplateColumn Title="Ordre">
+                                <ChildContent Context="column">
+                                    <FluentNumberField TValue="int"
+                                                       Value="@column.Order"
+                                                       ValueChanged="@((int value) => column.Order = value)"
+                                                       Style="width: 80px;" />
+                                </ChildContent>
+                            </TemplateColumn>
+                        </FluentDataGrid>
+                    </div>
+                </FluentStack>
+            </div>
         </FluentDialogBody>
+
         <FluentDialogFooter>
             <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8">
                 <FluentButton Appearance="Appearance.Accent" OnClick="SaveLayoutAsync">Sauvegarder</FluentButton>
@@ -231,6 +261,8 @@
             </FluentStack>
         </FluentDialogFooter>
     </FluentDialog>
+
+
 </div>
 
 @code {
@@ -250,8 +282,6 @@
     private readonly List<DynamicRow> _viewRows = new();
     private readonly List<DynamicColumnDefinition> _searchableColumns = new();
 
-    private DynamicColumnDefinition? _sortColumn;
-    private bool _sortDescending;
     private bool _isLoading = true;
     private int _page = 1;
     private int _pageSize = 20;
@@ -262,11 +292,83 @@
     private string? _loadedTableName;
     private FluentDialog? _layoutEditorDialog;
     private bool _layoutEditorOpen;
+    
+    private sealed class SortDescriptor
+    {
+        public string FieldName { get; set; } = string.Empty;
+        public bool Descending { get; set; }
+    }
+    private readonly List<SortDescriptor> _sortDescriptors = new();
 
     private bool LayoutEditorHidden
     {
         get => !_layoutEditorOpen;
         set => _layoutEditorOpen = !value;
+    }
+
+    private void OnColumnHeaderClick(DynamicColumnDefinition column, MouseEventArgs e)
+    {
+        var multi = e.CtrlKey || e.ShiftKey; // clic simple = mono-tri, Ctrl/Shift+clic = multi-tri
+
+        if (!multi)
+        {
+            // Mono-tri : soit on inverse sur la même colonne, soit on repart de zéro
+            var existing = _sortDescriptors.FirstOrDefault(s =>
+                string.Equals(s.FieldName, column.FieldName, StringComparison.OrdinalIgnoreCase));
+
+            if (existing != null && _sortDescriptors.Count == 1)
+            {
+                existing.Descending = !existing.Descending;
+            }
+            else
+            {
+                _sortDescriptors.Clear();
+                _sortDescriptors.Add(new SortDescriptor
+                {
+                    FieldName = column.FieldName,
+                    Descending = false
+                });
+            }
+        }
+        else
+        {
+            // Multi-tri (Ctrl/Shift) : on ajoute ou on inverse uniquement cette colonne
+            var existing = _sortDescriptors.FirstOrDefault(s =>
+                string.Equals(s.FieldName, column.FieldName, StringComparison.OrdinalIgnoreCase));
+
+            if (existing != null)
+            {
+                existing.Descending = !existing.Descending;
+            }
+            else
+            {
+                _sortDescriptors.Add(new SortDescriptor
+                {
+                    FieldName = column.FieldName,
+                    Descending = false
+                });
+            }
+        }
+
+        _page = 1;
+        ApplyFilters();
+    }
+
+    /// <summary>
+    /// Comparaison tolérante pour object? : gère null, IComparable, string, etc.
+    /// </summary>
+    private int CompareValues(object? x, object? y)
+    {
+        if (ReferenceEquals(x, y)) return 0;
+        if (x is null) return -1;
+        if (y is null) return 1;
+
+        // Si les types sont comparables directement
+        if (x is IComparable cx && x.GetType() == y.GetType())
+            return cx.CompareTo(y);
+
+        // Fallback : comparaison en string
+        return string.Compare(x.ToString(), y.ToString(), StringComparison.CurrentCultureIgnoreCase);
     }
 
     private void OpenLayoutEditor()
@@ -315,8 +417,7 @@
         _rows.Clear();
         _searchValues.Clear();
         _searchableColumns.Clear();
-        _sortColumn = null;
-        _sortDescending = false;
+        _sortDescriptors.Clear();
         StateHasChanged();
 
         if (string.IsNullOrWhiteSpace(TableName))
@@ -405,6 +506,7 @@
         }
     }
 
+
     private async Task LoadLayoutAsync()
     {
         try
@@ -421,9 +523,28 @@
                         column.Order = persisted.Order;
                     }
                 }
+
                 if (layout.PageSize > 0)
                 {
                     _pageSize = layout.PageSize;
+                }
+
+                // 👉 Nouveau : restaurer le multi-tri
+                _sortDescriptors.Clear();
+                if (layout.Sorts != null && layout.Sorts.Count > 0)
+                {
+                    foreach (var s in layout.Sorts.OrderBy(s => s.Order))
+                    {
+                        // Ne conserver que les colonnes qui existent encore
+                        if (_columns.Any(c => string.Equals(c.FieldName, s.FieldName, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            _sortDescriptors.Add(new SortDescriptor
+                            {
+                                FieldName = s.FieldName,
+                                Descending = s.Descending
+                            });
+                        }
+                    }
                 }
             }
         }
@@ -438,6 +559,7 @@
             _pageSizeDraft = _pageSize;
         }
     }
+
 
     private async Task LoadDataAsync()
     {
@@ -490,12 +612,38 @@
             query = query.Where(row => FilterRow(row, column, kvp.Value!));
         }
 
-        if (_sortColumn is not null)
+        if (_sortDescriptors.Count > 0)
         {
-            query = _sortDescending
-                ? query.OrderByDescending(row => row.GetValue(_sortColumn.FieldName))
-                : query.OrderBy(row => row.GetValue(_sortColumn.FieldName));
+            var comparer = Comparer<object?>.Create(CompareValues);
+
+            IOrderedEnumerable<DynamicRow>? ordered = null;
+
+            foreach (var sd in _sortDescriptors)
+            {
+                var fieldName = sd.FieldName;
+
+                Func<DynamicRow, object?> keySelector = row => row.GetValue(fieldName);
+
+                if (ordered == null)
+                {
+                    ordered = sd.Descending
+                        ? query.OrderByDescending(keySelector, comparer)
+                        : query.OrderBy(keySelector, comparer);
+                }
+                else
+                {
+                    ordered = sd.Descending
+                        ? ordered.ThenByDescending(keySelector, comparer)
+                        : ordered.ThenBy(keySelector, comparer);
+                }
+            }
+
+            if (ordered != null)
+            {
+                query = ordered;
+            }
         }
+
 
         var result = query.ToList();
         _filteredCount = result.Count;
@@ -571,20 +719,6 @@
             "ends" => str.EndsWith(filterValue, StringComparison.OrdinalIgnoreCase),
             _ => str.Contains(filterValue, StringComparison.OrdinalIgnoreCase)
         };
-    }
-
-    private void SortBy(DynamicColumnDefinition column)
-    {
-        if (_sortColumn == column)
-        {
-            _sortDescending = !_sortDescending;
-        }
-        else
-        {
-            _sortColumn = column;
-            _sortDescending = false;
-        }
-        ApplyFilters();
     }
 
     private void OnSearchChanged(string fieldName, string? value)
@@ -901,11 +1035,21 @@
                 FieldName = c.FieldName,
                 Visible = c.Visible,
                 Order = c.Order
-            }).ToList()
+            }).ToList(),
+
+            // 👉 Nouveau : enregistrer les tris courants
+            Sorts = _sortDescriptors
+                .Select((sd, index) => new DynamicGridSortLayout
+                {
+                    FieldName = sd.FieldName,
+                    Order = index,
+                    Descending = sd.Descending
+                }).ToList()
         };
 
         await LayoutStore.SaveLayoutAsync(TableName, UserContext.TenantId, UserContext.UserId, layout, CancellationToken.None);
 
+        // Colonnes comme avant
         foreach (var draft in _columnsDraft)
         {
             var column = _columns.FirstOrDefault(c => string.Equals(c.FieldName, draft.FieldName, StringComparison.OrdinalIgnoreCase));
@@ -922,6 +1066,7 @@
         _page = 1;
         ApplyFilters();
     }
+
 
     private void PrepareLayoutDraft()
     {

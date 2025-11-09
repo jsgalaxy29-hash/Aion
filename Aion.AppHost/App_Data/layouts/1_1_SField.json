@@ -10,54 +10,54 @@
     {
       "fieldName": "Alias",
       "visible": true,
-      "order": 0,
+      "order": 2,
       "width": null
     },
     {
       "fieldName": "Commentaire",
       "visible": true,
-      "order": 0,
+      "order": 89,
       "width": null
     },
     {
       "fieldName": "CoordonneeLabelX",
       "visible": true,
-      "order": 0,
+      "order": 90,
       "width": null
     },
     {
       "fieldName": "CoordonneeLabelY",
       "visible": true,
-      "order": 0,
+      "order": 91,
       "width": null
     },
     {
       "fieldName": "CoordonneeX",
       "visible": true,
-      "order": 0,
+      "order": 92,
       "width": null
     },
     {
       "fieldName": "CoordonneeY",
       "visible": true,
-      "order": 0,
+      "order": 93,
       "width": null
     },
     {
       "fieldName": "DataType",
       "visible": true,
-      "order": 0,
+      "order": 3,
       "width": null
     },
     {
       "fieldName": "Defaut",
       "visible": true,
-      "order": 0,
+      "order": 4,
       "width": null
     },
     {
       "fieldName": "Deleted",
-      "visible": true,
+      "visible": false,
       "order": 0,
       "width": null
     },
@@ -87,14 +87,14 @@
     },
     {
       "fieldName": "Echelle",
-      "visible": true,
+      "visible": false,
       "order": 0,
       "width": null
     },
     {
       "fieldName": "Format",
       "visible": true,
-      "order": 0,
+      "order": 5,
       "width": null
     },
     {
@@ -106,103 +106,103 @@
     {
       "fieldName": "IsClePrimaire",
       "visible": true,
-      "order": 0,
+      "order": 1,
       "width": null
     },
     {
       "fieldName": "IsHistorise",
       "visible": true,
-      "order": 0,
+      "order": 7,
       "width": null
     },
     {
       "fieldName": "IsLinkToBdd",
       "visible": true,
-      "order": 0,
+      "order": 8,
       "width": null
     },
     {
       "fieldName": "IsNulleable",
       "visible": true,
-      "order": 0,
+      "order": 6,
       "width": null
     },
     {
       "fieldName": "IsSearch",
       "visible": true,
-      "order": 0,
+      "order": 9,
       "width": null
     },
     {
       "fieldName": "IsUnique",
       "visible": true,
-      "order": 0,
+      "order": 10,
       "width": null
     },
     {
       "fieldName": "IsVisible",
       "visible": true,
-      "order": 0,
+      "order": 11,
       "width": null
     },
     {
       "fieldName": "Libelle",
       "visible": true,
-      "order": 0,
+      "order": 1,
       "width": null
     },
     {
       "fieldName": "Masque",
       "visible": true,
-      "order": 0,
+      "order": 12,
       "width": null
     },
     {
       "fieldName": "Max",
       "visible": true,
-      "order": 0,
+      "order": 13,
       "width": null
     },
     {
       "fieldName": "Min",
       "visible": true,
-      "order": 0,
+      "order": 14,
       "width": null
     },
     {
       "fieldName": "Nullable",
-      "visible": true,
+      "visible": false,
       "order": 0,
       "width": null
     },
     {
       "fieldName": "Ordre",
       "visible": true,
-      "order": 0,
+      "order": 15,
       "width": null
     },
     {
       "fieldName": "Precision",
-      "visible": true,
+      "visible": false,
       "order": 0,
       "width": null
     },
     {
       "fieldName": "Referentiel",
       "visible": true,
-      "order": 0,
+      "order": 16,
       "width": null
     },
     {
       "fieldName": "ReferentielWhereClause",
       "visible": true,
-      "order": 0,
+      "order": 17,
       "width": null
     },
     {
       "fieldName": "Regex",
       "visible": true,
-      "order": 0,
+      "order": 18,
       "width": null
     },
     {
@@ -214,13 +214,13 @@
     {
       "fieldName": "SearchDefautValue",
       "visible": true,
-      "order": 0,
+      "order": 19,
       "width": null
     },
     {
       "fieldName": "SearchOperator",
       "visible": true,
-      "order": 0,
+      "order": 20,
       "width": null
     },
     {
@@ -232,12 +232,12 @@
     {
       "fieldName": "Taille",
       "visible": true,
-      "order": 0,
+      "order": 2,
       "width": null
     },
     {
       "fieldName": "TenantId",
-      "visible": true,
+      "visible": false,
       "order": 0,
       "width": null
     },
@@ -262,14 +262,21 @@
     {
       "fieldName": "ValidationScript",
       "visible": true,
-      "order": 0,
+      "order": 23,
       "width": null
     },
     {
       "fieldName": "ValidationYaml",
       "visible": true,
-      "order": 0,
+      "order": 24,
       "width": null
+    }
+  ],
+  "sorts": [
+    {
+      "fieldName": "TableId",
+      "order": 0,
+      "descending": false
     }
   ]
 }

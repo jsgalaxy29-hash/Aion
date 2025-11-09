@@ -4,16 +4,13 @@
 @using Aion.Domain.UI
 @inject ITabService Tabs
 
-<FluentTabs 
+<FluentTabs Orientation="Orientation.Horizontal" 
             ActiveTabId="@SelectedTabId"
-            OnTabClose="@ClosedTab"
-            OnTabChange="OnTabChange" Class="w-100" ShowClose="true" >
+            OnTabClose="@ClosedTab"  
+            OnTabChange="OnTabChange" ShowClose="true" >
     @foreach (var tab in Tabs.Tabs)
     {
-        <FluentTab Id="@GetTabHtmlId(tab.Id)"    
-                   Label="@tab.Title"
-                   Data="@tab" >
-        </FluentTab>
+        <FluentTab Id="@GetTabHtmlId(tab.Id)" Label="@tab.Title" Data="@tab" />
     }
 </FluentTabs>
 

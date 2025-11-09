@@ -5,10 +5,8 @@
 @inject IDataEngine DataEngine
 @inject IUserContext UserContext
 
-<PageTitle>Designer de métadonnées</PageTitle>
 
-
-<FluentLabel Typo="Typography.H1">Designer de métadonnées</FluentLabel>
+<FluentLabel Typo="Typography.PageTitle">Designer de métadonnées</FluentLabel>
 
 @if (!string.IsNullOrEmpty(_errorMessage))
 {
@@ -23,7 +21,7 @@
 {
     <div class="d-flex align-items-center gap-2">
         <FluentProgressRing />
-        <span>Chargement des métadonnées...</span>
+        <FluentLabel Typo="Typography.Subject">Chargement des métadonnées...</FluentLabel>
     </div>
 }
 else
@@ -36,7 +34,7 @@ else
 
             @if (_tables.Count == 0)
             {
-                <div class="text-muted small">Aucune table définie pour le moment.</div>
+                <FluentLabel class="text-muted small" Typo="Typography.Body">Designer de métadonnées</FluentLabel>
             }
             else
             {
@@ -54,9 +52,9 @@ else
         <div class="catalog-content">
             @if (_currentTable is null)
             {
-                <div class="text-muted">
+                <FluentLabel class="text-muted" Typo="Typography.Body">
                     Sélectionnez une table à gauche ou créez-en une nouvelle pour commencer.
-                </div>
+                </FluentLabel>
             }
             else
             {
@@ -65,40 +63,40 @@ else
                     <ValidationSummary />
 
                     <fieldset class="mb-4">
-                        <legend>Table</legend>
+                        <FluentLabel>Table</FluentLabel>
                         <div class="form-grid">
-                            <label>Nom interne *</label>
+                            <FluentLabel>Nom interne *</FluentLabel>
                             <InputText @bind-Value="_currentTable.Libelle" class="form-control" />
                             <ValidationMessage For="() => _currentTable.Libelle" />
 
-                            <label>Description</label>
+                            <FluentLabel>Description</FluentLabel>
                             <InputTextArea @bind-Value="_currentTable.Description" class="form-control" />
 
-                            <label>Type</label>
+                            <FluentLabel>Type</FluentLabel>
                             <InputText @bind-Value="_currentTable.Type" class="form-control" />
 
-                            <label>Table parente</label>
+                            <FluentLabel>Table parente</FluentLabel>
                             <InputText @bind-Value="_currentTable.Parent" class="form-control" />
 
-                            <label>Champ de liaison parent</label>
+                            <FluentLabel>Champ de liaison parent</FluentLabel>
                             <InputText @bind-Value="_currentTable.ParentLiaison" class="form-control" />
 
-                            <label>Libellé référentiel</label>
+                            <FluentLabel>Libellé référentiel</FluentLabel>
                             <InputText @bind-Value="_currentTable.ReferentielLibelle" class="form-control" />
                         </div>
                         <div class="mt-3 d-flex flex-wrap gap-3">
-                            <label class="form-check">
+                            <FluentLabel class="form-check">
                                 <InputCheckbox @bind-Value="_currentTable.IsHistorise" class="form-check-input" />
-                                <span class="form-check-label">Historiser les changements</span>
-                            </label>
-                            <label class="form-check">
+                                <FluentLabel class="form-check-label">Historiser les changements</FluentLabel>
+                            </FluentLabel>
+                            <FluentLabel class="form-check">
                                 <InputCheckbox @bind-Value="_currentTable.Actif" class="form-check-input" />
-                                <span class="form-check-label">Actif</span>
-                            </label>
-                            <label class="form-check">
+                                <FluentLabel class="form-check-label">Actif</FluentLabel>
+                            </FluentLabel>
+                            <FluentLabel class="form-check">
                                 <InputCheckbox @bind-Value="_currentTable.Doc" class="form-check-input" />
-                                <span class="form-check-label">Documents liés</span>
-                            </label>
+                                <FluentLabel class="form-check-label">Documents liés</FluentLabel>
+                            </FluentLabel>
                         </div>
                         <div class="mt-3 d-flex flex-wrap gap-2">
                             <FluentButton Appearance="Appearance.Accent" Type="ButtonType.Submit">Enregistrer la table</FluentButton>
@@ -121,11 +119,11 @@ else
 
                     @if (_currentTable.Id == 0)
                     {
-                        <div class="alert alert-info">Enregistrez la table avant d'ajouter des champs.</div>
+                        <FluentLabel class="alert alert-info">Enregistrez la table avant d'ajouter des champs.</FluentLabel>
                     }
                     else if (_fields.Count == 0)
                     {
-                        <div class="text-muted">Aucun champ défini pour cette table.</div>
+                        <FluentLabel class="text-muted">Aucun champ défini pour cette table.</FluentLabel>
                     }
                     else
                     {
@@ -202,23 +200,23 @@ else
                                 <div class="mt-3 d-flex flex-wrap gap-3">
                                     <FluentLabel class="form-check">
                                         <InputCheckbox @bind-Value="_currentField.IsNulleable" class="form-check-input" />
-                                        <span class="form-check-label">Nullable</span>
+                                        <FluentLabel class="form-check-label">Nullable</FluentLabel>
                                     </FluentLabel>
                                     <FluentLabel class="form-check">
                                         <InputCheckbox @bind-Value="_currentField.IsClePrimaire" class="form-check-input" />
-                                        <span class="form-check-label">Clé primaire</span>
+                                        <FluentLabel class="form-check-label">Clé primaire</FluentLabel>
                                     </FluentLabel>
                                     <FluentLabel class="form-check">
                                         <InputCheckbox @bind-Value="_currentField.IsUnique" class="form-check-input" />
-                                        <span class="form-check-label">Unique</span>
+                                        <FluentLabel class="form-check-label">Unique</FluentLabel>
                                     </FluentLabel>
                                     <FluentLabel class="form-check">
                                         <InputCheckbox @bind-Value="_currentField.IsVisible" class="form-check-input" />
-                                        <span class="form-check-label">Visible</span>
+                                        <FluentLabel class="form-check-label">Visible</FluentLabel>
                                     </FluentLabel>
                                     <FluentLabel class="form-check">
                                         <InputCheckbox @bind-Value="_currentField.IsHistorise" class="form-check-input" />
-                                        <span class="form-check-label">Historiser</span>
+                                        <FluentLabel class="form-check-label">Historiser</FluentLabel>
                                     </FluentLabel>
                                 </div>
                                 <div class="mt-3 d-flex gap-2">

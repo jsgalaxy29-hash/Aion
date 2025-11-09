@@ -9,24 +9,29 @@
 @inject IAionThemeService ThemeService
 @implements IDisposable
 
-<FluentDesignTheme Mode="@ThemeService.Current.Mode" 
-    NeutralBaseColor="@ThemeService.Current.NeutralBaseColor"
+<FluentDesignTheme Mode="@ThemeService.Current.Mode"
+                   NeutralBaseColor="@ThemeService.Current.NeutralBaseColor"
                    OfficeColor="@ThemeService.Current.OfficeColor"
-                   CustomColor="@ThemeService.Current.CustomColor" >
-               
-    <FluentStack Horizontal="true" Style="height:100vh" >
-        <!-- Outlook bar (menu) -->
-        <div class="p-2" style="width:260px; overflow:auto">
+                   CustomColor="@ThemeService.Current.CustomColor">
+
+    @* Conteneur horizontal plein écran *@
+    <FluentStack Horizontal="true" Style="height:100vh; max-height:100vh;">
+
+        @* Outlook bar (menu) *@
+        <div class="p-2" style="flex:0 0 260px; width:260px; overflow:auto;">
             @if (_authState?.User.Identity?.IsAuthenticated == true)
             {
                 <OutlookBar />
             }
         </div>
+
         <FluentDivider Vertical="true" />
-        <!-- Main content area -->
-        <div class="flex-grow p-2 overflow-auto"   >
+
+        @* Zone principale qui prend tout le reste *@
+        <div style="flex:1; min-width:0; height:100%; display:flex; flex-direction:column; overflow-x:auto;">
             @if (_authState?.User.Identity?.IsAuthenticated == true)
             {
+                @* TabHost peut maintenant occuper 100% de la zone principale *@
                 <TabHost />
             }
             else
@@ -34,16 +39,23 @@
                 @Body
             }
         </div>
-        <!-- Simple header with user info and sign out -->
+
+        @* Header fixe en haut à droite *@
         <div class="position-fixed top-0 end-0 p-2" style="z-index:1000">
             @if (_authState?.User.Identity?.IsAuthenticated == true)
             {
                 <div class="d-flex gap-2 align-items-center">
-                    <FluentSelect TOption="string" Value="_selectedTheme" ValueChanged="OnThemeSelectionChanged" Style="min-width: 140px;">
+                    <FluentSelect TOption="string"
+                                  Value="_selectedTheme"
+                                  ValueChanged="OnThemeSelectionChanged"
+                                  Style="min-width: 140px;">
                         <FluentOption Value="light">Thème clair</FluentOption>
                         <FluentOption Value="dark">Thème sombre</FluentOption>
                     </FluentSelect>
-                    <FluentButton OnClick="Logout">Se déconnecter (@_authState.User.Identity?.Name)</FluentButton>
+
+                    <FluentButton OnClick="Logout">
+                        Se déconnecter (@_authState.User.Identity?.Name)
+                    </FluentButton>
                 </div>
             }
         </div>
@@ -100,3 +112,4 @@
         ThemeService.ThemeChanged -= OnThemeChanged;
     }
 }
+
