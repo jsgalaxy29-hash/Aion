@@ -66,6 +66,7 @@ public class AgendaReminderWorker : BackgroundService
         await using var db = await dbFactory.CreateDbContextAsync(ct).ConfigureAwait(false);
 
         var reminders = await db.SAgendaReminders
+            .IgnoreQueryFilters()
             .Include(r => r.AgendaEvent)
             .Where(r => !r.Deleted && !r.IsSent && r.TriggerAtUtc <= nowUtc)
             .ToListAsync(ct)

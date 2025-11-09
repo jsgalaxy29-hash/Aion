@@ -29,6 +29,7 @@ public class NotificationService(IDbContextFactory<AionDbContext> dbContextFacto
         await using var db = await _dbContextFactory.CreateDbContextAsync(ct);
 
         var evt = await db.SAgendaEvents
+            .IgnoreQueryFilters()
             .Include(e => e.Agenda)
             .FirstOrDefaultAsync(e => e.Id == reminder.AgendaEventId, ct)
             .ConfigureAwait(false);
@@ -39,6 +40,7 @@ public class NotificationService(IDbContextFactory<AionDbContext> dbContextFacto
         }
 
         var notificationTypeId = await db.RNotificationTypes
+            .IgnoreQueryFilters()
             .Where(t => t.Code == "AGENDA_REMINDER")
             .Select(t => (int?)t.Id)
             .FirstOrDefaultAsync(ct)
