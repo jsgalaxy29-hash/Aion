@@ -144,6 +144,8 @@ public class AgendaService(IDbContextFactory<AionDbContext> dbContextFactory) : 
         var events = await db.SAgendaEvents
             .Include(e => e.Reminders)
             .Where(e => accessibleAgendaIds.Contains(e.AgendaId)
+                && !e.Deleted
+                && e.Actif
                 && e.StartUtc < toUtc
                 && e.EndUtc >= fromUtc)
             .AsNoTracking()
