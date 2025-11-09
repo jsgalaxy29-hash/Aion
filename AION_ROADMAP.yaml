@@ -7,9 +7,9 @@ aion:
   conventions:
     environments: "agnostic"
     naming:
-      system_tables_prefix: "S_"
-      reference_tables_prefix: "R_"
-      feature_tables_prefix: "F_"
+      system_tables_prefix: "S"
+      reference_tables_prefix: "R"
+      feature_tables_prefix: "F"
     menus:
       id_strategy: "code"          # Pas de plages numériques; l’engine génère un ID interne
       code_format: "[A-Z0-9_]+"
@@ -26,7 +26,7 @@ aion:
     security:
       multi_tenant:
         enabled: true
-        tenant_table: "S_Tenant"
+        tenant_table: "STenant"
         tenant_key_name: "TenantId"
         enforce_on:
           - scope: "all_feature_tables"
@@ -67,9 +67,9 @@ aion:
       - name: "SMenu"
       - name: "STable"
       - name: "SField"
-      - name: "S_Module"
-      - name: "S_Action"
-      - name: "S_Tenant"     # requis par multi-tenant
+      - name: "SModule"
+      - name: "SAction"
+      - name: "STenant"     # requis par multi-tenant
     rules:
       tenant_required_on_feature_tables: true
       seed:
@@ -105,8 +105,8 @@ aion:
         - "SMenu"
         - "STable"
         - "SField"
-        - "S_Module"
-        - "S_Action"
+        - "SModule"
+        - "SAction"
       rights:
         defaults:
           group: "Administrators"
@@ -130,7 +130,7 @@ aion:
         - "SUserGroup"
         - "SRightType"
         - "SRight"
-        - "S_Tenant"
+        - "STenant"
 
     - code: "DATA_ENGINE"
       name: "Moteur de données"

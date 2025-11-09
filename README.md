@@ -176,7 +176,7 @@ modules:
         icon: "BoxMultiple"
     
     tables:
-      - name: "F_Product"
+      - name: "FProduct"
         fields:
           - name: "Reference"
             type: "string"
@@ -230,8 +230,8 @@ dotnet run --verbosity detailed
 | `SMenu` | Menus de navigation |
 | `STable` | Métadonnées tables |
 | `SField` | Métadonnées colonnes |
-| `S_Module` | Modules métiers |
-| `S_Action` | Actions système |
+| `SModule` | Modules métiers |
+| `SAction` | Actions système |
 
 ---
 
