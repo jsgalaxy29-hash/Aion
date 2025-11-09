@@ -95,6 +95,13 @@ namespace Aion.DataEngine.Services
             Console.WriteLine("   ✅ Module Agenda initialisé");
         }
 
+        public async Task EnsureAdminDefaultAgendaAsync()
+        {
+            Console.WriteLine("👤 Vérification de l'agenda par défaut administrateur...");
+            await _db.ExecuteNonQueryAsync(SqlEnsureAdminDefaultAgenda());
+            Console.WriteLine("   ✅ Agenda par défaut administrateur synchronisé");
+        }
+
         #region SQL Builders
 
         private static string SqlSecurityCreate() => @"
@@ -1177,6 +1184,48 @@ WHEN MATCHED THEN
 WHEN NOT MATCHED THEN
   INSERT(ActionId, Libelle, CronExpression, NextRunUtc, LastRunUtc, StatusId, ParametersJson, LastError, TenantId, Actif, Doc, Deleted, DtCreation)
   VALUES(source.ActionId, source.Libelle, source.CronExpression, DATEADD(MINUTE, 1, GETUTCDATE()), NULL, COALESCE(source.StatusId, @activeStatus), NULL, NULL, 1, 1, 0, 0, GETUTCDATE());
+";
+
+        private static string SqlEnsureAdminDefaultAgenda() => @"
+-- ===== AGENDA PAR DÉFAUT POUR L'ADMINISTRATEUR =====
+
+DECLARE @adminUserId INT = (
+    SELECT TOP 1 ID
+    FROM dbo.SUser
+    WHERE NormalizedUserName = 'ADMIN'
+    ORDER BY ID
+);
+
+IF @adminUserId IS NOT NULL
+BEGIN
+    DECLARE @defaultAgendaId INT = (
+        SELECT TOP 1 ID
+        FROM dbo.SAgenda
+        WHERE OwnerUserId = @adminUserId AND IsDefault = 1 AND Deleted = 0
+        ORDER BY ID
+    );
+
+    IF @defaultAgendaId IS NULL
+    BEGIN
+        INSERT INTO dbo.SAgenda(
+            Libelle, OwnerUserId, IsShared, Color, TimeZoneId, IsDefault,
+            TenantId, Actif, Doc, Deleted, DtCreation, UsrCreationId)
+        VALUES('Agenda administrateur', @adminUserId, 0, NULL, 'Europe/Paris', 1,
+               1, 1, 0, 0, GETUTCDATE(), @adminUserId);
+        SET @defaultAgendaId = SCOPE_IDENTITY();
+    END
+
+    IF NOT EXISTS(SELECT 1 FROM dbo.SAgendaUser WHERE AgendaId = @defaultAgendaId AND UserId = @adminUserId)
+    BEGIN
+        INSERT INTO dbo.SAgendaUser(
+            AgendaId, UserId, CanEdit, CanViewPrivate, TenantId, Actif, Doc, Deleted, DtCreation, UsrCreationId)
+        VALUES(@defaultAgendaId, @adminUserId, 1, 1, 1, 1, 0, 0, GETUTCDATE(), @adminUserId);
+    END
+END
+ELSE
+BEGIN
+    PRINT '⚠️ Aucun utilisateur ADMIN trouvé pour créer un agenda par défaut.';
+END
 ";
 
         #endregion

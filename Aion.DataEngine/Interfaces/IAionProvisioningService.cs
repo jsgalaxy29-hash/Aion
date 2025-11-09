@@ -17,5 +17,6 @@ namespace Aion.DataEngine.Interfaces
         Task SeedAgendaReferentialsAsync();
         Task SeedAgendaSystemScheduledActionsAsync();
         Task EnsureAgendaModuleAsync();
+        Task EnsureAdminDefaultAgendaAsync();
     }
 }

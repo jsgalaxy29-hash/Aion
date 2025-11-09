@@ -61,6 +61,7 @@ namespace Aion.Infrastructure.Startup
                 // ====== PHASE 2 : Données de sécurité via EF Core ======
                 _logger.LogInformation("🔐 Phase 2 : Seed des données de sécurité...");
                 await SecuritySeeder.SeedAsync(securityDb);
+                await _provisioning.EnsureAdminDefaultAgendaAsync();
                 _logger.LogInformation("✅ Données de sécurité créées");
 
                 // ====== PHASE 3 : Droits par défaut sur les menus ======
