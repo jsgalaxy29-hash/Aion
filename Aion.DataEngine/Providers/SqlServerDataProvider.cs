@@ -114,18 +114,40 @@ namespace Aion.Infrastructure.Data
 
                 if (!string.IsNullOrWhiteSpace(databaseName))
                 {
-                    var masterBuilder = new SqlConnectionStringBuilder(_connectionString)
+                    var databaseExists = false;
+
+                    try
                     {
-                        InitialCatalog = "master"
-                    };
+                        await using (var connection = new SqlConnection(_connectionString))
+                        {
+                            await connection.OpenAsync().ConfigureAwait(false);
+                        }
 
-                    await using var connection = new SqlConnection(masterBuilder.ConnectionString);
-                    await connection.OpenAsync().ConfigureAwait(false);
+                        databaseExists = true;
+                    }
+                    catch (SqlException ex) when (ex.Number == 4060)
+                    {
+                        // The configured database does not exist. Continue to creation logic.
+                    }
 
-                    var commandText = "IF DB_ID(@databaseName) IS NULL BEGIN CREATE DATABASE [" + databaseName + "] END;";
-                    using var command = new SqlCommand(commandText, connection);
-                    command.Parameters.AddWithValue("@databaseName", databaseName);
-                    await command.ExecuteNonQueryAsync().ConfigureAwait(false);
+                    if (!databaseExists)
+                    {
+                        var masterBuilder = new SqlConnectionStringBuilder(_connectionString)
+                        {
+                            InitialCatalog = "master"
+                        };
+
+                        await using var connection = new SqlConnection(masterBuilder.ConnectionString);
+                        await connection.OpenAsync().ConfigureAwait(false);
+
+                        var commandText = "IF DB_ID(@databaseName) IS NULL BEGIN CREATE DATABASE [" + databaseName + "] END;";
+                        using var command = new SqlCommand(commandText, connection);
+                        command.Parameters.AddWithValue("@databaseName", databaseName);
+                        await command.ExecuteNonQueryAsync().ConfigureAwait(false);
+                    }
+
+                    _databaseInitialized = true;
+                    return;
                 }
                 else if (!string.IsNullOrWhiteSpace(builder.AttachDBFilename))
                 {
