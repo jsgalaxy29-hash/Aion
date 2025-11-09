@@ -444,6 +444,10 @@ else
         {
             return;
         }
+    }
+
+        _isSaving = true;
+        _errorMessage = null;
 
         _isSaving = true;
         _errorMessage = null;
@@ -591,6 +595,7 @@ else
         {
             return;
         }
+    }
 
         await LoadEventForEditAsync(id);
     }
