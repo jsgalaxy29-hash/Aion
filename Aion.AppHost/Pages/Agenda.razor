@@ -48,7 +48,7 @@ else
                 <FluentStack Orientation="Orientation.Vertical" VerticalGap="12">
                     <FluentLabel Typo="Typography.H5">Agendas</FluentLabel>
 
-                    <FluentRadioGroup Value="@_selectedAgendaKey" ValueChanged="OnAgendaChanged" Orientation="Orientation.Vertical">
+                    <FluentRadioGroup Value="@_selectedAgendaKey" ValueChanged="@OnAgendaChanged" Orientation="Orientation.Vertical">
                         @foreach (var agenda in _agendas)
                         {
                             <FluentRadio Value="@agenda.Id.ToString()">
@@ -57,7 +57,7 @@ else
                         }
                     </FluentRadioGroup>
 
-                    <FluentButton Appearance="Appearance.Accent" OnClick="OpenCreateDialog">
+                    <FluentButton Appearance="Appearance.Accent" OnClick="@OpenCreateDialogAsync">
                         ➕ Nouvel événement
                     </FluentButton>
                 </FluentStack>
@@ -75,8 +75,8 @@ else
                         @foreach (var evt in UpcomingEvents)
                         {
                             <FluentStack Orientation="Orientation.Vertical" Class="agenda-upcoming-item">
-                                <FluentLabel Typo="Typography.BodyStrong">@evt.Libelle</FluentLabel>
-                                <FluentLabel Typo="Typography.Caption">@evt.StartUtc.ToLocalTime():g</FluentLabel>
+                                <FluentLabel Typo="Typography.Body">@evt.Libelle</FluentLabel>
+                                <FluentLabel Typo="Typography.Body">@evt.StartUtc.ToLocalTime():g</FluentLabel>
                             </FluentStack>
                         }
                     }
@@ -87,15 +87,15 @@ else
         <div class="agenda-main">
             <FluentStack Orientation="Orientation.Vertical" VerticalGap="16">
                 <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8" Wrap="true">
-                    <FluentButton Appearance="Appearance.Stealth" OnClick="GoPrev">◀</FluentButton>
-                    <FluentButton Appearance="Appearance.Stealth" OnClick="GoToday">Aujourd'hui</FluentButton>
-                    <FluentButton Appearance="Appearance.Stealth" OnClick="GoNext">▶</FluentButton>
+                    <FluentButton Appearance="Appearance.Stealth" OnClick="@GoPrevAsync">◀</FluentButton>
+                    <FluentButton Appearance="Appearance.Stealth" OnClick="@GoTodayAsync">Aujourd'hui</FluentButton>
+                    <FluentButton Appearance="Appearance.Stealth" OnClick="@GoNextAsync">▶</FluentButton>
 
                     <FluentDivider Orientation="Orientation.Vertical" />
 
-                    <FluentButton Appearance="@GetViewAppearance("dayGridMonth")" OnClick="@(async e => await ChangeView("dayGridMonth"))">Mois</FluentButton>
-                    <FluentButton Appearance="@GetViewAppearance("timeGridWeek")" OnClick="@(async e => await ChangeView("timeGridWeek"))">Semaine</FluentButton>
-                    <FluentButton Appearance="@GetViewAppearance("timeGridDay")" OnClick="@(async e => await ChangeView("timeGridDay"))">Jour</FluentButton>
+                    <FluentButton Appearance="@GetViewAppearance("dayGridMonth")" OnClick="@ShowMonthViewAsync">Mois</FluentButton>
+                    <FluentButton Appearance="@GetViewAppearance("timeGridWeek")" OnClick="@ShowWeekViewAsync">Semaine</FluentButton>
+                    <FluentButton Appearance="@GetViewAppearance("timeGridDay")" OnClick="@ShowDayViewAsync">Jour</FluentButton>
                 </FluentStack>
 
                 <div id="aion-agenda-calendar" class="agenda-calendar"></div>
@@ -120,7 +120,7 @@ else
 
             <FluentStack Orientation="Orientation.Vertical" VerticalGap="12">
                 <FluentField Label="Agenda">
-                    <FluentSelect TValue="int" @bind-Value="_formModel.AgendaId">
+                    <FluentSelect TOption="int" @bind-Value="_formModel.AgendaId">
                         @foreach (var agenda in _agendas)
                         {
                             <FluentOption Value="@agenda.Id">@agenda.Libelle</FluentOption>
@@ -148,11 +148,11 @@ else
                     </FluentField>
                 </FluentStack>
 
-                <FluentCheckbox @bind-Value="_formModel.AllDay">Toute la journée</FluentCheckbox>
-                <FluentCheckbox @bind-Value="_formModel.IsPrivate">Privé</FluentCheckbox>
+                <FluentCheckbox @bind-Checked="_formModel.AllDay">Toute la journée</FluentCheckbox>
+                <FluentCheckbox @bind-Checked="_formModel.IsPrivate">Privé</FluentCheckbox>
 
                 <FluentField Label="Statut">
-                    <FluentSelect TValue="int" @bind-Value="_formModel.StatusId">
+                    <FluentSelect TOption="int" @bind-Value="_formModel.StatusId">
                         @foreach (var status in _statuses)
                         {
                             <FluentOption Value="@status.Id">@status.Libelle</FluentOption>
@@ -160,7 +160,7 @@ else
                     </FluentSelect>
                 </FluentField>
 
-                <FluentCheckbox @bind-Value="_formModel.EnableReminders" OnChange="ToggleReminderActivation">Activer les rappels</FluentCheckbox>
+                <FluentCheckbox Checked="_formModel.EnableReminders" CheckedChanged="OnEnableRemindersChanged">Activer les rappels</FluentCheckbox>
 
                 @if (_formModel.EnableReminders)
                 {
@@ -169,21 +169,21 @@ else
                         {
                             <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8" Wrap="true" Class="agenda-reminder-row">
                                 <FluentField Label="Minutes">
-                                    <InputNumber @bind-Value="reminder.OffsetMinutes" @bind-Value:event="oninput" />
+                                    <InputNumber TValue="int" @bind-Value="reminder.OffsetMinutes" @bind-Value:event="oninput" />
                                 </FluentField>
                                 <FluentField Label="Canal">
-                                    <FluentSelect TValue="int" @bind-Value="reminder.ChannelId">
+                                    <FluentSelect TOption="int" @bind-Value="reminder.ChannelId">
                                         @foreach (var channel in _channels)
                                         {
                                             <FluentOption Value="@channel.Id">@channel.Libelle</FluentOption>
                                         }
                                     </FluentSelect>
                                 </FluentField>
-                                <FluentButton Appearance="Appearance.Stealth" OnClick="() => RemoveReminder(reminder)">Supprimer</FluentButton>
+                                <FluentButton Appearance="Appearance.Stealth" OnClick="@(() => RemoveReminder(reminder))">Supprimer</FluentButton>
                             </FluentStack>
                         }
 
-                        <FluentButton Appearance="Appearance.Accent" OnClick="AddReminder">Ajouter un rappel</FluentButton>
+                <FluentButton Appearance="Appearance.Accent" OnClick="@AddReminderAsync">Ajouter un rappel</FluentButton>
                     </FluentStack>
                 }
             </FluentStack>
@@ -194,10 +194,10 @@ else
         <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8" Wrap="true">
             @if (!_formModel.IsNew)
             {
-                <FluentButton Appearance="Appearance.Stealth" OnClick="DeleteEventAsync" Disabled="@_isSaving">Supprimer</FluentButton>
+                <FluentButton Appearance="Appearance.Stealth" OnClick="@DeleteEventAsync" Disabled="@_isSaving">Supprimer</FluentButton>
             }
-            <FluentButton Appearance="Appearance.Stealth" OnClick="CloseDialog" Disabled="@_isSaving">Annuler</FluentButton>
-            <FluentButton Appearance="Appearance.Accent" OnClick="SaveEventFromButton" Disabled="@_isSaving">Enregistrer</FluentButton>
+            <FluentButton Appearance="Appearance.Stealth" OnClick="@CloseDialog" Disabled="@_isSaving">Annuler</FluentButton>
+            <FluentButton Appearance="Appearance.Accent" OnClick="@SaveEventFromButtonAsync" Disabled="@_isSaving">Enregistrer</FluentButton>
         </FluentStack>
     </FluentDialogFooter>
 </FluentDialog>
@@ -350,21 +350,26 @@ else
         await _agendaModule.InvokeVoidAsync("setEvents", events);
     }
 
-    private void CloseDialog(MouseEventArgs _)
+    private Task CloseDialog()
     {
         _dialogHidden = true;
+        return Task.CompletedTask;
     }
 
-    private void ToggleReminderActivation(bool value)
+    private Task OnEnableRemindersChanged(bool? value)
     {
-        if (value && _formModel.Reminders.Count == 0)
+        var enable = value ?? false;
+        if (enable && _formModel.Reminders.Count == 0)
         {
             AddReminderInternal();
         }
-        else if (!value)
+        else if (!enable)
         {
             _formModel.Reminders.Clear();
         }
+
+        _formModel.EnableReminders = enable;
+        return Task.CompletedTask;
     }
 
     private async Task OnAgendaChanged(string? agendaKey)
@@ -378,10 +383,11 @@ else
         ? Appearance.Accent
         : Appearance.Stealth;
 
-    private void OpenCreateDialog(MouseEventArgs _)
+    private Task OpenCreateDialogAsync()
     {
         PrepareFormForCreate(null, null, false);
         _dialogHidden = false;
+        return Task.CompletedTask;
     }
 
     private void PrepareFormForCreate(DateTime? start, DateTime? end, bool allDay)
@@ -398,9 +404,9 @@ else
         _dialogHidden = false;
     }
 
-    private async Task SaveEventFromButton(MouseEventArgs _)
+    private async Task SaveEventFromButtonAsync()
     {
-        if (await _editContext.ValidateAsync())
+        if (_editContext.Validate())
         {
             await SaveEventAsync();
         }
@@ -412,6 +418,7 @@ else
         {
             return;
         }
+    }
 
         _isSaving = true;
         _errorMessage = null;
@@ -446,7 +453,7 @@ else
         }
     }
 
-    private async Task DeleteEventAsync(MouseEventArgs _)
+    private async Task DeleteEventAsync()
     {
         if (_formModel.IsNew || _formModel.EventId == 0)
         {
@@ -465,9 +472,10 @@ else
         }
     }
 
-    private void AddReminder(MouseEventArgs _)
+    private Task AddReminderAsync()
     {
         AddReminderInternal();
+        return Task.CompletedTask;
     }
 
     private void AddReminderInternal()
@@ -512,7 +520,7 @@ else
         }
     }
 
-    private async Task GoToday(MouseEventArgs _)
+    private async Task GoTodayAsync()
     {
         if (_agendaModule is not null)
         {
@@ -520,7 +528,7 @@ else
         }
     }
 
-    private async Task GoPrev(MouseEventArgs _)
+    private async Task GoPrevAsync()
     {
         if (_agendaModule is not null)
         {
@@ -528,7 +536,7 @@ else
         }
     }
 
-    private async Task GoNext(MouseEventArgs _)
+    private async Task GoNextAsync()
     {
         if (_agendaModule is not null)
         {
@@ -536,7 +544,7 @@ else
         }
     }
 
-    private async Task ChangeView(string view)
+    private async Task ChangeViewAsync(string view)
     {
         _selectedView = view;
         if (_agendaModule is not null)
@@ -544,6 +552,12 @@ else
             await _agendaModule.InvokeVoidAsync("changeView", view);
         }
     }
+
+    private Task ShowMonthViewAsync() => ChangeViewAsync("dayGridMonth");
+
+    private Task ShowWeekViewAsync() => ChangeViewAsync("timeGridWeek");
+
+    private Task ShowDayViewAsync() => ChangeViewAsync("timeGridDay");
 
     [JSInvokable]
     public async Task OnEventClickAsync(string eventId)
