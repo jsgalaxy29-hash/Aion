@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Aion.Domain.Agenda;
 using Aion.Infrastructure;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -57,40 +59,84 @@ public class AgendaReminderWorker : BackgroundService
 
     private async Task ProcessRemindersAsync(CancellationToken ct)
     {
-        using var scope = _scopeFactory.CreateScope();
-        var dbFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AionDbContext>>();
-        var notificationService = scope.ServiceProvider.GetRequiredService<INotificationService>();
+        List<int> tenantIds;
+        using (var discoveryScope = _scopeFactory.CreateScope())
+        {
+            var discoveryFactory = discoveryScope.ServiceProvider.GetRequiredService<IDbContextFactory<AionDbContext>>();
+            tenantIds = await TenantExecutionHelper.GetTenantIdsAsync(discoveryFactory, ct).ConfigureAwait(false);
+        }
 
-        var nowUtc = DateTime.UtcNow;
-
-        await using var db = await dbFactory.CreateDbContextAsync(ct).ConfigureAwait(false);
-
-        var reminders = await db.SAgendaReminders
-            .Include(r => r.AgendaEvent)
-            .Where(r => !r.Deleted && !r.IsSent && r.TriggerAtUtc <= nowUtc)
-            .ToListAsync(ct)
-            .ConfigureAwait(false);
-
-        if (reminders.Count == 0)
+        if (tenantIds.Count == 0)
         {
             return;
         }
 
-        foreach (var reminder in reminders)
+        var nowUtc = DateTime.UtcNow;
+
+        foreach (var tenantId in tenantIds)
         {
+            using var tenantScope = _scopeFactory.CreateScope();
+            var dbFactory = tenantScope.ServiceProvider.GetRequiredService<IDbContextFactory<AionDbContext>>();
+            var notificationService = tenantScope.ServiceProvider.GetRequiredService<INotificationService>();
+            var httpContextAccessor = tenantScope.ServiceProvider.GetRequiredService<IHttpContextAccessor>();
+
             try
             {
-                await notificationService.SendReminderAsync(reminder, ct).ConfigureAwait(false);
-                reminder.IsSent = true;
-                reminder.SentAtUtc = nowUtc;
-                reminder.DtModification = DateTime.UtcNow;
+                await ProcessTenantRemindersAsync(dbFactory, notificationService, httpContextAccessor, tenantId, nowUtc, ct).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erreur lors de l'envoi du rappel {ReminderId}", reminder.Id);
+                _logger.LogError(ex, "Erreur lors du traitement des rappels pour le tenant {TenantId}", tenantId);
             }
         }
+    }
 
-        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+    private async Task ProcessTenantRemindersAsync(
+        IDbContextFactory<AionDbContext> dbFactory,
+        INotificationService notificationService,
+        IHttpContextAccessor httpContextAccessor,
+        int tenantId,
+        DateTime nowUtc,
+        CancellationToken ct)
+    {
+        var previousContext = httpContextAccessor.HttpContext;
+        try
+        {
+            httpContextAccessor.HttpContext = TenantExecutionHelper.CreateBackgroundHttpContext(tenantId);
+
+            await using var db = await dbFactory.CreateDbContextAsync(ct).ConfigureAwait(false);
+
+            var reminders = await db.SAgendaReminders
+                .Include(r => r.AgendaEvent)
+                .Where(r => !r.Deleted && !r.IsSent && r.TriggerAtUtc <= nowUtc)
+                .ToListAsync(ct)
+                .ConfigureAwait(false);
+
+            if (reminders.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var reminder in reminders)
+            {
+                try
+                {
+                    await notificationService.SendReminderAsync(reminder, ct).ConfigureAwait(false);
+                    reminder.IsSent = true;
+                    reminder.SentAtUtc = nowUtc;
+                    reminder.DtModification = DateTime.UtcNow;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Erreur lors de l'envoi du rappel {ReminderId} pour le tenant {TenantId}", reminder.Id, tenantId);
+                }
+            }
+
+            await db.SaveChangesAsync(ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            httpContextAccessor.HttpContext = previousContext;
+        }
     }
 }
