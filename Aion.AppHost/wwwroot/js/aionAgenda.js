@@ -49,6 +49,13 @@ export function initCalendar(dotNet, selectedAgendaId, initialView) {
         },
         eventResize: async (info) => {
             await persistEventDates(info.event);
+        },
+        datesSet: (info) => {
+            if (dotNetRef) {
+                const start = info.start ? info.start.toISOString() : info.startStr;
+                const end = info.end ? info.end.toISOString() : info.endStr;
+                dotNetRef.invokeMethodAsync('OnVisibleRangeChangedAsync', start, end);
+            }
         }
     });
 

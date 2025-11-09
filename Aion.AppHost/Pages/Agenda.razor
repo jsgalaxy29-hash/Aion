@@ -251,6 +251,8 @@ else
     private string? _errorMessage;
     private string _selectedView = "timeGridWeek";
     private string? _selectedAgendaKey;
+    private DateTime? _visibleRangeStartUtc;
+    private DateTime? _visibleRangeEndUtc;
 
     private IEnumerable<SAgendaEvent> UpcomingEvents => _events
         .Where(e => !_selectedAgendaId.HasValue || e.AgendaId == _selectedAgendaId)
@@ -337,7 +339,7 @@ else
         _dotNetRef?.Dispose();
     }
 
-    private async Task LoadEventsAsync()
+    private async Task LoadEventsAsync(DateTime? rangeStartUtc = null, DateTime? rangeEndUtc = null)
     {
         if (!_agendas.Any())
         {
@@ -345,15 +347,18 @@ else
             return;
         }
 
-        var from = DateTime.UtcNow.Date.AddMonths(-1);
-        var to = DateTime.UtcNow.Date.AddMonths(3);
+        var from = rangeStartUtc ?? _visibleRangeStartUtc ?? DateTime.UtcNow.Date.AddMonths(-1);
+        var to = rangeEndUtc ?? _visibleRangeEndUtc ?? DateTime.UtcNow.Date.AddMonths(3);
+
+        _visibleRangeStartUtc = from;
+        _visibleRangeEndUtc = to;
 
         var events = await AgendaService.GetEventsForUserAsync(UserContext.UserId, from, to);
         _events.Clear();
         _events.AddRange(events);
 
         await PushEventsToCalendarAsync();
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task PushEventsToCalendarAsync()
@@ -627,6 +632,25 @@ else
 
         PrepareFormForCreate(startUtc, endUtc, allDay);
         await InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public async Task OnVisibleRangeChangedAsync(string startStr, string endStr)
+    {
+        if (string.IsNullOrWhiteSpace(startStr) || string.IsNullOrWhiteSpace(endStr))
+        {
+            return;
+        }
+
+        var startUtc = DateTime.Parse(startStr, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal);
+        var endUtc = DateTime.Parse(endStr, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal);
+
+        if (_visibleRangeStartUtc.HasValue && _visibleRangeEndUtc.HasValue && _visibleRangeStartUtc.Value == startUtc && _visibleRangeEndUtc.Value == endUtc)
+        {
+            return;
+        }
+
+        await LoadEventsAsync(startUtc, endUtc);
     }
 
     private sealed class AgendaEventFormModel
