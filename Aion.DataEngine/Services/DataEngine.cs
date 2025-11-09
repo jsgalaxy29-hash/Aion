@@ -291,13 +291,15 @@ namespace Aion.DataEngine.Services
 
                 if (!string.IsNullOrWhiteSpace(f.Referentiel))
                 {
-                    foreignKeys.Add($"    CONSTRAINT FK_{table.Libelle}_{f.Libelle} FOREIGN KEY ([{f.Libelle}]) REFERENCES [{f.Referentiel}]([Id])");
+                    var foreignKeyName = QuoteIdentifier($"FK_{table.Libelle}_{f.Libelle}");
+                    foreignKeys.Add($"    CONSTRAINT {foreignKeyName} FOREIGN KEY ([{f.Libelle}]) REFERENCES [{f.Referentiel}]([Id])");
                 }
             }
 
             if (pkColumns.Count > 0)
             {
-                foreignKeys.Insert(0, $"    CONSTRAINT PK_{table.Libelle} PRIMARY KEY ({string.Join(", ", pkColumns.Select(c => $"[{c}]"))})");
+                var primaryKeyName = QuoteIdentifier($"PK_{table.Libelle}");
+                foreignKeys.Insert(0, $"    CONSTRAINT {primaryKeyName} PRIMARY KEY ({string.Join(", ", pkColumns.Select(c => $"[{c}]"))})");
             }
 
             var allDefinitions = columnDefinitions.Concat(foreignKeys);
@@ -555,6 +557,12 @@ namespace Aion.DataEngine.Services
             }
             // Wrap string with single quotes and escape single quotes within
             return $"'" + def.Replace("'", "''") + "'";
+        }
+
+        private static string QuoteIdentifier(string name)
+        {
+            if (name == null) throw new ArgumentNullException(nameof(name));
+            return "[" + name.Replace("]", "]]") + "]";
         }
 
         /// <summary>
