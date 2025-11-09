@@ -129,20 +129,32 @@ namespace Aion.Infrastructure.Data
                 }
                 else if (!string.IsNullOrWhiteSpace(builder.AttachDBFilename))
                 {
-                    var databasePath = builder.AttachDBFilename;
+                    var attachDbFilename = builder.AttachDBFilename;
+                    var containsPlaceholder = attachDbFilename.IndexOf('|') >= 0;
+                    var requiresConnectionOpen = containsPlaceholder;
 
-                    if (!Path.IsPathRooted(databasePath))
+                    string? databasePath = attachDbFilename;
+
+                    if (!containsPlaceholder && !Path.IsPathRooted(databasePath))
                     {
                         databasePath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, databasePath));
                     }
 
-                    var directory = Path.GetDirectoryName(databasePath);
-                    if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                    if (!containsPlaceholder)
                     {
-                        Directory.CreateDirectory(directory);
+                        var directory = Path.GetDirectoryName(databasePath);
+                        if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                        {
+                            Directory.CreateDirectory(directory);
+                        }
+
+                        if (!File.Exists(databasePath))
+                        {
+                            requiresConnectionOpen = true;
+                        }
                     }
 
-                    if (!File.Exists(databasePath))
+                    if (requiresConnectionOpen)
                     {
                         await using var connection = new SqlConnection(_connectionString);
                         await connection.OpenAsync().ConfigureAwait(false);
