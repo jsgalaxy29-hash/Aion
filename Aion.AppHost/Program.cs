@@ -27,6 +27,9 @@ using System.Linq;
 using Aion.Domain.UI.DynamicLayouts;
 using Aion.AI.Extensions;
 using Aion.AI.Abstractions;
+using Aion.AppHost.Workers;
+using Aion.Domain.Agenda;
+using Aion.Infrastructure.Services.Agenda;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -125,12 +128,18 @@ builder.Services.AddSingleton<IModuleBootstrapper, SystemCatalogBootstrapper>();
 builder.Services.AddSingleton<IModuleBootstrapper, SecurityAdminBootstrapper>();
 builder.Services.AddSingleton<IModuleBootstrapper, ListDynBootstrapper>();
 builder.Services.AddSingleton<IModuleBootstrapper, FormDynBootstrapper>();
+builder.Services.AddSingleton<IModuleBootstrapper, AgendaModuleBootstrapper>();
 builder.Services.AddScoped<StartupOrchestrator>();
 builder.Services.AddAionAi();
 builder.Services.AddScoped<IAuditTrailService, DatabaseAuditTrailService>();
 builder.Services.AddScoped<IAionProvisioningObserver, AiProvisioningObserver>();
 // Changez Scoped à Singleton pour garantir la même instance pour tous les composants
 builder.Services.AddSingleton<IAionThemeService, AionThemeService>();
+builder.Services.AddScoped<IAgendaService, AgendaService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IScheduledActionService, ScheduledActionService>();
+builder.Services.AddHostedService<AgendaReminderWorker>();
+builder.Services.AddHostedService<ActionSchedulerWorker>();
 // ===== Build Application =====
 var app = builder.Build();
 
