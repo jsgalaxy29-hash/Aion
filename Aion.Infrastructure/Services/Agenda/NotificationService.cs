@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Aion.Domain.Agenda;
@@ -41,7 +42,7 @@ public class NotificationService(IDbContextFactory<AionDbContext> dbContextFacto
 
         var notificationTypeId = await db.RNotificationTypes
             .IgnoreQueryFilters()
-            .Where(t => t.Code == "AGENDA_REMINDER")
+            .Where(t => t.TenantId == evt.TenantId && t.Code == "AGENDA_REMINDER")
             .Select(t => (int?)t.Id)
             .FirstOrDefaultAsync(ct)
             .ConfigureAwait(false);
