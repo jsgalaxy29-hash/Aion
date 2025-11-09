@@ -1124,11 +1124,11 @@ SELECT @menuId = ID FROM dbo.SMenu WHERE Libelle = 'Agenda' AND TenantId = 1;
 IF @menuId IS NULL
 BEGIN
   INSERT INTO dbo.SMenu(ParentId, ModuleId, Libelle, IsLeaf, Icon, Parametre, [Order], TenantId, Actif, Doc, Deleted, DtCreation)
-  VALUES(NULL, @moduleId, 'Agenda', 1, 'calendar', '/agenda', 100, 1, 1, 0, 0, @utcNow);
+  VALUES(NULL, @moduleId, 'Agenda', 1, 'calendar', NULL, 100, 1, 1, 0, 0, @utcNow);
 END
 ELSE
 BEGIN
-  UPDATE dbo.SMenu SET ModuleId = @moduleId, Icon = COALESCE(Icon, 'calendar'), Parametre = '/agenda', Deleted = 0, Actif = 1 WHERE ID = @menuId;
+  UPDATE dbo.SMenu SET ModuleId = @moduleId, Icon = COALESCE(Icon, 'calendar'), Parametre = NULL, Deleted = 0, Actif = 1 WHERE ID = @menuId;
 END
 
 -- Création du droit Menu pour le groupe Administrateurs si disponible
