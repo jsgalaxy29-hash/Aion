@@ -1,98 +1,74 @@
-import { Calendar } from '@fullcalendar/core';
-import dayGridPlugin from '@fullcalendar/daygrid';
-import timeGridPlugin from '@fullcalendar/timegrid';
-import interactionPlugin from '@fullcalendar/interaction';
+// wwwroot/js/aionAgenda.js
 
 let calendar;
 let dotNetRef;
-
-export function initCalendar(dotNet, selectedAgendaId, initialView) {
-    dotNetRef = dotNet;
-
-    const calendarEl = document.getElementById('aion-agenda-calendar');
+export function initCalendar(dotNetRef, selectedAgendaId, defaultView) {
+    const calendarEl = document.getElementById("aion-agenda-calendar");
     if (!calendarEl) {
-        console.warn('Aion agenda calendar element not found.');
+        console.error("Élément #aion-agenda-calendar introuvable");
         return;
     }
 
-    calendar = new Calendar(calendarEl, {
-        plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
-        initialView: initialView || 'timeGridWeek',
-        height: 'auto',
-        nowIndicator: true,
+    if (!window.FullCalendar || !window.FullCalendar.Calendar) {
+        console.error("FullCalendar global n'est pas chargé");
+        return;
+    }
+
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: defaultView || "timeGridWeek",
         selectable: true,
-        editable: true,
-        slotDuration: '00:30:00',
-        slotMinTime: '06:00:00',
-        slotMaxTime: '20:00:00',
-        firstDay: 1,
-        locale: 'fr',
-        headerToolbar: false,
-        eventClick: (info) => {
-            info.jsEvent?.preventDefault();
-            if (dotNetRef) {
-                dotNetRef.invokeMethodAsync('OnEventClickAsync', info.event.id);
-            }
+        editable: false,
+        locale: "fr",
+        events: [],
+        datesSet: (info) => {
+            dotNetRef.invokeMethodAsync(
+                "OnVisibleRangeChangedAsync",
+                info.startStr,
+                info.endStr
+            );
         },
         select: (info) => {
-            if (dotNetRef) {
-                dotNetRef.invokeMethodAsync(
-                    'OnEventCreatedAsync',
-                    info.startStr,
-                    info.endStr ?? info.startStr,
-                    info.allDay ?? false
-                );
-            }
+            dotNetRef.invokeMethodAsync(
+                "OnEventCreatedAsync",
+                info.startStr,
+                info.endStr,
+                info.allDay
+            );
         },
-        eventDrop: async (info) => {
-            await persistEventDates(info.event);
-        },
-        eventResize: async (info) => {
-            await persistEventDates(info.event);
-        },
-        datesSet: (info) => {
-            if (dotNetRef) {
-                const start = info.start ? info.start.toISOString() : info.startStr;
-                const end = info.end ? info.end.toISOString() : info.endStr;
-                dotNetRef.invokeMethodAsync('OnVisibleRangeChangedAsync', start, end);
-            }
+        eventClick: (info) => {
+            dotNetRef.invokeMethodAsync(
+                "OnEventClickAsync",
+                info.event.id
+            );
         }
     });
 
     calendar.render();
+    window.aionAgendaCalendar = calendar;
 }
 
 export function setEvents(events) {
-    if (!calendar) {
-        return;
-    }
+    const calendar = window.aionAgendaCalendar;
+    if (!calendar) return;
 
     calendar.removeAllEvents();
-    calendar.addEventSource(events ?? []);
-}
-
-export function changeView(viewName) {
-    if (calendar) {
-        calendar.changeView(viewName);
-    }
+    calendar.addEventSource(events);
 }
 
 export function goToday() {
-    if (calendar) {
-        calendar.today();
-    }
+    window.aionAgendaCalendar?.today();
 }
 
 export function goPrev() {
-    if (calendar) {
-        calendar.prev();
-    }
+    window.aionAgendaCalendar?.prev();
 }
 
 export function goNext() {
-    if (calendar) {
-        calendar.next();
-    }
+    window.aionAgendaCalendar?.next();
+}
+
+export function changeView(viewName) {
+    window.aionAgendaCalendar?.changeView(viewName);
 }
 
 async function persistEventDates(event) {

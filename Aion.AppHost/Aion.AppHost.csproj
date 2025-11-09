@@ -35,5 +35,10 @@
     <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.13.1" />
     <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.Icons" Version="4.13.1" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Update="wwwroot\js\aionAgenda.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 </Project>
 

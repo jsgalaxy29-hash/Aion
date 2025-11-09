@@ -109,7 +109,7 @@ builder.Services.AddMemoryCache();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddCascadingAuthenticationState();
 
-builder.Services.AddScoped<IUserContext, HttpContextUserContext>();
+builder.Services.AddSingleton<IUserContext, HttpContextUserContext>();
 builder.Services.AddScoped<IRightService, RightService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IMenuProvider, MenuProvider>();

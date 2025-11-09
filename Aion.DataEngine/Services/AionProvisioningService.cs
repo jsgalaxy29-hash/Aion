@@ -1128,23 +1128,39 @@ END
 CLOSE action_cursor;
 DEALLOCATE action_cursor;
 
+DECLARE @homeId INT;
+SELECT @homeId = ID FROM dbo.SMenu WHERE Libelle = 'Home' AND TenantId = 1;
+IF @homeId IS NULL
+BEGIN
+  INSERT INTO dbo.SMenu(ParentId, ModuleId, Libelle, IsLeaf, Icon, Parametre, [Order], TenantId, Actif, Doc, Deleted, DtCreation)
+  VALUES(NULL, NULL, 'Home', 1, NULL, NULL, 100, 1, 1, 0, 0, @utcNow);
+  SELECT @homeId = ID FROM dbo.SMenu WHERE Libelle = 'Home' AND TenantId = 1;
+END
+
 DECLARE @menuId INT;
 SELECT @menuId = ID FROM dbo.SMenu WHERE Libelle = 'Agenda' AND TenantId = 1;
 
 IF @menuId IS NULL
 BEGIN
   INSERT INTO dbo.SMenu(ParentId, ModuleId, Libelle, IsLeaf, Icon, Parametre, [Order], TenantId, Actif, Doc, Deleted, DtCreation)
-  VALUES(NULL, @moduleId, 'Agenda', 1, 'calendar', NULL, 100, 1, 1, 0, 0, @utcNow);
+  VALUES(@homeId, @moduleId, 'Agenda', 1, 'calendar', NULL, 100, 1, 1, 0, 0, @utcNow);
 END
 ELSE
 BEGIN
-  UPDATE dbo.SMenu SET ModuleId = @moduleId, Icon = COALESCE(Icon, 'calendar'), Parametre = NULL, Deleted = 0, Actif = 1 WHERE ID = @menuId;
+  UPDATE dbo.SMenu SET ParentId = @homeId, ModuleId = @moduleId, Icon = COALESCE(Icon, 'calendar'), Parametre = NULL, Deleted = 0, Actif = 1 WHERE ID = @menuId;
 END
 
 -- Création du droit Menu pour le groupe Administrateurs si disponible
 DECLARE @adminGroupId INT = (SELECT TOP 1 ID FROM dbo.SGroup WHERE Name IN ('Administrateurs','Administrateur'));
 IF @adminGroupId IS NOT NULL AND EXISTS(SELECT 1 FROM dbo.SMenu WHERE Libelle = 'Agenda' AND TenantId = 1)
 BEGIN
+  DECLARE @homeMenuId INT = (SELECT ID FROM dbo.SMenu WHERE Libelle = 'Home' AND TenantId = 1);
+  IF NOT EXISTS(SELECT 1 FROM dbo.SRight WHERE GroupId = @adminGroupId AND Target = 'Menu' AND SubjectId = @homeMenuId)
+  BEGIN
+    INSERT INTO dbo.SRight(GroupId, Target, SubjectId, Right1, TenantId, Actif, Doc, Deleted, DtCreation)
+    VALUES(@adminGroupId, 'Menu', @homeMenuId, 1, 1, 1, 0, 0, @utcNow);
+  END
+
   DECLARE @agendaMenuId INT = (SELECT ID FROM dbo.SMenu WHERE Libelle = 'Agenda' AND TenantId = 1);
   IF NOT EXISTS(SELECT 1 FROM dbo.SRight WHERE GroupId = @adminGroupId AND Target = 'Menu' AND SubjectId = @agendaMenuId)
   BEGIN

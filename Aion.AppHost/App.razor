@@ -9,7 +9,8 @@
 <head>
 
     <base href="/" />
-
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css" />
     @* <script src="_content/Microsoft.FluentUI.AspNetCore.Components/Microsoft.FluentUI.AspNetCore.Components.lib.module.js" type="module"></script> *@
     <script src="_content/Microsoft.FluentUI.AspNetCore.Components/Microsoft.FluentUI.AspNetCore.Components.lib.module.js" type="module" async></script>
 
@@ -37,6 +38,9 @@
 <body>
     <Routes @rendermode="RenderMode.InteractiveServer" />
     <script src="_framework/blazor.web.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+    <script src="~/js/aionAgenda.js" type="module"></script> <!-- si tu veux le charger direct -->
+    <script src="_framework/blazor.server.js"></script>
 </body>
 
 </html>

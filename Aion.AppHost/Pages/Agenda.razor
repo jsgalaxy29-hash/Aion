@@ -50,8 +50,8 @@ else
                     <FluentLabel Typo="Typography.H5">Agendas</FluentLabel>
 
                     <FluentRadioGroup Value="@_selectedAgendaKey"
-                                       ValueChanged="@((string? value) => OnAgendaChangedAsync(value))"
-                                       Orientation="Orientation.Vertical">
+                                      ValueChanged="@((string? value) => OnAgendaChangedAsync(value))"
+                                      Orientation="Orientation.Vertical">
                         @foreach (var agenda in _agendas)
                         {
                             <FluentRadio Value="@agenda.Id.ToString()">
@@ -122,7 +122,9 @@ else
             <ValidationSummary />
 
             <FluentStack Orientation="Orientation.Vertical" VerticalGap="12">
-                <FluentField Label="Agenda">
+
+                <FluentStack>
+                    <FluentLabel>Agenda</FluentLabel>
                     <FluentSelect TOption="string"
                                   Value="_formModel.AgendaIdValue"
                                   ValueChanged="@OnFormAgendaChanged">
@@ -131,38 +133,40 @@ else
                             <FluentOption Value="@agenda.Id.ToString(CultureInfo.InvariantCulture)">@agenda.Libelle</FluentOption>
                         }
                     </FluentSelect>
-                </FluentField>
+                </FluentStack>
 
-                <FluentField Label="Titre">
+                <FluentStack Orientation="Orientation.Horizontal">
+                    <FluentLabel>Titre</FluentLabel>
                     <FluentTextField @bind-Value="_formModel.Libelle" Required="true" />
-                </FluentField>
+                </FluentStack>
 
-                <FluentField Label="Description">
+                <FluentStack Orientation="Orientation.Horizontal">
+                    <FluentLabel>Description</FluentLabel>
                     <FluentTextArea @bind-Value="_formModel.Description" Rows="3" />
-                </FluentField>
+                </FluentStack>
 
                 <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="12" Wrap="true">
-                    <FluentField Label="Début">
-                        <FluentStack Orientation="Orientation.Vertical" VerticalGap="4">
-                            <InputDate @bind-Value="_formModel.StartLocal" class="form-control" />
-                            <input type="time" 
-                                   value="@_formModel.StartTime.ToString(@"hh\:mm")" 
-                                   @onchange="@(e => _formModel.StartTime = TimeSpan.Parse(e.Value?.ToString() ?? "00:00"))"
-                                   disabled="@_formModel.AllDay" 
-                                   class="form-control" />
-                        </FluentStack>
-                    </FluentField>
+                    <FluentLabel>Début</FluentLabel>
+                    <FluentStack Orientation="Orientation.Vertical" VerticalGap="4">
+                        <InputDate @bind-Value="_formModel.StartLocal" class="form-control" />
+                        <input type="time"
+                               value="@_formModel.StartTime.ToString(@"hh\:mm")"
+                               @onchange="@(e => _formModel.StartTime = TimeSpan.Parse(e.Value?.ToString() ?? "00:00"))"
+                               disabled="@_formModel.AllDay"
+                               class="form-control" />
+                    </FluentStack>
+                </FluentStack>
 
-                    <FluentField Label="Fin">
-                        <FluentStack Orientation="Orientation.Vertical" VerticalGap="4">
-                            <InputDate @bind-Value="_formModel.EndLocal" class="form-control" />
-                            <input type="time" 
-                                   value="@_formModel.EndTime.ToString(@"hh\:mm")" 
-                                   @onchange="@(e => _formModel.EndTime = TimeSpan.Parse(e.Value?.ToString() ?? "00:00"))"
-                                   disabled="@_formModel.AllDay" 
-                                   class="form-control" />
-                        </FluentStack>
-                    </FluentField>
+                <FluentStack Orientation="Orientation.Horizontal">
+                    <FluentLabel>Fin</FluentLabel>
+                    <FluentStack Orientation="Orientation.Vertical" VerticalGap="4">
+                        <InputDate @bind-Value="_formModel.EndLocal" class="form-control" />
+                        <input type="time"
+                               value="@_formModel.EndTime.ToString(@"hh\:mm")"
+                               @onchange="@(e => _formModel.EndTime = TimeSpan.Parse(e.Value?.ToString() ?? "00:00"))"
+                               disabled="@_formModel.AllDay"
+                               class="form-control" />
+                    </FluentStack>
                 </FluentStack>
 
                 <FluentCheckbox Value="_formModel.AllDay"
@@ -174,7 +178,8 @@ else
                     Privé
                 </FluentCheckbox>
 
-                <FluentField Label="Statut">
+                <FluentStack Orientation="Orientation.Horizontal">
+                    <FluentLabel>Statut</FluentLabel>
                     <FluentSelect TOption="string"
                                   Value="_formModel.StatusIdValue"
                                   ValueChanged="@OnFormStatusChanged">
@@ -183,7 +188,7 @@ else
                             <FluentOption Value="@status.Id.ToString(CultureInfo.InvariantCulture)">@status.Libelle</FluentOption>
                         }
                     </FluentSelect>
-                </FluentField>
+                </FluentStack>
 
                 <FluentCheckbox Value="_formModel.EnableReminders"
                                 ValueChanged="@((bool value) => OnEnableRemindersChanged(value))">
@@ -196,12 +201,14 @@ else
                         @foreach (var reminder in _formModel.Reminders)
                         {
                             <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8" Wrap="true" Class="agenda-reminder-row">
-                                <FluentField Label="Minutes">
+                                <FluentStack Orientation="Orientation.Horizontal">
+                                    <FluentLabel>Minutes</FluentLabel>
                                     <FluentNumberField Value="reminder.OffsetMinutes"
                                                        ValueChanged="@((int value) => reminder.OffsetMinutes = value)"
                                                        Style="width: 100px;" />
-                                </FluentField>
-                                <FluentField Label="Canal">
+                                </FluentStack>
+                                <FluentStack Orientation="Orientation.Horizontal">
+                                    <FluentLabel>Canal</FluentLabel>
                                     <FluentSelect TOption="string"
                                                   Value="reminder.ChannelValue"
                                                   ValueChanged="@(value => OnReminderChannelChanged(reminder, value))">
@@ -210,7 +217,7 @@ else
                                             <FluentOption Value="@channel.Id.ToString(CultureInfo.InvariantCulture)">@channel.Libelle</FluentOption>
                                         }
                                     </FluentSelect>
-                                </FluentField>
+                                </FluentStack>
                                 <FluentButton Appearance="Appearance.Stealth" OnClick="@(() => RemoveReminder(reminder))">Supprimer</FluentButton>
                             </FluentStack>
                         }
@@ -264,6 +271,9 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        // EditContext valide dès le premier rendu
+        _editContext = new EditContext(_formModel);
+        
         await base.OnInitializedAsync();
 
         try
@@ -323,7 +333,7 @@ else
         if (firstRender)
         {
             _dotNetRef = DotNetObjectReference.Create(this);
-            _agendaModule = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/aionAgenda.js");
+            _agendaModule = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "/js/aionAgenda.js");
             await _agendaModule.InvokeVoidAsync("initCalendar", _dotNetRef, _selectedAgendaId, _selectedView);
             await PushEventsToCalendarAsync();
         }
@@ -657,7 +667,7 @@ else
     {
         public int EventId { get; set; }
         public int AgendaId { get; set; }
-        
+
         public string AgendaIdValue
         {
             get => AgendaId.ToString(CultureInfo.InvariantCulture);
@@ -676,11 +686,11 @@ else
 
         [Required]
         public string Libelle { get; set; } = string.Empty;
-        
+
         public string? Description { get; set; }
         public DateTime StartLocal { get; set; } = DateTime.Now;
         public DateTime EndLocal { get; set; } = DateTime.Now.AddHours(1);
-        
+
         public TimeSpan StartTime
         {
             get => StartLocal.TimeOfDay;
@@ -692,11 +702,11 @@ else
             get => EndLocal.TimeOfDay;
             set => EndLocal = DateTime.SpecifyKind(EndLocal.Date.Add(value), DateTimeKind.Local);
         }
-        
+
         public bool AllDay { get; set; }
         public bool IsPrivate { get; set; }
         public int StatusId { get; set; }
-        
+
         public string StatusIdValue
         {
             get => StatusId.ToString(CultureInfo.InvariantCulture);
@@ -712,7 +722,7 @@ else
                 }
             }
         }
-        
+
         public string? ContextEntityType { get; set; }
         public Guid? ContextEntityId { get; set; }
         public bool EnableReminders { get; set; }
@@ -852,7 +862,7 @@ else
         public int ReminderId { get; set; }
         public int OffsetMinutes { get; set; } = -15;
         public int ChannelId { get; set; }
-        
+
         public string ChannelValue
         {
             get => ChannelId.ToString(CultureInfo.InvariantCulture);
