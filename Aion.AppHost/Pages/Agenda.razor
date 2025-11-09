@@ -394,6 +394,16 @@ else
         _formModel.StartLocal = proposedStart.Kind == DateTimeKind.Utc ? proposedStart.ToLocalTime() : DateTime.SpecifyKind(proposedStart, DateTimeKind.Local);
         _formModel.EndLocal = proposedEnd.Kind == DateTimeKind.Utc ? proposedEnd.ToLocalTime() : DateTime.SpecifyKind(proposedEnd, DateTimeKind.Local);
         _formModel.AllDay = allDay;
+
+        if (_formModel.AllDay)
+        {
+            var startDate = _formModel.StartLocal.Date;
+            var endExclusiveDate = _formModel.EndLocal.Date;
+            var inclusiveEndDate = endExclusiveDate > startDate ? endExclusiveDate.AddDays(-1) : startDate;
+
+            _formModel.StartLocal = DateTime.SpecifyKind(startDate, DateTimeKind.Local);
+            _formModel.EndLocal = DateTime.SpecifyKind(inclusiveEndDate, DateTimeKind.Local);
+        }
         _editContext = new EditContext(_formModel);
         _dialogHidden = false;
     }
@@ -634,6 +644,16 @@ else
             if (EnableReminders && Reminders.Count == 0)
             {
                 EnableReminders = false;
+            }
+
+            if (AllDay)
+            {
+                var startDate = StartLocal.Date;
+                var endExclusiveDate = EndLocal.Date;
+                var inclusiveEndDate = endExclusiveDate > startDate ? endExclusiveDate.AddDays(-1) : startDate;
+
+                StartLocal = DateTime.SpecifyKind(startDate, DateTimeKind.Local);
+                EndLocal = DateTime.SpecifyKind(inclusiveEndDate, DateTimeKind.Local);
             }
         }
 
