@@ -829,7 +829,17 @@ BEGIN
   PRINT 'Table SAgendaUser créée';
 END
 ELSE
+BEGIN
   PRINT 'Table SAgendaUser existe déjà';
+
+  IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_SAgendaUser_User' AND parent_object_id = OBJECT_ID('dbo.SAgendaUser'))
+  BEGIN
+    ALTER TABLE dbo.SAgendaUser DROP CONSTRAINT FK_SAgendaUser_User;
+  END;
+
+  IF OBJECT_ID('dbo.SUser','U') IS NOT NULL
+    ALTER TABLE dbo.SAgendaUser ADD CONSTRAINT FK_SAgendaUser_User FOREIGN KEY(UserId) REFERENCES dbo.SUser(ID) ON DELETE NO ACTION;
+END;
 
 IF OBJECT_ID('dbo.SAgendaEvent','U') IS NULL
 BEGIN
