@@ -6,6 +6,7 @@
 @using Aion.DataEngine.Interfaces
 @using Aion.Infrastructure
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.EntityFrameworkCore
@@ -48,7 +49,9 @@ else
                 <FluentStack Orientation="Orientation.Vertical" VerticalGap="12">
                     <FluentLabel Typo="Typography.H5">Agendas</FluentLabel>
 
-                    <FluentRadioGroup Value="@_selectedAgendaKey" ValueChanged="@OnAgendaChanged" Orientation="Orientation.Vertical">
+                    <FluentRadioGroup Value="@_selectedAgendaKey"
+                                       ValueChanged="@((string? value) => OnAgendaChangedAsync(value))"
+                                       Orientation="Orientation.Vertical">
                         @foreach (var agenda in _agendas)
                         {
                             <FluentRadio Value="@agenda.Id.ToString()">
@@ -76,7 +79,7 @@ else
                         {
                             <FluentStack Orientation="Orientation.Vertical" Class="agenda-upcoming-item">
                                 <FluentLabel Typo="Typography.Body">@evt.Libelle</FluentLabel>
-                                <FluentLabel Typo="Typography.Body">@evt.StartUtc.ToLocalTime():g</FluentLabel>
+                                <FluentLabel Typo="Typography.Body">@evt.StartUtc.ToLocalTime().ToString("g")</FluentLabel>
                             </FluentStack>
                         }
                     }
@@ -120,10 +123,12 @@ else
 
             <FluentStack Orientation="Orientation.Vertical" VerticalGap="12">
                 <FluentField Label="Agenda">
-                    <FluentSelect TOption="int" @bind-Value="_formModel.AgendaId">
+                    <FluentSelect TOption="string"
+                                  Value="_formModel.AgendaIdValue"
+                                  ValueChanged="@OnFormAgendaChanged">
                         @foreach (var agenda in _agendas)
                         {
-                            <FluentOption Value="@agenda.Id">@agenda.Libelle</FluentOption>
+                            <FluentOption Value="@agenda.Id.ToString(CultureInfo.InvariantCulture)">@agenda.Libelle</FluentOption>
                         }
                     </FluentSelect>
                 </FluentField>
@@ -148,19 +153,30 @@ else
                     </FluentField>
                 </FluentStack>
 
-                <FluentCheckbox @bind-Checked="_formModel.AllDay">Toute la journée</FluentCheckbox>
-                <FluentCheckbox @bind-Checked="_formModel.IsPrivate">Privé</FluentCheckbox>
+                <FluentCheckbox Value="_formModel.AllDay"
+                                ValueChanged="@((bool value) => _formModel.AllDay = value)">
+                    Toute la journée
+                </FluentCheckbox>
+                <FluentCheckbox Value="_formModel.IsPrivate"
+                                ValueChanged="@((bool value) => _formModel.IsPrivate = value)">
+                    Privé
+                </FluentCheckbox>
 
                 <FluentField Label="Statut">
-                    <FluentSelect TOption="int" @bind-Value="_formModel.StatusId">
+                    <FluentSelect TOption="string"
+                                  Value="_formModel.StatusIdValue"
+                                  ValueChanged="@OnFormStatusChanged">
                         @foreach (var status in _statuses)
                         {
-                            <FluentOption Value="@status.Id">@status.Libelle</FluentOption>
+                            <FluentOption Value="@status.Id.ToString(CultureInfo.InvariantCulture)">@status.Libelle</FluentOption>
                         }
                     </FluentSelect>
                 </FluentField>
 
-                <FluentCheckbox Checked="_formModel.EnableReminders" CheckedChanged="OnEnableRemindersChanged">Activer les rappels</FluentCheckbox>
+                <FluentCheckbox Value="_formModel.EnableReminders"
+                                ValueChanged="@((bool value) => OnEnableRemindersChanged(value))">
+                    Activer les rappels
+                </FluentCheckbox>
 
                 @if (_formModel.EnableReminders)
                 {
@@ -169,13 +185,17 @@ else
                         {
                             <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8" Wrap="true" Class="agenda-reminder-row">
                                 <FluentField Label="Minutes">
-                                    <InputNumber TValue="int" @bind-Value="reminder.OffsetMinutes" @bind-Value:event="oninput" />
+                                    <FluentNumberField Value="reminder.OffsetMinutes"
+                                                       ValueChanged="@((int value) => reminder.OffsetMinutes = value)"
+                                                       Style="width: 100px;" />
                                 </FluentField>
                                 <FluentField Label="Canal">
-                                    <FluentSelect TOption="int" @bind-Value="reminder.ChannelId">
+                                    <FluentSelect TOption="string"
+                                                  Value="reminder.ChannelValue"
+                                                  ValueChanged="@(value => OnReminderChannelChanged(reminder, value))">
                                         @foreach (var channel in _channels)
                                         {
-                                            <FluentOption Value="@channel.Id">@channel.Libelle</FluentOption>
+                                            <FluentOption Value="@channel.Id.ToString(CultureInfo.InvariantCulture)">@channel.Libelle</FluentOption>
                                         }
                                     </FluentSelect>
                                 </FluentField>
@@ -183,7 +203,7 @@ else
                             </FluentStack>
                         }
 
-                <FluentButton Appearance="Appearance.Accent" OnClick="@AddReminderAsync">Ajouter un rappel</FluentButton>
+                        <FluentButton Appearance="Appearance.Accent" OnClick="@AddReminderAsync">Ajouter un rappel</FluentButton>
                     </FluentStack>
                 }
             </FluentStack>
@@ -356,27 +376,44 @@ else
         return Task.CompletedTask;
     }
 
-    private Task OnEnableRemindersChanged(bool? value)
+    private Task OnEnableRemindersChanged(bool value)
     {
-        var enable = value ?? false;
-        if (enable && _formModel.Reminders.Count == 0)
+        if (value && _formModel.Reminders.Count == 0)
         {
             AddReminderInternal();
         }
-        else if (!enable)
+        else if (!value)
         {
             _formModel.Reminders.Clear();
         }
 
-        _formModel.EnableReminders = enable;
+        _formModel.EnableReminders = value;
         return Task.CompletedTask;
     }
 
-    private async Task OnAgendaChanged(string? agendaKey)
+    private async Task OnAgendaChangedAsync(string? agendaKey)
     {
         _selectedAgendaKey = agendaKey;
         _formModel.AgendaId = _selectedAgendaId ?? _formModel.AgendaId;
         await PushEventsToCalendarAsync();
+    }
+
+    private Task OnFormAgendaChanged(string? agendaKey)
+    {
+        _formModel.AgendaIdValue = agendaKey ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task OnFormStatusChanged(string? statusKey)
+    {
+        _formModel.StatusIdValue = statusKey ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task OnReminderChannelChanged(ReminderModel reminder, string? channelKey)
+    {
+        reminder.ChannelValue = channelKey ?? string.Empty;
+        return Task.CompletedTask;
     }
 
     private Appearance GetViewAppearance(string view) => string.Equals(_selectedView, view, StringComparison.OrdinalIgnoreCase)
@@ -401,7 +438,6 @@ else
         _formModel.EndLocal = proposedEnd.Kind == DateTimeKind.Utc ? proposedEnd.ToLocalTime() : DateTime.SpecifyKind(proposedEnd, DateTimeKind.Local);
         _formModel.AllDay = allDay;
         _editContext = new EditContext(_formModel);
-        _dialogHidden = false;
     }
 
     private async Task SaveEventFromButtonAsync()
@@ -418,7 +454,6 @@ else
         {
             return;
         }
-    }
 
         _isSaving = true;
         _errorMessage = null;
@@ -586,8 +621,26 @@ else
     {
         public int EventId { get; set; }
         public int AgendaId { get; set; }
+        
+        public string AgendaIdValue
+        {
+            get => AgendaId.ToString(CultureInfo.InvariantCulture);
+            set
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    AgendaId = 0;
+                }
+                else if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed))
+                {
+                    AgendaId = parsed;
+                }
+            }
+        }
+
         [Required]
         public string Libelle { get; set; } = string.Empty;
+        
         public string? Description { get; set; }
         public DateTime StartLocal { get; set; } = DateTime.Now;
         public DateTime EndLocal { get; set; } = DateTime.Now.AddHours(1);
@@ -635,6 +688,23 @@ else
         public bool AllDay { get; set; }
         public bool IsPrivate { get; set; }
         public int StatusId { get; set; }
+        
+        public string StatusIdValue
+        {
+            get => StatusId.ToString(CultureInfo.InvariantCulture);
+            set
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    StatusId = 0;
+                }
+                else if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed))
+                {
+                    StatusId = parsed;
+                }
+            }
+        }
+        
         public string? ContextEntityType { get; set; }
         public Guid? ContextEntityId { get; set; }
         public bool EnableReminders { get; set; }
@@ -654,9 +724,12 @@ else
             IsPrivate = false;
             EnableReminders = false;
             Reminders.Clear();
+            var now = DateTime.Now;
+            StartLocal = now;
+            EndLocal = now.AddHours(1);
         }
 
-        public void LoadFromEntity(SAgendaEvent evt, IEnumerable<SAgendaReminder> reminders)
+        public void LoadFromEntity(SAgendaEvent evt, IEnumerable<SAgendaReminder>? reminders)
         {
             EventId = evt.Id;
             AgendaId = evt.AgendaId;
@@ -676,7 +749,7 @@ else
 
             Reminders.Clear();
 
-            foreach (var reminder in reminders)
+            foreach (var reminder in reminders ?? Enumerable.Empty<SAgendaReminder>())
             {
                 Reminders.Add(new ReminderModel
                 {
@@ -771,5 +844,21 @@ else
         public int ReminderId { get; set; }
         public int OffsetMinutes { get; set; } = -15;
         public int ChannelId { get; set; }
+        
+        public string ChannelValue
+        {
+            get => ChannelId.ToString(CultureInfo.InvariantCulture);
+            set
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    ChannelId = 0;
+                }
+                else if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed))
+                {
+                    ChannelId = parsed;
+                }
+            }
+        }
     }
 }

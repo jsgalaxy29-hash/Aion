@@ -13,10 +13,10 @@ using Aion.Domain.Agenda;
 namespace Aion.Infrastructure
 {
     // 1. Ajoutez IUserContext userContext aux paramètres du constructeur principal
-    public class AionDbContext(DbContextOptions<AionDbContext> options, IUserContext userContext) : DbContext(options)
+    public class AionDbContext(DbContextOptions<AionDbContext> options, IUserContext? userContext = null) : DbContext(options)
     {
         // 2. Initialisez le champ _userContext avec le paramètre injecté
-        private readonly IUserContext _userContext = userContext;
+        private readonly IUserContext _userContext = userContext ?? new DefaultUserContext();
 
         // System DbSets (unifiés)
         public DbSet<SUser> Users => Set<SUser>(); // Gardé 'Users'
