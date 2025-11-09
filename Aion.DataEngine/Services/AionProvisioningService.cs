@@ -67,6 +67,34 @@ namespace Aion.DataEngine.Services
 
         }
 
+        public async Task EnsureAgendaSchemaAsync()
+        {
+            Console.WriteLine("📅 Vérification du schéma Agenda...");
+            await _db.ExecuteNonQueryAsync(SqlEnsureAgendaSchema());
+            Console.WriteLine("   ✅ Schéma Agenda prêt");
+        }
+
+        public async Task SeedAgendaReferentialsAsync()
+        {
+            Console.WriteLine("📚 Initialisation des référentiels Agenda...");
+            await _db.ExecuteNonQueryAsync(SqlSeedAgendaReferentials());
+            Console.WriteLine("   ✅ Référentiels Agenda synchronisés");
+        }
+
+        public async Task SeedAgendaSystemScheduledActionsAsync()
+        {
+            Console.WriteLine("⏱️ Synchronisation des actions planifiées Agenda...");
+            await _db.ExecuteNonQueryAsync(SqlSeedAgendaScheduledActions());
+            Console.WriteLine("   ✅ Actions planifiées Agenda prêtes");
+        }
+
+        public async Task EnsureAgendaModuleAsync()
+        {
+            Console.WriteLine("🧭 Provisioning du module Agenda...");
+            await _db.ExecuteNonQueryAsync(SqlEnsureAgendaModule());
+            Console.WriteLine("   ✅ Module Agenda initialisé");
+        }
+
         #region SQL Builders
 
         private static string SqlSecurityCreate() => @"
@@ -644,6 +672,511 @@ CLOSE cur;
 DEALLOCATE cur;
 
 PRINT 'Ajout colonnes BaseEntity terminé';
+";
+
+        private static string SqlEnsureAgendaSchema() => @"
+-- ===== SCHÉMA AGENDA / NOTIFICATIONS =====
+
+IF OBJECT_ID('dbo.RReminderChannel','U') IS NULL
+BEGIN
+  CREATE TABLE dbo.RReminderChannel(
+    ID SMALLINT NOT NULL PRIMARY KEY,
+    Code NVARCHAR(50) NOT NULL,
+    Libelle NVARCHAR(200) NOT NULL,
+    TenantId INT NOT NULL DEFAULT(1),
+    Actif BIT NOT NULL DEFAULT(1),
+    Doc BIT NOT NULL DEFAULT(0),
+    Deleted BIT NOT NULL DEFAULT(0),
+    DtCreation DATETIME NOT NULL DEFAULT(GETUTCDATE()),
+    DtModification DATETIME NULL,
+    DtSuppression DATETIME NULL,
+    UsrCreationId INT NULL,
+    UsrModificationId INT NULL,
+    UsrSuppressionId INT NULL,
+    RowVersion ROWVERSION
+  );
+  PRINT 'Table RReminderChannel créée';
+END
+ELSE
+  PRINT 'Table RReminderChannel existe déjà';
+
+IF OBJECT_ID('dbo.RAgendaEventStatus','U') IS NULL
+BEGIN
+  CREATE TABLE dbo.RAgendaEventStatus(
+    ID SMALLINT NOT NULL PRIMARY KEY,
+    Code NVARCHAR(50) NOT NULL,
+    Libelle NVARCHAR(200) NOT NULL,
+    TenantId INT NOT NULL DEFAULT(1),
+    Actif BIT NOT NULL DEFAULT(1),
+    Doc BIT NOT NULL DEFAULT(0),
+    Deleted BIT NOT NULL DEFAULT(0),
+    DtCreation DATETIME NOT NULL DEFAULT(GETUTCDATE()),
+    DtModification DATETIME NULL,
+    DtSuppression DATETIME NULL,
+    UsrCreationId INT NULL,
+    UsrModificationId INT NULL,
+    UsrSuppressionId INT NULL,
+    RowVersion ROWVERSION
+  );
+  PRINT 'Table RAgendaEventStatus créée';
+END
+ELSE
+  PRINT 'Table RAgendaEventStatus existe déjà';
+
+IF OBJECT_ID('dbo.RScheduledActionStatus','U') IS NULL
+BEGIN
+  CREATE TABLE dbo.RScheduledActionStatus(
+    ID SMALLINT NOT NULL PRIMARY KEY,
+    Code NVARCHAR(50) NOT NULL,
+    Libelle NVARCHAR(200) NOT NULL,
+    TenantId INT NOT NULL DEFAULT(1),
+    Actif BIT NOT NULL DEFAULT(1),
+    Doc BIT NOT NULL DEFAULT(0),
+    Deleted BIT NOT NULL DEFAULT(0),
+    DtCreation DATETIME NOT NULL DEFAULT(GETUTCDATE()),
+    DtModification DATETIME NULL,
+    DtSuppression DATETIME NULL,
+    UsrCreationId INT NULL,
+    UsrModificationId INT NULL,
+    UsrSuppressionId INT NULL,
+    RowVersion ROWVERSION
+  );
+  PRINT 'Table RScheduledActionStatus créée';
+END
+ELSE
+  PRINT 'Table RScheduledActionStatus existe déjà';
+
+IF OBJECT_ID('dbo.RNotificationType','U') IS NULL
+BEGIN
+  CREATE TABLE dbo.RNotificationType(
+    ID SMALLINT NOT NULL PRIMARY KEY,
+    Code NVARCHAR(50) NOT NULL,
+    Libelle NVARCHAR(200) NOT NULL,
+    TenantId INT NOT NULL DEFAULT(1),
+    Actif BIT NOT NULL DEFAULT(1),
+    Doc BIT NOT NULL DEFAULT(0),
+    Deleted BIT NOT NULL DEFAULT(0),
+    DtCreation DATETIME NOT NULL DEFAULT(GETUTCDATE()),
+    DtModification DATETIME NULL,
+    DtSuppression DATETIME NULL,
+    UsrCreationId INT NULL,
+    UsrModificationId INT NULL,
+    UsrSuppressionId INT NULL,
+    RowVersion ROWVERSION
+  );
+  PRINT 'Table RNotificationType créée';
+END
+ELSE
+  PRINT 'Table RNotificationType existe déjà';
+
+IF OBJECT_ID('dbo.SAgenda','U') IS NULL
+BEGIN
+  CREATE TABLE dbo.SAgenda(
+    ID INT IDENTITY(1,1) PRIMARY KEY,
+    Libelle NVARCHAR(200) NOT NULL,
+    OwnerUserId INT NOT NULL,
+    IsShared BIT NOT NULL DEFAULT(0),
+    Color NVARCHAR(32) NULL,
+    TimeZoneId NVARCHAR(128) NULL,
+    IsDefault BIT NOT NULL DEFAULT(0),
+    TenantId INT NOT NULL DEFAULT(1),
+    Actif BIT NOT NULL DEFAULT(1),
+    Doc BIT NOT NULL DEFAULT(0),
+    Deleted BIT NOT NULL DEFAULT(0),
+    DtCreation DATETIME NOT NULL DEFAULT(GETUTCDATE()),
+    DtModification DATETIME NULL,
+    DtSuppression DATETIME NULL,
+    UsrCreationId INT NULL,
+    UsrModificationId INT NULL,
+    UsrSuppressionId INT NULL,
+    RowVersion ROWVERSION
+  );
+
+  IF OBJECT_ID('dbo.SUser','U') IS NOT NULL
+    ALTER TABLE dbo.SAgenda ADD CONSTRAINT FK_SAgenda_User FOREIGN KEY(OwnerUserId) REFERENCES dbo.SUser(ID) ON DELETE CASCADE;
+
+  PRINT 'Table SAgenda créée';
+END
+ELSE
+  PRINT 'Table SAgenda existe déjà';
+
+IF OBJECT_ID('dbo.SAgendaUser','U') IS NULL
+BEGIN
+  CREATE TABLE dbo.SAgendaUser(
+    ID INT IDENTITY(1,1) PRIMARY KEY,
+    AgendaId INT NOT NULL,
+    UserId INT NOT NULL,
+    CanEdit BIT NOT NULL DEFAULT(0),
+    CanViewPrivate BIT NOT NULL DEFAULT(0),
+    TenantId INT NOT NULL DEFAULT(1),
+    Actif BIT NOT NULL DEFAULT(1),
+    Doc BIT NOT NULL DEFAULT(0),
+    Deleted BIT NOT NULL DEFAULT(0),
+    DtCreation DATETIME NOT NULL DEFAULT(GETUTCDATE()),
+    DtModification DATETIME NULL,
+    DtSuppression DATETIME NULL,
+    UsrCreationId INT NULL,
+    UsrModificationId INT NULL,
+    UsrSuppressionId INT NULL,
+    RowVersion ROWVERSION
+  );
+
+  ALTER TABLE dbo.SAgendaUser ADD CONSTRAINT UQ_SAgendaUser UNIQUE(AgendaId, UserId, TenantId);
+  ALTER TABLE dbo.SAgendaUser ADD CONSTRAINT FK_SAgendaUser_Agenda FOREIGN KEY(AgendaId) REFERENCES dbo.SAgenda(ID) ON DELETE CASCADE;
+  IF OBJECT_ID('dbo.SUser','U') IS NOT NULL
+    ALTER TABLE dbo.SAgendaUser ADD CONSTRAINT FK_SAgendaUser_User FOREIGN KEY(UserId) REFERENCES dbo.SUser(ID) ON DELETE NO ACTION;
+
+  PRINT 'Table SAgendaUser créée';
+END
+ELSE
+  PRINT 'Table SAgendaUser existe déjà';
+
+IF OBJECT_ID('dbo.SAgendaEvent','U') IS NULL
+BEGIN
+  CREATE TABLE dbo.SAgendaEvent(
+    ID INT IDENTITY(1,1) PRIMARY KEY,
+    AgendaId INT NOT NULL,
+    Libelle NVARCHAR(200) NOT NULL,
+    Description NVARCHAR(2000) NULL,
+    StartUtc DATETIME2 NOT NULL,
+    EndUtc DATETIME2 NOT NULL,
+    AllDay BIT NOT NULL DEFAULT(0),
+    IsPrivate BIT NOT NULL DEFAULT(0),
+    StatusId SMALLINT NOT NULL,
+    ContextEntityType NVARCHAR(128) NULL,
+    ContextEntityId UNIQUEIDENTIFIER NULL,
+    EnableReminders BIT NOT NULL DEFAULT(0),
+    TenantId INT NOT NULL DEFAULT(1),
+    Actif BIT NOT NULL DEFAULT(1),
+    Doc BIT NOT NULL DEFAULT(0),
+    Deleted BIT NOT NULL DEFAULT(0),
+    DtCreation DATETIME NOT NULL DEFAULT(GETUTCDATE()),
+    DtModification DATETIME NULL,
+    DtSuppression DATETIME NULL,
+    UsrCreationId INT NULL,
+    UsrModificationId INT NULL,
+    UsrSuppressionId INT NULL,
+    RowVersion ROWVERSION
+  );
+
+  ALTER TABLE dbo.SAgendaEvent ADD CONSTRAINT FK_SAgendaEvent_Agenda FOREIGN KEY(AgendaId) REFERENCES dbo.SAgenda(ID) ON DELETE CASCADE;
+  IF OBJECT_ID('dbo.RAgendaEventStatus','U') IS NOT NULL
+    ALTER TABLE dbo.SAgendaEvent ADD CONSTRAINT FK_SAgendaEvent_Status FOREIGN KEY(StatusId) REFERENCES dbo.RAgendaEventStatus(ID);
+
+  CREATE INDEX IX_SAgendaEvent_Period ON dbo.SAgendaEvent(AgendaId, StartUtc, EndUtc);
+  PRINT 'Table SAgendaEvent créée';
+END
+ELSE
+  PRINT 'Table SAgendaEvent existe déjà';
+
+IF OBJECT_ID('dbo.SAgendaReminder','U') IS NULL
+BEGIN
+  CREATE TABLE dbo.SAgendaReminder(
+    ID INT IDENTITY(1,1) PRIMARY KEY,
+    AgendaEventId INT NOT NULL,
+    OffsetMinutes INT NOT NULL,
+    ChannelId SMALLINT NOT NULL,
+    TriggerAtUtc DATETIME2 NOT NULL,
+    IsSent BIT NOT NULL DEFAULT(0),
+    SentAtUtc DATETIME2 NULL,
+    TenantId INT NOT NULL DEFAULT(1),
+    Actif BIT NOT NULL DEFAULT(1),
+    Doc BIT NOT NULL DEFAULT(0),
+    Deleted BIT NOT NULL DEFAULT(0),
+    DtCreation DATETIME NOT NULL DEFAULT(GETUTCDATE()),
+    DtModification DATETIME NULL,
+    DtSuppression DATETIME NULL,
+    UsrCreationId INT NULL,
+    UsrModificationId INT NULL,
+    UsrSuppressionId INT NULL,
+    RowVersion ROWVERSION
+  );
+
+  ALTER TABLE dbo.SAgendaReminder ADD CONSTRAINT FK_SAgendaReminder_Event FOREIGN KEY(AgendaEventId) REFERENCES dbo.SAgendaEvent(ID) ON DELETE CASCADE;
+  IF OBJECT_ID('dbo.RReminderChannel','U') IS NOT NULL
+    ALTER TABLE dbo.SAgendaReminder ADD CONSTRAINT FK_SAgendaReminder_Channel FOREIGN KEY(ChannelId) REFERENCES dbo.RReminderChannel(ID);
+
+  CREATE INDEX IX_SAgendaReminder_Trigger ON dbo.SAgendaReminder(TriggerAtUtc, IsSent);
+  PRINT 'Table SAgendaReminder créée';
+END
+ELSE
+  PRINT 'Table SAgendaReminder existe déjà';
+
+IF OBJECT_ID('dbo.SPushSubscription','U') IS NULL
+BEGIN
+  CREATE TABLE dbo.SPushSubscription(
+    ID INT IDENTITY(1,1) PRIMARY KEY,
+    UserId INT NOT NULL,
+    Endpoint NVARCHAR(1024) NOT NULL,
+    P256dh NVARCHAR(512) NOT NULL,
+    Auth NVARCHAR(256) NOT NULL,
+    DeviceInfo NVARCHAR(512) NULL,
+    IsActive BIT NOT NULL DEFAULT(1),
+    LastUsedUtc DATETIME2 NULL,
+    TenantId INT NOT NULL DEFAULT(1),
+    Actif BIT NOT NULL DEFAULT(1),
+    Doc BIT NOT NULL DEFAULT(0),
+    Deleted BIT NOT NULL DEFAULT(0),
+    DtCreation DATETIME NOT NULL DEFAULT(GETUTCDATE()),
+    DtModification DATETIME NULL,
+    DtSuppression DATETIME NULL,
+    UsrCreationId INT NULL,
+    UsrModificationId INT NULL,
+    UsrSuppressionId INT NULL,
+    RowVersion ROWVERSION
+  );
+
+  IF OBJECT_ID('dbo.SUser','U') IS NOT NULL
+    ALTER TABLE dbo.SPushSubscription ADD CONSTRAINT FK_SPushSubscription_User FOREIGN KEY(UserId) REFERENCES dbo.SUser(ID) ON DELETE CASCADE;
+
+  CREATE UNIQUE INDEX IX_SPushSubscription_UserEndpoint ON dbo.SPushSubscription(UserId, Endpoint);
+  PRINT 'Table SPushSubscription créée';
+END
+ELSE
+  PRINT 'Table SPushSubscription existe déjà';
+
+IF OBJECT_ID('dbo.SNotification','U') IS NULL
+BEGIN
+  CREATE TABLE dbo.SNotification(
+    ID INT IDENTITY(1,1) PRIMARY KEY,
+    UserId INT NOT NULL,
+    Title NVARCHAR(256) NOT NULL,
+    Message NVARCHAR(2000) NOT NULL,
+    CreatedUtc DATETIME2 NOT NULL,
+    ReadUtc DATETIME2 NULL,
+    NotificationTypeId SMALLINT NULL,
+    LinkUrl NVARCHAR(1024) NULL,
+    TenantId INT NOT NULL DEFAULT(1),
+    Actif BIT NOT NULL DEFAULT(1),
+    Doc BIT NOT NULL DEFAULT(0),
+    Deleted BIT NOT NULL DEFAULT(0),
+    DtCreation DATETIME NOT NULL DEFAULT(GETUTCDATE()),
+    DtModification DATETIME NULL,
+    DtSuppression DATETIME NULL,
+    UsrCreationId INT NULL,
+    UsrModificationId INT NULL,
+    UsrSuppressionId INT NULL,
+    RowVersion ROWVERSION
+  );
+
+  IF OBJECT_ID('dbo.SUser','U') IS NOT NULL
+    ALTER TABLE dbo.SNotification ADD CONSTRAINT FK_SNotification_User FOREIGN KEY(UserId) REFERENCES dbo.SUser(ID) ON DELETE CASCADE;
+  IF OBJECT_ID('dbo.RNotificationType','U') IS NOT NULL
+    ALTER TABLE dbo.SNotification ADD CONSTRAINT FK_SNotification_Type FOREIGN KEY(NotificationTypeId) REFERENCES dbo.RNotificationType(ID);
+
+  CREATE INDEX IX_SNotification_User ON dbo.SNotification(UserId, CreatedUtc DESC);
+  PRINT 'Table SNotification créée';
+END
+ELSE
+  PRINT 'Table SNotification existe déjà';
+
+IF OBJECT_ID('dbo.SScheduledAction','U') IS NULL
+BEGIN
+  CREATE TABLE dbo.SScheduledAction(
+    ID INT IDENTITY(1,1) PRIMARY KEY,
+    ActionId INT NOT NULL,
+    Libelle NVARCHAR(200) NOT NULL,
+    CronExpression NVARCHAR(64) NOT NULL,
+    NextRunUtc DATETIME2 NOT NULL,
+    LastRunUtc DATETIME2 NULL,
+    StatusId SMALLINT NOT NULL,
+    ParametersJson NVARCHAR(4000) NULL,
+    LastError NVARCHAR(2000) NULL,
+    TenantId INT NOT NULL DEFAULT(1),
+    Actif BIT NOT NULL DEFAULT(1),
+    Doc BIT NOT NULL DEFAULT(0),
+    Deleted BIT NOT NULL DEFAULT(0),
+    DtCreation DATETIME NOT NULL DEFAULT(GETUTCDATE()),
+    DtModification DATETIME NULL,
+    DtSuppression DATETIME NULL,
+    UsrCreationId INT NULL,
+    UsrModificationId INT NULL,
+    UsrSuppressionId INT NULL,
+    RowVersion ROWVERSION
+  );
+
+  IF OBJECT_ID('dbo.SAction','U') IS NOT NULL
+    ALTER TABLE dbo.SScheduledAction ADD CONSTRAINT FK_SScheduledAction_Action FOREIGN KEY(ActionId) REFERENCES dbo.SAction(ID) ON DELETE CASCADE;
+  IF OBJECT_ID('dbo.RScheduledActionStatus','U') IS NOT NULL
+    ALTER TABLE dbo.SScheduledAction ADD CONSTRAINT FK_SScheduledAction_Status FOREIGN KEY(StatusId) REFERENCES dbo.RScheduledActionStatus(ID);
+
+  CREATE INDEX IX_SScheduledAction_NextRun ON dbo.SScheduledAction(StatusId, NextRunUtc);
+  PRINT 'Table SScheduledAction créée';
+END
+ELSE
+  PRINT 'Table SScheduledAction existe déjà';
+";
+
+        private static string SqlSeedAgendaReferentials() => @"
+-- ===== SEED RÉFÉRENTIELS AGENDA =====
+
+MERGE dbo.RReminderChannel AS target
+USING (VALUES
+    (1, 'INAPP', 'Notification interne'),
+    (2, 'EMAIL', 'Email'),
+    (3, 'PUSH', 'Notification push')
+) AS source(Id, Code, Libelle)
+ON target.ID = source.Id
+WHEN MATCHED THEN UPDATE SET Code = source.Code, Libelle = source.Libelle, Deleted = 0, Actif = 1
+WHEN NOT MATCHED THEN
+  INSERT(ID, Code, Libelle, TenantId, Actif, Doc, Deleted, DtCreation)
+  VALUES(source.Id, source.Code, source.Libelle, 1, 1, 0, 0, GETUTCDATE());
+
+MERGE dbo.RAgendaEventStatus AS target
+USING (VALUES
+    (1, 'PLANNED', 'Prévu'),
+    (2, 'DONE', 'Terminé'),
+    (3, 'CANCELLED', 'Annulé')
+) AS source(Id, Code, Libelle)
+ON target.ID = source.Id
+WHEN MATCHED THEN UPDATE SET Code = source.Code, Libelle = source.Libelle, Deleted = 0, Actif = 1
+WHEN NOT MATCHED THEN
+  INSERT(ID, Code, Libelle, TenantId, Actif, Doc, Deleted, DtCreation)
+  VALUES(source.Id, source.Code, source.Libelle, 1, 1, 0, 0, GETUTCDATE());
+
+MERGE dbo.RScheduledActionStatus AS target
+USING (VALUES
+    (1, 'ACTIVE', 'Active'),
+    (2, 'PAUSED', 'En pause'),
+    (3, 'DISABLED', 'Désactivée')
+) AS source(Id, Code, Libelle)
+ON target.ID = source.Id
+WHEN MATCHED THEN UPDATE SET Code = source.Code, Libelle = source.Libelle, Deleted = 0, Actif = 1
+WHEN NOT MATCHED THEN
+  INSERT(ID, Code, Libelle, TenantId, Actif, Doc, Deleted, DtCreation)
+  VALUES(source.Id, source.Code, source.Libelle, 1, 1, 0, 0, GETUTCDATE());
+
+MERGE dbo.RNotificationType AS target
+USING (VALUES
+    (1, 'AGENDA_REMINDER', 'Rappel d''agenda'),
+    (2, 'ACTION_FAILED', 'Action planifiée en erreur'),
+    (3, 'SYSTEM_INFO', 'Information système')
+) AS source(Id, Code, Libelle)
+ON target.ID = source.Id
+WHEN MATCHED THEN UPDATE SET Code = source.Code, Libelle = source.Libelle, Deleted = 0, Actif = 1
+WHEN NOT MATCHED THEN
+  INSERT(ID, Code, Libelle, TenantId, Actif, Doc, Deleted, DtCreation)
+  VALUES(source.Id, source.Code, source.Libelle, 1, 1, 0, 0, GETUTCDATE());
+";
+
+        private static string SqlEnsureAgendaModule() => @"
+-- ===== MODULE & MENUS AGENDA =====
+
+DECLARE @utcNow DATETIME = GETUTCDATE();
+DECLARE @moduleId INT;
+
+SELECT @moduleId = ID FROM dbo.SModule WHERE Name = 'Agenda' AND TenantId = 1;
+
+IF @moduleId IS NULL
+BEGIN
+  INSERT INTO dbo.SModule(Name, Description, Route, Icon, [Order], TenantId, Actif, Doc, Deleted, DtCreation)
+  VALUES('Agenda', 'Gestion des agendas internes', '/agenda', 'calendar', 100, 1, 1, 0, 0, @utcNow);
+  SET @moduleId = SCOPE_IDENTITY();
+END
+ELSE
+BEGIN
+  UPDATE dbo.SModule
+  SET Description = 'Gestion des agendas internes', Route = '/agenda', Icon = COALESCE(Icon, 'calendar'), Actif = 1, Deleted = 0
+  WHERE ID = @moduleId;
+END
+
+DECLARE @actions TABLE(Code NVARCHAR(128), Description NVARCHAR(255));
+INSERT INTO @actions(Code, Description)
+VALUES
+  ('Agenda_ViewCalendar', 'Consulter l''agenda'),
+  ('Agenda_EditEvent', 'Créer ou modifier un événement'),
+  ('Agenda_DeleteEvent', 'Supprimer un événement'),
+  ('Agenda_ManageSharing', 'Gérer le partage d''un agenda'),
+  ('ScheduledAction_View', 'Consulter les actions planifiées'),
+  ('ScheduledAction_Edit', 'Modifier les actions planifiées');
+
+DECLARE @actionId INT;
+
+DECLARE action_cursor CURSOR LOCAL FAST_FORWARD FOR
+  SELECT Code, Description FROM @actions;
+
+OPEN action_cursor;
+DECLARE @code NVARCHAR(128), @desc NVARCHAR(255);
+
+FETCH NEXT FROM action_cursor INTO @code, @desc;
+WHILE @@FETCH_STATUS = 0
+BEGIN
+  SELECT @actionId = ID FROM dbo.SAction WHERE Name = @code AND TenantId = 1;
+  IF @actionId IS NULL
+  BEGIN
+    INSERT INTO dbo.SAction(Name, Description, TenantId, Actif, Doc, Deleted, DtCreation)
+    VALUES(@code, @desc, 1, 1, 0, 0, @utcNow);
+    SET @actionId = SCOPE_IDENTITY();
+  END
+  ELSE
+  BEGIN
+    UPDATE dbo.SAction SET Description = @desc, Deleted = 0, Actif = 1 WHERE ID = @actionId;
+  END
+  FETCH NEXT FROM action_cursor INTO @code, @desc;
+END
+
+CLOSE action_cursor;
+DEALLOCATE action_cursor;
+
+DECLARE @menuId INT;
+SELECT @menuId = ID FROM dbo.SMenu WHERE Libelle = 'Agenda' AND TenantId = 1;
+
+IF @menuId IS NULL
+BEGIN
+  INSERT INTO dbo.SMenu(ParentId, ModuleId, Libelle, IsLeaf, Icon, Parametre, [Order], TenantId, Actif, Doc, Deleted, DtCreation)
+  VALUES(NULL, @moduleId, 'Agenda', 1, 'calendar', NULL, 100, 1, 1, 0, 0, @utcNow);
+END
+ELSE
+BEGIN
+  UPDATE dbo.SMenu SET ModuleId = @moduleId, Icon = COALESCE(Icon, 'calendar'), Parametre = NULL, Deleted = 0, Actif = 1 WHERE ID = @menuId;
+END
+
+-- Création du droit Menu pour le groupe Administrateurs si disponible
+DECLARE @adminGroupId INT = (SELECT TOP 1 ID FROM dbo.SGroup WHERE Name IN ('Administrateurs','Administrateur'));
+IF @adminGroupId IS NOT NULL AND EXISTS(SELECT 1 FROM dbo.SMenu WHERE Libelle = 'Agenda' AND TenantId = 1)
+BEGIN
+  DECLARE @agendaMenuId INT = (SELECT ID FROM dbo.SMenu WHERE Libelle = 'Agenda' AND TenantId = 1);
+  IF NOT EXISTS(SELECT 1 FROM dbo.SRight WHERE GroupId = @adminGroupId AND Target = 'Menu' AND SubjectId = @agendaMenuId)
+  BEGIN
+    INSERT INTO dbo.SRight(GroupId, Target, SubjectId, Right1, TenantId, Actif, Doc, Deleted, DtCreation)
+    VALUES(@adminGroupId, 'Menu', @agendaMenuId, 1, 1, 1, 0, 0, @utcNow);
+  END
+END
+";
+
+        private static string SqlSeedAgendaScheduledActions() => @"
+-- ===== SEED ACTIONS PLANIFIÉES AGENDA =====
+
+DECLARE @dispatcherActionId INT = (SELECT ID FROM dbo.SAction WHERE Name = 'AgendaReminderDispatcher' AND TenantId = 1);
+IF @dispatcherActionId IS NULL
+BEGIN
+  INSERT INTO dbo.SAction(Name, Description, TenantId, Actif, Doc, Deleted, DtCreation)
+  VALUES('AgendaReminderDispatcher', 'Dispatch des rappels d''agenda', 1, 1, 0, 0, GETUTCDATE());
+  SET @dispatcherActionId = SCOPE_IDENTITY();
+END
+
+DECLARE @cleanupActionId INT = (SELECT ID FROM dbo.SAction WHERE Name = 'NotificationCleanup' AND TenantId = 1);
+IF @cleanupActionId IS NULL
+BEGIN
+  INSERT INTO dbo.SAction(Name, Description, TenantId, Actif, Doc, Deleted, DtCreation)
+  VALUES('NotificationCleanup', 'Nettoyage des notifications anciennes', 1, 1, 0, 0, GETUTCDATE());
+  SET @cleanupActionId = SCOPE_IDENTITY();
+END
+
+DECLARE @activeStatus SMALLINT = (SELECT ID FROM dbo.RScheduledActionStatus WHERE Code = 'ACTIVE');
+IF @activeStatus IS NULL SET @activeStatus = 1;
+
+MERGE dbo.SScheduledAction AS target
+USING (VALUES
+    ('AgendaReminderDispatcher', @dispatcherActionId, 'AgendaReminderDispatcher', '*/1 * * * *', 1),
+    ('NotificationCleanup', @cleanupActionId, 'NotificationCleanup', '0 3 * * *', 1)
+) AS source(Code, ActionId, Libelle, CronExpression, StatusId)
+ON target.ActionId = source.ActionId
+WHEN MATCHED THEN
+  UPDATE SET Libelle = source.Libelle, CronExpression = source.CronExpression, StatusId = COALESCE(source.StatusId, @activeStatus), Deleted = 0, Actif = 1
+WHEN NOT MATCHED THEN
+  INSERT(ActionId, Libelle, CronExpression, NextRunUtc, LastRunUtc, StatusId, ParametersJson, LastError, TenantId, Actif, Doc, Deleted, DtCreation)
+  VALUES(source.ActionId, source.Libelle, source.CronExpression, DATEADD(MINUTE, 1, GETUTCDATE()), NULL, COALESCE(source.StatusId, @activeStatus), NULL, NULL, 1, 1, 0, 0, GETUTCDATE());
 ";
 
         #endregion
