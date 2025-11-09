@@ -13,5 +13,10 @@ namespace Aion.DataEngine.Interfaces
     public interface IAionProvisioningService
     {
         Task EnsureDatabaseReadyAsync();
+        Task EnsureAgendaSchemaAsync();
+        Task SeedAgendaReferentialsAsync();
+        Task SeedAgendaSystemScheduledActionsAsync();
+        Task EnsureAgendaModuleAsync();
+        Task EnsureAdminDefaultAgendaAsync();
     }
 }

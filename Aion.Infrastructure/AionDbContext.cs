@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Aion.DataEngine.Entities;
 using Aion.Domain.AI;
+using Aion.Domain.Agenda;
 
 namespace Aion.Infrastructure
 {
@@ -40,6 +41,17 @@ namespace Aion.Infrastructure
         public DbSet<SXAiConfig> SXAiConfigs => Set<SXAiConfig>();
         public DbSet<SXSynonym> SXSynonyms => Set<SXSynonym>();
         public DbSet<SXTemplate> SXTemplates => Set<SXTemplate>();
+        public DbSet<SAgenda> SAgendas => Set<SAgenda>();
+        public DbSet<SAgendaUser> SAgendaUsers => Set<SAgendaUser>();
+        public DbSet<SAgendaEvent> SAgendaEvents => Set<SAgendaEvent>();
+        public DbSet<SAgendaReminder> SAgendaReminders => Set<SAgendaReminder>();
+        public DbSet<SPushSubscription> SPushSubscriptions => Set<SPushSubscription>();
+        public DbSet<SNotification> SNotifications => Set<SNotification>();
+        public DbSet<SScheduledAction> SScheduledActions => Set<SScheduledAction>();
+        public DbSet<RReminderChannel> RReminderChannels => Set<RReminderChannel>();
+        public DbSet<RAgendaEventStatus> RAgendaEventStatuses => Set<RAgendaEventStatus>();
+        public DbSet<RScheduledActionStatus> RScheduledActionStatuses => Set<RScheduledActionStatus>();
+        public DbSet<RNotificationType> RNotificationTypes => Set<RNotificationType>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -71,8 +83,148 @@ namespace Aion.Infrastructure
             modelBuilder.Entity<Aion.DataEngine.Entities.SHistoVersion>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
             modelBuilder.Entity<Aion.DataEngine.Entities.SHistoChange>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
             modelBuilder.Entity<Aion.DataEngine.Entities.STenant>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
+            modelBuilder.Entity<SAgenda>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
+            modelBuilder.Entity<SAgendaUser>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
+            modelBuilder.Entity<SAgendaEvent>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
+            modelBuilder.Entity<SAgendaReminder>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
+            modelBuilder.Entity<SPushSubscription>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
+            modelBuilder.Entity<SNotification>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
+            modelBuilder.Entity<SScheduledAction>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
+            modelBuilder.Entity<RReminderChannel>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
+            modelBuilder.Entity<RAgendaEventStatus>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
+            modelBuilder.Entity<RScheduledActionStatus>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
+            modelBuilder.Entity<RNotificationType>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
 
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(AionDbContext).Assembly);
+
+            modelBuilder.Entity<SAgenda>(entity =>
+            {
+                entity.ToTable("SAgenda");
+                entity.Property(e => e.Libelle).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Color).HasMaxLength(32);
+                entity.Property(e => e.TimeZoneId).HasMaxLength(128);
+                entity.HasMany(e => e.Events)
+                    .WithOne(e => e.Agenda)
+                    .HasForeignKey(e => e.AgendaId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<SAgendaUser>(entity =>
+            {
+                entity.ToTable("SAgendaUser");
+                entity.HasIndex(e => new { e.AgendaId, e.UserId }).IsUnique();
+                entity.HasOne(e => e.Agenda)
+                    .WithMany(e => e.SharedUsers)
+                    .HasForeignKey(e => e.AgendaId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<RAgendaEventStatus>(entity =>
+            {
+                entity.ToTable("RAgendaEventStatus");
+                entity.Property(e => e.Code).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.Libelle).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Id).HasColumnType("smallint");
+            });
+
+            modelBuilder.Entity<RReminderChannel>(entity =>
+            {
+                entity.ToTable("RReminderChannel");
+                entity.Property(e => e.Code).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.Libelle).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Id).HasColumnType("smallint");
+            });
+
+            modelBuilder.Entity<RScheduledActionStatus>(entity =>
+            {
+                entity.ToTable("RScheduledActionStatus");
+                entity.Property(e => e.Code).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.Libelle).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Id).HasColumnType("smallint");
+            });
+
+            modelBuilder.Entity<RNotificationType>(entity =>
+            {
+                entity.ToTable("RNotificationType");
+                entity.Property(e => e.Code).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.Libelle).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Id).HasColumnType("smallint");
+            });
+
+            modelBuilder.Entity<SAgendaEvent>(entity =>
+            {
+                entity.ToTable("SAgendaEvent");
+                entity.Property(e => e.Libelle).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Description).HasMaxLength(2000);
+                entity.Property(e => e.ContextEntityType).HasMaxLength(128);
+                entity.HasOne(e => e.Status)
+                    .WithMany(s => s.Events)
+                    .HasForeignKey(e => e.StatusId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<SAgendaReminder>(entity =>
+            {
+                entity.ToTable("SAgendaReminder");
+                entity.HasOne(e => e.AgendaEvent)
+                    .WithMany(e => e.Reminders)
+                    .HasForeignKey(e => e.AgendaEventId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.Channel)
+                    .WithMany(c => c.Reminders)
+                    .HasForeignKey(e => e.ChannelId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<SPushSubscription>(entity =>
+            {
+                entity.ToTable("SPushSubscription");
+                entity.Property(e => e.Endpoint).IsRequired().HasMaxLength(1024);
+                entity.Property(e => e.P256dh).IsRequired().HasMaxLength(512);
+                entity.Property(e => e.Auth).IsRequired().HasMaxLength(256);
+                entity.Property(e => e.DeviceInfo).HasMaxLength(512);
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<SNotification>(entity =>
+            {
+                entity.ToTable("SNotification");
+                entity.Property(e => e.Title).IsRequired().HasMaxLength(256);
+                entity.Property(e => e.Message).IsRequired().HasMaxLength(2000);
+                entity.Property(e => e.LinkUrl).HasMaxLength(1024);
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.NotificationType)
+                    .WithMany(t => t.Notifications)
+                    .HasForeignKey(e => e.NotificationTypeId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            modelBuilder.Entity<SScheduledAction>(entity =>
+            {
+                entity.ToTable("SScheduledAction");
+                entity.Property(e => e.Libelle).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.CronExpression).IsRequired().HasMaxLength(64);
+                entity.Property(e => e.ParametersJson).HasMaxLength(4000);
+                entity.Property(e => e.LastError).HasMaxLength(2000);
+                entity.HasOne(e => e.Action)
+                    .WithMany()
+                    .HasForeignKey(e => e.ActionId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.Status)
+                    .WithMany(s => s.ScheduledActions)
+                    .HasForeignKey(e => e.StatusId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
 
             foreach (var entityType in modelBuilder.Model.GetEntityTypes()
                          .Where(t => typeof(BaseEntity).IsAssignableFrom(t.ClrType)))
