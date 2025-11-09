@@ -22,6 +22,7 @@ using Microsoft.FluentUI.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Aion.DataEngine.Services;
 using Aion.Infrastructure.Data;
+using System;
 using System.Linq;
 using Aion.Domain.UI.DynamicLayouts;
 using Aion.AI.Extensions;
@@ -42,14 +43,32 @@ builder.Services.AddHttpClient();
 // ===== Database Contexts =====
 var connectionString = builder.Configuration.GetConnectionString("AionDb")
     ?? "Server=localhost;Database=AionDb;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true;";
+var databaseProvider = builder.Configuration.GetValue<string>("DatabaseProvider") ?? "SqlServer";
 
-builder.Services.AddDbContextFactory<AionDbContext>((_, opt) =>
-    opt.UseSqlServer(connectionString),
-    ServiceLifetime.Scoped);
+if (string.Equals(databaseProvider, "Sqlite", StringComparison.OrdinalIgnoreCase))
+{
+    builder.Services.AddDbContextFactory<AionDbContext>((_, opt) =>
+        opt.UseSqlite(connectionString),
+        ServiceLifetime.Scoped);
 
-builder.Services.AddDbContextFactory<SecurityDbContext>((_, opt) =>
-    opt.UseSqlServer(connectionString),
-    ServiceLifetime.Scoped);
+    builder.Services.AddDbContextFactory<SecurityDbContext>((_, opt) =>
+        opt.UseSqlite(connectionString),
+        ServiceLifetime.Scoped);
+
+    builder.Services.AddScoped<IDataProvider, SqliteDataProvider>();
+}
+else
+{
+    builder.Services.AddDbContextFactory<AionDbContext>((_, opt) =>
+        opt.UseSqlServer(connectionString),
+        ServiceLifetime.Scoped);
+
+    builder.Services.AddDbContextFactory<SecurityDbContext>((_, opt) =>
+        opt.UseSqlServer(connectionString),
+        ServiceLifetime.Scoped);
+
+    builder.Services.AddScoped<IDataProvider, SqlDataProvider>();
+}
 
 builder.Services.AddServerSideBlazor()
     .AddCircuitOptions(o => { o.DetailedErrors = true; });
@@ -94,7 +113,6 @@ builder.Services.AddScoped<IMenuProvider, MenuProvider>();
 builder.Services.AddScoped<ITabService, TabService>();
 builder.Services.AddScoped<IDataQueryResolver, DataQueryResolver>();
 builder.Services.AddScoped<IWidgetService, WidgetServiceEf>();
-builder.Services.AddScoped<IDataProvider, SqlDataProvider>();
 builder.Services.AddScoped<IAionProvisioningService, AionProvisioningService>();
 builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
 builder.Services.AddSingleton<IClock, Aion.Infrastructure.Services.SystemClock>();
