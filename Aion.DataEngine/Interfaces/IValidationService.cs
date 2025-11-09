@@ -6,7 +6,7 @@ namespace Aion.DataEngine.Interfaces
 {
     /// <summary>
     /// Provides runtime validation for values written to user‑defined tables.
-    /// Rules are derived from metadata stored in S_CHAMP, such as regular
+    /// Rules are derived from metadata stored in SFIELD, such as regular
     /// expressions, ranges and nullability.
     /// </summary>
     public interface IValidationService

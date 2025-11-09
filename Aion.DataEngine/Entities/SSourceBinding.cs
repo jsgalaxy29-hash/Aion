@@ -21,7 +21,7 @@ namespace Aion.DataEngine.Entities
         public int TableId { get; set; }
 
         /// <summary>
-        /// Foreign key to the logical column (S_CHAMP) this binding applies to.
+        /// Foreign key to the logical column (SFIELD) this binding applies to.
         /// Null if the binding operates at table level (e.g. import/export).
         /// </summary>
         public int? ChampId { get; set; }

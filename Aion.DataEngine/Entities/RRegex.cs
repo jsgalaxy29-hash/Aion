@@ -6,7 +6,7 @@ namespace Aion.DataEngine.Entities
     /// Represents a reusable regular expression definition.  Instances of this
     /// entity are stored in the reference table RRegex.  The `Pattern`
     /// property contains the actual regular expression and may be selected
-    /// from a dropdown when defining a field in S_CHAMP.
+    /// from a dropdown when defining a field in SFIELD.
     /// </summary>
     public class RRegex : BaseEntity
     {

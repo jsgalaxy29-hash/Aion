@@ -207,7 +207,7 @@ namespace Aion.DataEngine.Services
                     {
                         // Insert column metadata.  We assume no primary key or unique constraints for discovered columns.
                         const string insertColSql = @"
-                            INSERT INTO S_CHAMP (
+                            INSERT INTO SFIELD (
                                 TableId, Libelle, Alias, DataType,
                                 IsClePrimaire, IsUnique, Taille, Referentiel,
                                 ReferentielWhereClause, Defaut, IsNulleable,
@@ -574,7 +574,7 @@ namespace Aion.DataEngine.Services
         }
 
         /// <summary>
-        /// Retrieves metadata for all fields (S_CHAMP) belonging to a table.
+        /// Retrieves metadata for all fields (SFIELD) belonging to a table.
         /// Uses an in‑memory cache to avoid repeated lookups.
         /// </summary>
         /// <param name="tableId">Identifier of the table (S_TABLE.Id).</param>

@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 namespace Aion.DataEngine.Entities
 {
     /// <summary>
-    /// Represents a field (column) definition stored in the system catalog (S_CHAMP).
+    /// Represents a field (column) definition stored in the system catalog (SFIELD).
     /// Each record defines metadata for a column belonging to a user‑defined table.
     /// </summary>
     public class SField : BaseEntity

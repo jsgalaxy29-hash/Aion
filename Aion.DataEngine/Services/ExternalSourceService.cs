@@ -38,8 +38,8 @@ namespace Aion.DataEngine.Services
         /// Reads data from the external source bound to the specified table and
         /// optional column.  If no binding exists, an empty collection is returned.
         /// </summary>
-        /// <param name="tableId">Identifier of the logical table (S_TABLE.Id).</param>
-        /// <param name="champId">Optional identifier of the logical column (S_CHAMP.Id).</param>
+        /// <param name="tableId">Identifier of the logical table (STABLE.Id).</param>
+        /// <param name="champId">Optional identifier of the logical column (SFIELD.Id).</param>
         /// <param name="context">Optional context parameters passed to the provider.</param>
         /// <returns>A collection of rows returned by the provider.  Each row
         /// is represented as a dictionary mapping column names to values.</returns>

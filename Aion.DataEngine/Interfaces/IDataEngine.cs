@@ -15,22 +15,22 @@ namespace Aion.DataEngine.Interfaces
 
         /// <summary>
         /// Scans the underlying database for existing tables and columns and
-        /// synchronises them into the catalog tables (S_TABLE, S_CHAMP).  
+        /// synchronises them into the catalog tables (STABLE, SFIELD).  
         /// This operation populates metadata for existing legacy tables.
         /// </summary>
         Task SynchronizeSystemCatalogAsync();
 
         /// <summary>
         /// Scans the underlying database for existing tables and columns and
-        /// synchronises them into the catalog tables (S_TABLE, S_CHAMP).  
+        /// synchronises them into the catalog tables (STABLE, SFIELD).  
         /// This operation populates metadata for existing legacy tables.
         /// </summary>
         Task SynchronizeCatalogAsync();
 
         /// <summary>
         /// Materialises a new table in the physical database based on the
-        /// provided metadata.  It is assumed that the corresponding S_TABLE and
-        /// S_CHAMP records have already been created and validated.
+        /// provided metadata.  It is assumed that the corresponding STABLE and
+        /// SFIELD records have already been created and validated.
         /// </summary>
         /// <param name="table">The table definition.</param>
         /// <param name="fields">The collection of field definitions.</param>
