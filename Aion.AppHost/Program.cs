@@ -52,7 +52,7 @@ if (string.Equals(databaseProvider, "Sqlite", StringComparison.OrdinalIgnoreCase
 {
     builder.Services.AddDbContextFactory<AionDbContext>((_, opt) =>
         opt.UseSqlite(connectionString),
-        ServiceLifetime.Singleton);
+        ServiceLifetime.Scoped);
 
     builder.Services.AddDbContextFactory<SecurityDbContext>((_, opt) =>
         opt.UseSqlite(connectionString),
@@ -64,7 +64,7 @@ else
 {
     builder.Services.AddDbContextFactory<AionDbContext>((_, opt) =>
         opt.UseSqlServer(connectionString),
-        ServiceLifetime.Singleton);
+        ServiceLifetime.Scoped);
 
     builder.Services.AddDbContextFactory<SecurityDbContext>((_, opt) =>
         opt.UseSqlServer(connectionString),
