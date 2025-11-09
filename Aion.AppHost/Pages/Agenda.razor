@@ -138,13 +138,13 @@ else
 
                 <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="12" Wrap="true">
                     <FluentField Label="Début">
-                        <InputDate TValue="DateTime" @bind-Value="_formModel.StartLocal" />
-                        <InputTime TValue="DateTime" @bind-Value="_formModel.StartLocal" Disabled="@_formModel.AllDay" />
+                        <InputDate TValue="DateTime" @bind-Value="_formModel.StartDateLocal" />
+                        <InputTime TValue="DateTime" @bind-Value="_formModel.StartTimeLocal" Disabled="@_formModel.AllDay" />
                     </FluentField>
 
                     <FluentField Label="Fin">
-                        <InputDate TValue="DateTime" @bind-Value="_formModel.EndLocal" />
-                        <InputTime TValue="DateTime" @bind-Value="_formModel.EndLocal" Disabled="@_formModel.AllDay" />
+                        <InputDate TValue="DateTime" @bind-Value="_formModel.EndDateLocal" />
+                        <InputTime TValue="DateTime" @bind-Value="_formModel.EndTimeLocal" Disabled="@_formModel.AllDay" />
                     </FluentField>
                 </FluentStack>
 
@@ -591,6 +591,47 @@ else
         public string? Description { get; set; }
         public DateTime StartLocal { get; set; } = DateTime.Now;
         public DateTime EndLocal { get; set; } = DateTime.Now.AddHours(1);
+        public DateTime StartDateLocal
+        {
+            get => StartLocal.Date;
+            set
+            {
+                var date = DateTime.SpecifyKind(value.Date, DateTimeKind.Local);
+                StartLocal = date.Add(StartLocal.TimeOfDay);
+            }
+        }
+
+        public DateTime EndDateLocal
+        {
+            get => EndLocal.Date;
+            set
+            {
+                var date = DateTime.SpecifyKind(value.Date, DateTimeKind.Local);
+                EndLocal = date.Add(EndLocal.TimeOfDay);
+            }
+        }
+
+        public DateTime StartTimeLocal
+        {
+            get => DateTime.SpecifyKind(DateTime.Today, DateTimeKind.Local).Add(StartLocal.TimeOfDay);
+            set
+            {
+                var timeOfDay = value.TimeOfDay;
+                var date = DateTime.SpecifyKind(StartLocal.Date, DateTimeKind.Local);
+                StartLocal = date.Add(timeOfDay);
+            }
+        }
+
+        public DateTime EndTimeLocal
+        {
+            get => DateTime.SpecifyKind(DateTime.Today, DateTimeKind.Local).Add(EndLocal.TimeOfDay);
+            set
+            {
+                var timeOfDay = value.TimeOfDay;
+                var date = DateTime.SpecifyKind(EndLocal.Date, DateTimeKind.Local);
+                EndLocal = date.Add(timeOfDay);
+            }
+        }
         public bool AllDay { get; set; }
         public bool IsPrivate { get; set; }
         public int StatusId { get; set; }
