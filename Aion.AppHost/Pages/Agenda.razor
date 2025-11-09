@@ -230,6 +230,7 @@ else
     private string? _selectedAgendaKey;
     private DateTime? _visibleRangeStartUtc;
     private DateTime? _visibleRangeEndUtc;
+    private Guid _lastLoadEventsRequestId;
 
     private IEnumerable<SAgendaEvent> UpcomingEvents => _events
         .Where(e => !_selectedAgendaId.HasValue || e.AgendaId == _selectedAgendaId)
@@ -327,10 +328,18 @@ else
         var from = rangeStartUtc ?? _visibleRangeStartUtc ?? DateTime.UtcNow.Date.AddMonths(-1);
         var to = rangeEndUtc ?? _visibleRangeEndUtc ?? DateTime.UtcNow.Date.AddMonths(3);
 
-        _visibleRangeStartUtc = from;
-        _visibleRangeEndUtc = to;
+        var requestId = Guid.NewGuid();
+        _lastLoadEventsRequestId = requestId;
 
         var events = await AgendaService.GetEventsForUserAsync(UserContext.UserId, from, to);
+
+        if (_lastLoadEventsRequestId != requestId)
+        {
+            return;
+        }
+
+        _visibleRangeStartUtc = from;
+        _visibleRangeEndUtc = to;
         _events.Clear();
         _events.AddRange(events);
 
