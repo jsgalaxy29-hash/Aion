@@ -415,7 +415,7 @@ BEGIN
     TableId INT NOT NULL,
     Libelle NVARCHAR(255) NOT NULL,
     Alias NVARCHAR(255) NOT NULL,
-    DataType NVARCHAR(15) NOT NULL,
+    DataType NVARCHAR(50) NOT NULL,
     Taille INT NOT NULL DEFAULT(1),
     IsClePrimaire BIT DEFAULT(0), 
     IsUnique BIT DEFAULT(0), 
