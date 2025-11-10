@@ -691,10 +691,15 @@ else
                 return;
             }
 
+            var removedUserId = link.UserId;
             securityDb.SUserGroup.Remove(link);
             await securityDb.SaveChangesAsync();
 
             var affectedUsers = await GetActiveGroupMemberIdsAsync(securityDb, _groupModel.Id);
+            if (!affectedUsers.Contains(removedUserId))
+            {
+                affectedUsers.Add(removedUserId);
+            }
 
             _statusMessage = "Utilisateur retiré du groupe.";
             await LoadGroupMembersAsync(_groupModel.Id, securityDb);
