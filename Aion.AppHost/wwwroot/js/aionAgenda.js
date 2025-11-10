@@ -31,6 +31,8 @@ async function ensureFullCalendar() {
 }
 
 export async function initCalendar(dotNetRefRef, selectedAgendaId, defaultView) {
+    await disposeCalendar();
+
     dotNetRef = dotNetRefRef;
 
     const fullCalendar = await ensureFullCalendar();
@@ -141,4 +143,14 @@ async function persistEventDates(event) {
     } catch (err) {
         console.error('Failed to persist event dates', err);
     }
+}
+
+export async function disposeCalendar() {
+    if (window.aionAgendaCalendar) {
+        window.aionAgendaCalendar.destroy();
+        window.aionAgendaCalendar = null;
+    }
+
+    calendar = undefined;
+    dotNetRef = null;
 }
