@@ -1,5 +1,3 @@
-using System;
-
 namespace Aion.Domain.Widgets
 {
     /// <summary>
@@ -8,14 +6,12 @@ namespace Aion.Domain.Widgets
     public sealed class WidgetEntity
     {
         public int Id { get; set; }
-        public Guid TenantId { get; set; }
+        public int TenantId { get; set; }
         public string Code { get; set; } = default!;
         public string Title { get; set; } = default!;
-        public string? Icon { get; set; }
-        public int DefaultW { get; set; } = 3;
-        public int DefaultH { get; set; } = 2;
+        public string? Component { get; set; }
+        public string? ConfigJson { get; set; }
+        public bool IsActive { get; set; }
         public string DataQueryRef { get; set; } = default!;
-        public string? SettingsSchemaJson { get; set; }
-        public string? RequiredPermissionsCsv { get; set; }
     }
 }
