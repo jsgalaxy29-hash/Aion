@@ -33,7 +33,6 @@ namespace Aion.Infrastructure.Services
 
             _tabs.Add(tab);
             TabsChanged?.Invoke();
-            TabsChanged?.Invoke();
             return Task.FromResult(tab);
         }
         public void Activate(Guid id)

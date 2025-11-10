@@ -3,9 +3,11 @@ using Aion.DataEngine.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Globalization;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using Aion.Infrastructure.Data;
+using System.Text;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace Aion.DataEngine.Services
@@ -57,194 +59,398 @@ namespace Aion.DataEngine.Services
         /// <returns></returns>
         public async Task SynchronizeCatalogAsync(string? tablename = null)
         {
-            // Retrieve all user tables from the database excluding system tables and the catalog itself.
-            string tablesQuery = @"
-                SELECT name
-                FROM sys.tables
-                WHERE type = 'U'";
+            var tableNames = await GetUserTablesAsync(tablename).ConfigureAwait(false);
 
-            if (tablename != null)
+            foreach (var tableName in tableNames)
             {
-                tablesQuery += " AND  = '" + tablename + "'";
-            }
+                var tableId = await EnsureTableMetadataAsync(tableName).ConfigureAwait(false);
+                var columns = await GetColumnMetadataAsync(tableName).ConfigureAwait(false);
 
-            var tables = await _db.ExecuteQueryAsync(tablesQuery).ConfigureAwait(false);
-
-            foreach (DataRow row in tables.Rows)
-            {
-                var tableName = row["name"].ToString()!;
-
-                // Insert table metadata into STable if it does not already exist.
-                // Use an upsert pattern: first check for existence.
-                const string checkTableExistsSql = "SELECT Id FROM STable WHERE Libelle = @name";
-                var existing = await _db.ExecuteQueryAsync(checkTableExistsSql, new Dictionary<string, object?> { ["@name"] = tableName }).ConfigureAwait(false);
-                int tableId;
-                if (existing.Rows.Count == 0)
+                foreach (var column in columns)
                 {
-                    const string insertTableSql = @"
-                        INSERT INTO STable (
-                            Libelle, Description, Parent, ParentLiaison, ReferentielLibelle, Type)
-                        VALUES (@libelle, @description, NULL, NULL, NULL, 'F');
-                        SELECT CAST(SCOPE_IDENTITY() AS INT);";
-                    var param = new Dictionary<string, object?> { ["@libelle"] = tableName, ["@description"] = (object?)null };
-                    var dt = await _db.ExecuteQueryAsync(insertTableSql, param).ConfigureAwait(false);
-                    tableId = Convert.ToInt32(dt.Rows[0][0]);
-                }
-                else
-                {
-                    tableId = Convert.ToInt32(existing.Rows[0][0]);
-                }
-
-                // Synchronize columns for this table.
-                const string columnsQuery = @"
-                                           SELECT 
-                                            c.TABLE_SCHEMA,
-                                            c.TABLE_NAME,
-                                            c.COLUMN_NAME,
-                                            c.ORDINAL_POSITION,
-                                            c.COLUMN_DEFAULT,
-                                            c.IS_NULLABLE,
-                                            c.DATA_TYPE,
-                                            c.CHARACTER_MAXIMUM_LENGTH,
-                                            c.NUMERIC_PRECISION,
-                                            c.NUMERIC_SCALE,
-
-                                            -- Clé primaire ?
-                                            CASE WHEN pk.COLUMN_NAME IS NOT NULL THEN 'Oui' ELSE 'Non' END AS IsPrimaryKey,
-
-                                            -- Contrainte UNIQUE ?
-                                            CASE WHEN uq.COLUMN_NAME IS NOT NULL THEN 'Oui' ELSE 'Non' END AS IsUnique,
-
-                                            -- Table référencée par la FK (uniquement si le nom de colonne finit par 'Id')
-                                            CASE 
-                                                WHEN c.COLUMN_NAME LIKE '%Id' THEN fk.ReferencedTableName
-                                                ELSE NULL
-                                            END AS FKTable
-
-                                        FROM INFORMATION_SCHEMA.COLUMNS c
-
-                                        -- PK
-                                        LEFT JOIN (
-                                            SELECT ku.TABLE_SCHEMA, ku.TABLE_NAME, ku.COLUMN_NAME
-                                            FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
-                                            JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE ku
-                                                ON tc.CONSTRAINT_NAME = ku.CONSTRAINT_NAME
-                                               AND tc.TABLE_SCHEMA   = ku.TABLE_SCHEMA
-                                            WHERE tc.CONSTRAINT_TYPE = 'PRIMARY KEY'
-                                        ) pk ON  c.TABLE_SCHEMA = pk.TABLE_SCHEMA
-                                           AND c.TABLE_NAME   = pk.TABLE_NAME
-                                           AND c.COLUMN_NAME  = pk.COLUMN_NAME
-
-                                        -- UNIQUE
-                                        LEFT JOIN (
-                                            SELECT ku.TABLE_SCHEMA, ku.TABLE_NAME, ku.COLUMN_NAME
-                                            FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
-                                            JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE ku
-                                                ON tc.CONSTRAINT_NAME = ku.CONSTRAINT_NAME
-                                               AND tc.TABLE_SCHEMA   = ku.TABLE_SCHEMA
-                                            WHERE tc.CONSTRAINT_TYPE = 'UNIQUE'
-                                        ) uq ON  c.TABLE_SCHEMA = uq.TABLE_SCHEMA
-                                           AND c.TABLE_NAME   = uq.TABLE_NAME
-                                           AND c.COLUMN_NAME  = uq.COLUMN_NAME
-
-                                        -- FK → table référencée
-                                        LEFT JOIN (
-                                            SELECT 
-                                                OBJECT_SCHEMA_NAME(fk.parent_object_id)     AS SchemaName,
-                                                OBJECT_NAME(fk.parent_object_id)            AS TableName,
-                                                pc.name                                     AS ColumnName,
-                                                OBJECT_SCHEMA_NAME(fk.referenced_object_id) AS ReferencedSchemaName,
-                                                OBJECT_NAME(fk.referenced_object_id)        AS ReferencedTableName
-                                            FROM sys.foreign_keys fk
-                                            JOIN sys.foreign_key_columns fkc 
-                                                ON fk.object_id = fkc.constraint_object_id
-                                            JOIN sys.columns pc
-                                                ON fkc.parent_object_id = pc.object_id 
-                                               AND fkc.parent_column_id = pc.column_id
-                                        ) fk ON  c.TABLE_SCHEMA = fk.SchemaName
-                                            AND c.TABLE_NAME   = fk.TableName
-                                            AND c.COLUMN_NAME  = fk.ColumnName
-
-                                        WHERE c.TABLE_NAME = @tableName
-                                        ORDER BY c.ORDINAL_POSITION;";
-                var columns = await _db.ExecuteQueryAsync(columnsQuery, new Dictionary<string, object?> { ["@tableName"] = tableName }).ConfigureAwait(false);
-
-                foreach (DataRow colRow in columns.Rows)
-                {
-                    var colName = colRow["COLUMN_NAME"].ToString()!;
-                    var dataType = colRow["DATA_TYPE"].ToString()!;
-                    var maxLengthObj = colRow["CHARACTER_MAXIMUM_LENGTH"];
-
-                    var maxLength = maxLengthObj != DBNull.Value ? Convert.ToInt32(maxLengthObj) : 0;
-                    if (maxLength == 0)
-                    {
-                        if (dataType != null)
-                        {
-                            switch (dataType)
-                            {
-                                case "int":
-                                case "smalint":
-                                case "float":
-                                    maxLength = int.Parse(colRow["NUMERIC_PRECISION"].ToString()!);
-                                    break;
-
-                            }
-                        }
-                    }
-                    else if (maxLength == -1)
-                    {
-                        maxLength = 9999;
-                    }
-                    var defaultvalue = colRow["COLUMN_DEFAULT"].ToString()!;
-
-                    var isNullable = string.Equals(colRow["IS_NULLABLE"].ToString(), "YES", StringComparison.OrdinalIgnoreCase);
-                    var IsPrimaryKey = string.Equals(colRow["IsPrimaryKey"].ToString(), "OUI", StringComparison.OrdinalIgnoreCase);
-                    var IsUnique = string.Equals(colRow["IsUnique"].ToString(), "OUI", StringComparison.OrdinalIgnoreCase);
-                    var FKTable = colRow["FKTable"].ToString()!;
-
-                    const string checkColumnSql = "SELECT Id FROM SField WHERE TableId = @tableId AND LIBELLE = @colName";
-                    var exists = await _db.ExecuteQueryAsync(checkColumnSql, new Dictionary<string, object?>
-                    {
-                        ["@tableId"] = tableId,
-                        ["@colName"] = colName
-                    }).ConfigureAwait(false);
-                    if (exists.Rows.Count == 0)
-                    {
-                        // Insert column metadata.  We assume no primary key or unique constraints for discovered columns.
-                        const string insertColSql = @"
-                            INSERT INTO SFIELD (
-                                TableId, Libelle, Alias, DataType,
-                                IsClePrimaire, IsUnique, Taille, Referentiel,
-                                Defaut, IsNulleable
-                                )
-                            VALUES (
-                                @tableId, @libelle, @alias, @dataType,
-                                @IsPrimaryKey, @IsUnique, @taille, @FKTable,
-                                @defaultvalue, @isNullable
-                            );
-                        SELECT CAST(SCOPE_IDENTITY() AS INT);";
-                        var colParams = new Dictionary<string, object?>
-                        {
-                            ["@tableId"] = tableId,
-                            ["@libelle"] = colName,
-                            ["@alias"] = colName,
-                            ["@dataType"] = dataType,
-                            ["@FKTable"] = FKTable,
-                            ["@taille"] = maxLength,
-                            ["@isNullable"] = isNullable ? 1 : 0,
-                            ["@IsPrimaryKey"] = isNullable ? 1 : 0,
-                            ["@IsUnique"] = isNullable ? 1 : 0,
-                            ["@defaultvalue"] = defaultvalue,
-                        };
-                        await _db.ExecuteQueryAsync(insertColSql, colParams).ConfigureAwait(false);
-                    }
+                    await EnsureColumnMetadataAsync(tableId, column).ConfigureAwait(false);
                 }
             }
 
-            // Invalidate cached metadata.
             await _cache.RemoveAsync(TablesCacheKey).ConfigureAwait(false);
         }
 
+
+
+
+        private async Task<IReadOnlyList<string>> GetUserTablesAsync(string? tableFilter)
+        {
+            IDictionary<string, object?>? parameters = null;
+            string sql;
+            if (_db is SqliteDataProvider)
+            {
+                sql = "SELECT name FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%'";
+                if (!string.IsNullOrWhiteSpace(tableFilter))
+                {
+                    sql += " AND name = @tableName";
+                    parameters = new Dictionary<string, object?> { ["@tableName"] = tableFilter };
+                }
+            }
+            else
+            {
+                sql = @"SELECT t.name AS [name]
+                        FROM sys.tables AS t
+                        WHERE t.is_ms_shipped = 0
+                          AND t.name <> '__EFMigrationsHistory'";
+
+                if (!string.IsNullOrWhiteSpace(tableFilter))
+                {
+                    sql += " AND t.name = @tableName";
+                    parameters = new Dictionary<string, object?> { ["@tableName"] = tableFilter };
+                }
+            }
+
+            var result = await _db.ExecuteQueryAsync(sql, parameters).ConfigureAwait(false);
+            return result.Rows.Cast<DataRow>()
+                .Select(row => row["name"].ToString()!)
+                .ToArray();
+        }
+
+        private async Task<int> EnsureTableMetadataAsync(string tableName)
+        {
+            const string checkSql = "SELECT Id FROM STable WHERE Libelle = @name";
+            var existing = await _db.ExecuteQueryAsync(checkSql, new Dictionary<string, object?>
+            {
+                ["@name"] = tableName
+            }).ConfigureAwait(false);
+
+            if (existing.Rows.Count > 0)
+            {
+                return Convert.ToInt32(existing.Rows[0][0], CultureInfo.InvariantCulture);
+            }
+
+            var insertSql = _db is SqliteDataProvider
+                ? @"INSERT INTO STable (Libelle, Description, Parent, ParentLiaison, ReferentielLibelle, Type)
+                    VALUES (@libelle, @description, NULL, NULL, NULL, 'F');
+                    SELECT last_insert_rowid();"
+                : @"INSERT INTO STable (Libelle, Description, Parent, ParentLiaison, ReferentielLibelle, Type)
+                    VALUES (@libelle, @description, NULL, NULL, NULL, 'F');
+                    SELECT CAST(SCOPE_IDENTITY() AS INT);";
+
+            var insertedId = await _db.ExecuteScalarAsync(insertSql, new Dictionary<string, object?>
+            {
+                ["@libelle"] = tableName,
+                ["@description"] = (object?)null
+            }).ConfigureAwait(false);
+
+            return Convert.ToInt32(insertedId ?? throw new InvalidOperationException("Unable to capture STable identifier"), CultureInfo.InvariantCulture);
+        }
+
+        private async Task<IReadOnlyList<ColumnMetadata>> GetColumnMetadataAsync(string tableName)
+        {
+            if (_db is SqliteDataProvider)
+            {
+                return await GetSqliteColumnMetadataAsync(tableName).ConfigureAwait(false);
+            }
+
+            return await GetSqlServerColumnMetadataAsync(tableName).ConfigureAwait(false);
+        }
+
+        private async Task EnsureColumnMetadataAsync(int tableId, ColumnMetadata column)
+        {
+            const string checkSql = "SELECT Id FROM SField WHERE TableId = @tableId AND LIBELLE = @colName";
+            var exists = await _db.ExecuteQueryAsync(checkSql, new Dictionary<string, object?>
+            {
+                ["@tableId"] = tableId,
+                ["@colName"] = column.Name
+            }).ConfigureAwait(false);
+
+            if (exists.Rows.Count > 0)
+            {
+                return;
+            }
+
+            var insertSql = _db is SqliteDataProvider
+                ? @"INSERT INTO SField (
+                        TableId, Libelle, Alias, DataType,
+                        IsClePrimaire, IsUnique, Taille, Referentiel,
+                        Defaut, IsNulleable)
+                    VALUES (
+                        @tableId, @libelle, @alias, @dataType,
+                        @IsPrimaryKey, @IsUnique, @taille, @FKTable,
+                        @defaultvalue, @isNullable);
+                    SELECT last_insert_rowid();"
+                : @"INSERT INTO SField (
+                        TableId, Libelle, Alias, DataType,
+                        IsClePrimaire, IsUnique, Taille, Referentiel,
+                        Defaut, IsNulleable)
+                    VALUES (
+                        @tableId, @libelle, @alias, @dataType,
+                        @IsPrimaryKey, @IsUnique, @taille, @FKTable,
+                        @defaultvalue, @isNullable);
+                    SELECT CAST(SCOPE_IDENTITY() AS INT);";
+
+            await _db.ExecuteScalarAsync(insertSql, new Dictionary<string, object?>
+            {
+                ["@tableId"] = tableId,
+                ["@libelle"] = column.Name,
+                ["@alias"] = column.Name,
+                ["@dataType"] = column.DataType,
+                ["@FKTable"] = column.ForeignTable,
+                ["@taille"] = column.Size ?? 0,
+                ["@isNullable"] = column.IsNullable,
+                ["@IsPrimaryKey"] = column.IsPrimaryKey,
+                ["@IsUnique"] = column.IsUnique,
+                ["@defaultvalue"] = column.DefaultValue
+            }).ConfigureAwait(false);
+        }
+
+        private async Task<IReadOnlyList<ColumnMetadata>> GetSqlServerColumnMetadataAsync(string tableName)
+        {
+            const string query = @"
+                SELECT
+                    c.COLUMN_NAME,
+                    c.COLUMN_DEFAULT,
+                    c.IS_NULLABLE,
+                    c.DATA_TYPE,
+                    c.CHARACTER_MAXIMUM_LENGTH,
+                    c.NUMERIC_PRECISION,
+                    c.NUMERIC_SCALE,
+                    CASE WHEN pk.COLUMN_NAME IS NOT NULL THEN 'Oui' ELSE 'Non' END AS IsPrimaryKey,
+                    CASE WHEN uq.COLUMN_NAME IS NOT NULL THEN 'Oui' ELSE 'Non' END AS IsUnique,
+                    fk.ReferencedTableName AS FKTable
+                FROM INFORMATION_SCHEMA.COLUMNS c
+                LEFT JOIN (
+                    SELECT ku.TABLE_NAME, ku.COLUMN_NAME
+                    FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
+                    JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE ku
+                        ON tc.CONSTRAINT_NAME = ku.CONSTRAINT_NAME
+                    WHERE tc.CONSTRAINT_TYPE = 'PRIMARY KEY'
+                ) pk ON c.TABLE_NAME = pk.TABLE_NAME AND c.COLUMN_NAME = pk.COLUMN_NAME
+                LEFT JOIN (
+                    SELECT ku.TABLE_NAME, ku.COLUMN_NAME
+                    FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
+                    JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE ku
+                        ON tc.CONSTRAINT_NAME = ku.CONSTRAINT_NAME
+                    WHERE tc.CONSTRAINT_TYPE = 'UNIQUE'
+                ) uq ON c.TABLE_NAME = uq.TABLE_NAME AND c.COLUMN_NAME = uq.COLUMN_NAME
+                LEFT JOIN (
+                    SELECT
+                        OBJECT_NAME(fk.parent_object_id)            AS TableName,
+                        pc.name                                     AS ColumnName,
+                        OBJECT_NAME(fk.referenced_object_id)        AS ReferencedTableName
+                    FROM sys.foreign_keys fk
+                    JOIN sys.foreign_key_columns fkc
+                        ON fk.object_id = fkc.constraint_object_id
+                    JOIN sys.columns pc
+                        ON fkc.parent_object_id = pc.object_id
+                       AND fkc.parent_column_id = pc.column_id
+                ) fk ON c.TABLE_NAME = fk.TableName AND c.COLUMN_NAME = fk.ColumnName
+                WHERE c.TABLE_NAME = @tableName
+                ORDER BY c.ORDINAL_POSITION;";
+
+            var rows = await _db.ExecuteQueryAsync(query, new Dictionary<string, object?>
+            {
+                ["@tableName"] = tableName
+            }).ConfigureAwait(false);
+
+            var result = new List<ColumnMetadata>(rows.Rows.Count);
+            foreach (DataRow row in rows.Rows)
+            {
+                var dataType = row["DATA_TYPE"].ToString() ?? string.Empty;
+                var maxLength = row["CHARACTER_MAXIMUM_LENGTH"] == DBNull.Value
+                    ? (int?)null
+                    : Convert.ToInt32(row["CHARACTER_MAXIMUM_LENGTH"], CultureInfo.InvariantCulture);
+
+                if (maxLength == -1)
+                {
+                    maxLength = 9999;
+                }
+                else if ((maxLength == null || maxLength == 0) && !string.IsNullOrEmpty(dataType))
+                {
+                    switch (dataType)
+                    {
+                        case "int":
+                        case "smallint":
+                        case "float":
+                            var precisionValue = row["NUMERIC_PRECISION"];
+                            if (precisionValue != null && precisionValue != DBNull.Value)
+                            {
+                                maxLength = Convert.ToInt32(precisionValue, CultureInfo.InvariantCulture);
+                            }
+                            break;
+                    }
+                }
+
+                var fkValue = row["FKTable"];
+                var defaultValue = row["COLUMN_DEFAULT"];
+
+                result.Add(new ColumnMetadata(
+                    row["COLUMN_NAME"].ToString()!,
+                    dataType,
+                    string.Equals(row["IS_NULLABLE"].ToString(), "YES", StringComparison.OrdinalIgnoreCase),
+                    string.Equals(row["IsPrimaryKey"].ToString(), "Oui", StringComparison.OrdinalIgnoreCase),
+                    string.Equals(row["IsUnique"].ToString(), "Oui", StringComparison.OrdinalIgnoreCase),
+                    fkValue == null || fkValue == DBNull.Value ? null : fkValue.ToString(),
+                    maxLength,
+                    defaultValue == null || defaultValue == DBNull.Value ? null : defaultValue.ToString()
+                ));
+            }
+
+            return result;
+        }
+
+        private async Task<IReadOnlyList<ColumnMetadata>> GetSqliteColumnMetadataAsync(string tableName)
+        {
+            var quotedTable = QuoteIdentifier(tableName, isSqlite: true);
+            var tableInfo = await _db.ExecuteQueryAsync($"PRAGMA table_info({quotedTable});").ConfigureAwait(false);
+            var uniqueColumns = await GetSqliteUniqueColumnsAsync(tableName).ConfigureAwait(false);
+            var foreignKeys = await GetSqliteForeignKeysAsync(tableName).ConfigureAwait(false);
+
+            var result = new List<ColumnMetadata>(tableInfo.Rows.Count);
+            foreach (DataRow row in tableInfo.Rows)
+            {
+                var columnName = row["name"]?.ToString();
+                if (string.IsNullOrWhiteSpace(columnName))
+                {
+                    continue;
+                }
+
+                var dataType = row["type"]?.ToString() ?? "TEXT";
+                var defaultValue = row["dflt_value"] is DBNull ? null : row["dflt_value"]?.ToString();
+                var isPrimaryKey = IsTruthy(row["pk"]);
+                var isUnique = isPrimaryKey || uniqueColumns.Contains(columnName);
+                foreignKeys.TryGetValue(columnName, out var fkTable);
+
+                result.Add(new ColumnMetadata(
+                    columnName,
+                    dataType,
+                    !IsTruthy(row["notnull"]),
+                    isPrimaryKey,
+                    isUnique,
+                    fkTable,
+                    TryParseSqliteLength(dataType),
+                    defaultValue
+                ));
+            }
+
+            return result;
+        }
+
+        private async Task<HashSet<string>> GetSqliteUniqueColumnsAsync(string tableName)
+        {
+            var quotedTable = QuoteIdentifier(tableName, isSqlite: true);
+            var indexList = await _db.ExecuteQueryAsync($"PRAGMA index_list({quotedTable});").ConfigureAwait(false);
+            var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (DataRow index in indexList.Rows)
+            {
+                if (!IsTruthy(index["unique"]))
+                {
+                    continue;
+                }
+
+                var indexName = index["name"]?.ToString();
+                if (string.IsNullOrWhiteSpace(indexName))
+                {
+                    continue;
+                }
+
+                var quotedIndex = QuoteIdentifier(indexName, isSqlite: true);
+                var indexInfo = await _db.ExecuteQueryAsync($"PRAGMA index_info({quotedIndex});").ConfigureAwait(false);
+                foreach (DataRow info in indexInfo.Rows)
+                {
+                    var columnName = info["name"]?.ToString();
+                    if (!string.IsNullOrWhiteSpace(columnName))
+                    {
+                        result.Add(columnName);
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        private async Task<Dictionary<string, string>> GetSqliteForeignKeysAsync(string tableName)
+        {
+            var quotedTable = QuoteIdentifier(tableName, isSqlite: true);
+            var fkInfo = await _db.ExecuteQueryAsync($"PRAGMA foreign_key_list({quotedTable});").ConfigureAwait(false);
+            var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (DataRow row in fkInfo.Rows)
+            {
+                var column = row["from"]?.ToString();
+                var referencedTable = row["table"]?.ToString();
+                if (!string.IsNullOrWhiteSpace(column) && !string.IsNullOrWhiteSpace(referencedTable))
+                {
+                    result[column] = referencedTable;
+                }
+            }
+
+            return result;
+        }
+
+        private static int? TryParseSqliteLength(string dataType)
+        {
+            if (string.IsNullOrWhiteSpace(dataType))
+            {
+                return null;
+            }
+
+            var openParen = dataType.IndexOf('(');
+            var closeParen = dataType.IndexOf(')', openParen + 1);
+            if (openParen < 0 || closeParen <= openParen)
+            {
+                return null;
+            }
+
+            var lengthPart = dataType.Substring(openParen + 1, closeParen - openParen - 1);
+            var commaIndex = lengthPart.IndexOf(',');
+            if (commaIndex >= 0)
+            {
+                lengthPart = lengthPart[..commaIndex];
+            }
+
+            return int.TryParse(lengthPart, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)
+                ? value
+                : null;
+        }
+
+        private static bool IsTruthy(object? value)
+        {
+            return value switch
+            {
+                null => false,
+                bool b => b,
+                sbyte sb => sb != 0,
+                byte b8 => b8 != 0,
+                short s => s != 0,
+                ushort us => us != 0,
+                int i => i != 0,
+                uint ui => ui != 0,
+                long l => l != 0,
+                ulong ul => ul != 0,
+                string s => s.Equals("1", StringComparison.OrdinalIgnoreCase) || s.Equals("true", StringComparison.OrdinalIgnoreCase),
+                _ => false
+            };
+        }
+
+        private static string QuoteIdentifier(string identifier, bool isSqlite)
+        {
+            if (string.IsNullOrEmpty(identifier))
+            {
+                return identifier;
+            }
+
+            return isSqlite
+                ? "\"" + identifier.Replace("\"", "\"\"") + "\""
+                : "[" + identifier.Replace("]", "]]") + "]";
+        }
+
+        private sealed record ColumnMetadata(
+            string Name,
+            string DataType,
+            bool IsNullable,
+            bool IsPrimaryKey,
+            bool IsUnique,
+            string? ForeignTable,
+            int? Size,
+            string? DefaultValue);
 
         /// <summary>
         /// Synchronises the physical database by creating the specified table with its fields.
