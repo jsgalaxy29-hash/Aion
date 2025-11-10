@@ -1,9 +1,11 @@
 ﻿@page "/debug/rights"
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Hosting
 @using Aion.Security.Services
 @using Aion.Security.Extensions
 @inject AuthenticationStateProvider AuthState
 @inject IRightService RightService
+@inject IWebHostEnvironment HostEnvironment
 
 <PageTitle>Debug - Droits utilisateur</PageTitle>
 
@@ -117,6 +119,12 @@ else
 
         try
         {
+            if (!HostEnvironment.IsDevelopment())
+            {
+                _error = "Page disponible uniquement en environnement de développement.";
+                return;
+            }
+
             var state = await AuthState.GetAuthenticationStateAsync();
             var user = state.User;
 
