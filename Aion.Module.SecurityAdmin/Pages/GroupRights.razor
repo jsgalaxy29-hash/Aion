@@ -2,10 +2,13 @@
 @using Microsoft.AspNetCore.Components.Web
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @using Microsoft.EntityFrameworkCore
+@using System.Linq
 @using Aion.Security
+@using Aion.Security.Services
 @inject IDbContextFactory<Aion.Security.SecurityDbContext> SecurityDbFactory
 @inject IDbContextFactory<Aion.Infrastructure.AionDbContext> AppDbFactory
 @inject IUserContext UserContext
+@inject IRightService RightService
 
 <PageTitle>Gestion des droits</PageTitle>
 
@@ -600,6 +603,7 @@ else
         {
             await using var securityDb = await SecurityDbFactory.CreateDbContextAsync();
 
+            var affectedUsers = await GetActiveGroupMemberIdsAsync(securityDb, _groupModel.Id);
             var entity = await securityDb.SGroup.FirstOrDefaultAsync(g => g.Id == _groupModel.Id && g.TenantId == UserContext.TenantId);
             if (entity == null)
             {
@@ -612,6 +616,7 @@ else
 
             _statusMessage = "Groupe supprimé.";
             await LoadGroupsAsync(securityDb);
+            InvalidateUserCaches(affectedUsers);
         }
         catch (Exception ex)
         {
@@ -653,8 +658,11 @@ else
             securityDb.SUserGroup.Add(link);
             await securityDb.SaveChangesAsync();
 
+            var affectedUsers = await GetActiveGroupMemberIdsAsync(securityDb, _groupModel.Id);
+
             _statusMessage = "Utilisateur ajouté au groupe.";
             await LoadGroupMembersAsync(_groupModel.Id, securityDb);
+            InvalidateUserCaches(affectedUsers);
         }
         catch (Exception ex)
         {
@@ -686,8 +694,11 @@ else
             securityDb.SUserGroup.Remove(link);
             await securityDb.SaveChangesAsync();
 
+            var affectedUsers = await GetActiveGroupMemberIdsAsync(securityDb, _groupModel.Id);
+
             _statusMessage = "Utilisateur retiré du groupe.";
             await LoadGroupMembersAsync(_groupModel.Id, securityDb);
+            InvalidateUserCaches(affectedUsers);
         }
         catch (Exception ex)
         {
@@ -743,8 +754,11 @@ else
             securityDb.SRight.Add(entity);
             await securityDb.SaveChangesAsync();
 
+            var affectedUsers = await GetActiveGroupMemberIdsAsync(securityDb, _groupModel.Id);
+
             _statusMessage = "Droit ajouté.";
             await state.LoadAsync(securityDb, appDb, _groupModel.Id, UserContext.TenantId);
+            InvalidateUserCaches(affectedUsers);
         }
         catch (Exception ex)
         {
@@ -774,8 +788,11 @@ else
             securityDb.SRight.Remove(entity);
             await securityDb.SaveChangesAsync();
 
+            var affectedUsers = await GetActiveGroupMemberIdsAsync(securityDb, _groupModel.Id);
+
             _statusMessage = "Droit supprimé.";
             await state.LoadAsync(securityDb, appDb, _groupModel.Id, UserContext.TenantId);
+            InvalidateUserCaches(affectedUsers);
         }
         catch (Exception ex)
         {
@@ -830,11 +847,31 @@ else
 
             await securityDb.SaveChangesAsync();
 
+            var affectedUsers = await GetActiveGroupMemberIdsAsync(securityDb, _groupModel.Id);
+
             _statusMessage = "Droit mis à jour.";
+            InvalidateUserCaches(affectedUsers);
         }
         catch (Exception ex)
         {
             _errorMessage = $"Erreur lors de la mise à jour du droit : {ex.Message}";
+        }
+    }
+
+    private async Task<List<int>> GetActiveGroupMemberIdsAsync(Aion.Security.SecurityDbContext securityDb, int groupId)
+    {
+        return await securityDb.SUserGroup
+            .Where(ug => ug.GroupId == groupId && ug.TenantId == UserContext.TenantId && ug.IsLinkActive && !ug.Deleted)
+            .Select(ug => ug.UserId)
+            .Distinct()
+            .ToListAsync();
+    }
+
+    private void InvalidateUserCaches(IEnumerable<int> userIds)
+    {
+        foreach (var userId in userIds)
+        {
+            RightService.InvalidateCache(userId);
         }
     }
 
