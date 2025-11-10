@@ -178,21 +178,12 @@ namespace Aion.AppHost.Pages
             {
                 await using var db = await _dbFactory.CreateDbContextAsync();
 
-                var user = await db.SUser.FirstOrDefaultAsync(u => u.Id == userId);
-                if (user == null)
-                {
-                    return;
-                }
-
-                user.AccessFailedCount++;
-
-                if (user.AccessFailedCount >= 4)
-                {
-                    user.LockoutEnd = DateTime.UtcNow.AddMinutes(30);
-                }
-
-                user.DtModification = DateTime.UtcNow;
-                await db.SaveChangesAsync();
+                await db.Database.ExecuteSqlInterpolatedAsync($@"
+                    UPDATE SUser
+                       SET AccessFailedCount = AccessFailedCount + 1,
+                           LockoutEnd = CASE WHEN AccessFailedCount + 1 >= 4 THEN DATEADD(minute, 30, GETUTCDATE()) ELSE LockoutEnd END,
+                           DtModification = GETUTCDATE()
+                     WHERE Id = {userId}");
             }
             catch (Exception ex)
             {
