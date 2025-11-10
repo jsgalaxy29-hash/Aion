@@ -189,6 +189,8 @@ else
     </div>
 }
 
+@implements IAsyncDisposable
+
 @code {
     private readonly AgendaFormModel _formModel = new();
     private bool _enableReminders;
@@ -269,7 +271,7 @@ else
     {
         if (firstRender && _loaded)
         {
-            _agendaJsModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/aionAgenda.js");
+            _agendaJsModule = await JS.InvokeAsync<IJSObjectReference>("import", "/js/aionAgenda.js");
             _dotNetRef = DotNetObjectReference.Create(this);
 
             // initCalendar(dotNetRef, selectedAgendaId, defaultView)
@@ -478,5 +480,30 @@ else
                 Deleted = Deleted
             };
         }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_agendaJsModule is not null)
+        {
+            try
+            {
+                await _agendaJsModule.InvokeVoidAsync("disposeCalendar");
+            }
+            catch (JSDisconnectedException)
+            {
+                // Ignored: the circuit is gone.
+            }
+            catch (ObjectDisposedException)
+            {
+                // Module already disposed.
+            }
+
+            await _agendaJsModule.DisposeAsync();
+            _agendaJsModule = null;
+        }
+
+        _dotNetRef?.Dispose();
+        _dotNetRef = null;
     }
 }
