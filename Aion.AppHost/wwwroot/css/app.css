@@ -61,3 +61,5 @@ main,
     .fc .fc-highlight {
         background: var(--accent-fill-rest, rgba(0,120,212,0.2));
     }
+
+}
