@@ -53,6 +53,11 @@ namespace Aion.Infrastructure
         public DbSet<RScheduledActionStatus> RScheduledActionStatuses => Set<RScheduledActionStatus>();
         public DbSet<RNotificationType> RNotificationTypes => Set<RNotificationType>();
 
+        public bool IsSqlServer()
+        {
+            return Database.ProviderName == "Microsoft.EntityFrameworkCore.SqlServer";
+        }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

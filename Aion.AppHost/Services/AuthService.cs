@@ -192,21 +192,20 @@ namespace Aion.AppHost.Services
             {
                 await using var db = await _dbFactory.CreateDbContextAsync();
 
-                var user = await db.SUser.FirstOrDefaultAsync(u => u.Id == userId);
-                if (user == null)
+                var now = DateTime.UtcNow;
+                var lockoutEnd = now.AddMinutes(30);
+                FormattableString sql = $@"
+                                            UPDATE [SUser]
+                                            SET [AccessFailedCount] = [AccessFailedCount] + 1,
+                                                [LockoutEnd] = CASE WHEN [AccessFailedCount] + 1 >= 4 THEN {lockoutEnd} ELSE [LockoutEnd] END,
+                                                [DtModification] = {now}
+                                            WHERE [Id] = {userId};";
+
+                var rows = await db.Database.ExecuteSqlInterpolatedAsync(sql);
+                if (rows == 0)
                 {
-                    return;
+                    _logger.LogWarning("Utilisateur introuvable pour l'incrémentation des tentatives échouées : {UserId}", userId);
                 }
-
-                user.AccessFailedCount++;
-
-                if (user.AccessFailedCount >= 4)
-                {
-                    user.LockoutEnd = DateTime.UtcNow.AddMinutes(30);
-                }
-
-                user.DtModification = DateTime.UtcNow;
-                await db.SaveChangesAsync();
             }
             catch (Exception ex)
             {

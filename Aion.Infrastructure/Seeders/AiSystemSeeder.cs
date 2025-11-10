@@ -20,7 +20,7 @@ public static class AiSystemSeeder
 
     private static async Task EnsureAiTablesExistAsync(AionDbContext dbContext, CancellationToken cancellationToken)
     {
-        if (!dbContext.Database.IsSqlServer())
+        if (!dbContext.IsSqlServer())
         {
             await dbContext.Database.EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
         }
