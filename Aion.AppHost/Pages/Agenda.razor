@@ -5,6 +5,7 @@
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.JSInterop
+@using System.Globalization
 @using System.Linq
 @using Aion.Domain.Agenda
 @inject IAgendaService AgendaService
@@ -189,6 +190,8 @@ else
     </div>
 }
 
+@implements IAsyncDisposable
+
 @code {
     private readonly AgendaFormModel _formModel = new();
     private bool _enableReminders;
@@ -199,6 +202,9 @@ else
     private List<RReminderChannel> _channels = new();
     private List<SAgendaEvent> _events = new();
     private readonly List<SAgendaReminder> _reminders = new();
+    private DateTime _visibleRangeStartUtc = DateTime.UtcNow.Date.AddDays(-7);
+    private DateTime _visibleRangeEndUtc = DateTime.UtcNow.Date.AddDays(30);
+    private bool _calendarInitialized;
 
     // JS interop
     private IJSObjectReference? _agendaJsModule;
@@ -267,10 +273,10 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && _loaded)
+        if (_loaded && !_calendarInitialized)
         {
-            _agendaJsModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/aionAgenda.js");
-            _dotNetRef = DotNetObjectReference.Create(this);
+            _agendaJsModule ??= await JS.InvokeAsync<IJSObjectReference>("import", "/js/aionAgenda.js");
+            _dotNetRef ??= DotNetObjectReference.Create(this);
 
             // initCalendar(dotNetRef, selectedAgendaId, defaultView)
             await _agendaJsModule.InvokeVoidAsync(
@@ -278,6 +284,22 @@ else
                 _dotNetRef,
                 null,
                 "timeGridWeek");
+
+            _calendarInitialized = true;
+
+            if (_events.Any())
+            {
+                var jsEvents = _events.Select(e => new
+                {
+                    id = e.Id.ToString(),
+                    title = e.Libelle,
+                    start = e.StartUtc,
+                    end = e.EndUtc,
+                    allDay = e.AllDay
+                });
+
+                await _agendaJsModule.InvokeVoidAsync("setEvents", jsEvents);
+            }
 
             // Le premier datesSet côté JS rappellera OnVisibleRangeChangedAsync, qui chargera les events.
         }
@@ -291,15 +313,22 @@ else
             return;
         }
 
-        var from = DateTime.UtcNow.Date.AddDays(-7);
-        var to = DateTime.UtcNow.Date.AddDays(30);
-        _events = await AgendaService.GetEventsForUserAsync(UserContext.UserId, from, to);
+        _events = await AgendaService.GetEventsForUserAsync(UserContext.UserId, _visibleRangeStartUtc, _visibleRangeEndUtc);
     }
 
     [JSInvokable]
     public async Task OnVisibleRangeChangedAsync(string startStr, string endStr)
     {
-        // Pour l’instant, on recharge sur une fenêtre glissante fixe comme avant
+        if (DateTime.TryParse(startStr, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var rangeStartUtc))
+        {
+            _visibleRangeStartUtc = rangeStartUtc;
+        }
+
+        if (DateTime.TryParse(endStr, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var rangeEndUtc))
+        {
+            _visibleRangeEndUtc = rangeEndUtc;
+        }
+
         await LoadEventsAsync();
 
         if (_agendaJsModule is null)
@@ -478,5 +507,31 @@ else
                 Deleted = Deleted
             };
         }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_agendaJsModule is not null)
+        {
+            try
+            {
+                await _agendaJsModule.InvokeVoidAsync("disposeCalendar");
+            }
+            catch (JSDisconnectedException)
+            {
+                // Ignored: the circuit is gone.
+            }
+            catch (ObjectDisposedException)
+            {
+                // Module already disposed.
+            }
+
+            await _agendaJsModule.DisposeAsync();
+            _agendaJsModule = null;
+        }
+
+        _dotNetRef?.Dispose();
+        _dotNetRef = null;
+        _calendarInitialized = false;
     }
 }
