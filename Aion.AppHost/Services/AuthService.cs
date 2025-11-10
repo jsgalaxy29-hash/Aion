@@ -190,15 +190,23 @@ namespace Aion.AppHost.Services
         {
             try
             {
-                // Utiliser ExecuteSqlRaw pour éviter les problèmes de tracking
                 await using var db = await _dbFactory.CreateDbContextAsync();
 
-                await db.Database.ExecuteSqlRawAsync(
-                    @"UPDATE SUser
-                      SET AccessFailedCount = AccessFailedCount + 1,
-                          LockoutEnd = CASE WHEN AccessFailedCount >= 4 THEN DATEADD(minute, 30, GETUTCDATE()) ELSE LockoutEnd END
-                      WHERE Id = {0}",
-                    userId);
+                var user = await db.SUser.FirstOrDefaultAsync(u => u.Id == userId);
+                if (user == null)
+                {
+                    return;
+                }
+
+                user.AccessFailedCount++;
+
+                if (user.AccessFailedCount >= 4)
+                {
+                    user.LockoutEnd = DateTime.UtcNow.AddMinutes(30);
+                }
+
+                user.DtModification = DateTime.UtcNow;
+                await db.SaveChangesAsync();
             }
             catch (Exception ex)
             {
@@ -210,16 +218,19 @@ namespace Aion.AppHost.Services
         {
             try
             {
-                // Utiliser ExecuteSqlRaw pour éviter les problèmes de tracking
                 await using var db = await _dbFactory.CreateDbContextAsync();
 
-                await db.Database.ExecuteSqlRawAsync(
-                    @"UPDATE SUser
-                      SET AccessFailedCount = 0,
-                          LockoutEnd = NULL,
-                          LastLoginDate = GETUTCDATE()
-                      WHERE Id = {0}",
-                    userId);
+                var user = await db.SUser.FirstOrDefaultAsync(u => u.Id == userId);
+                if (user == null)
+                {
+                    return;
+                }
+
+                user.AccessFailedCount = 0;
+                user.LockoutEnd = null;
+                user.LastLoginDate = DateTime.UtcNow;
+                user.DtModification = DateTime.UtcNow;
+                await db.SaveChangesAsync();
             }
             catch (Exception ex)
             {

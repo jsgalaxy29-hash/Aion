@@ -63,12 +63,14 @@ namespace Aion.DataEngine.Services
                 FROM sys.tables
                 WHERE type = 'U'";
 
-            if (tablename != null)
+            IDictionary<string, object?>? tableParams = null;
+            if (!string.IsNullOrWhiteSpace(tablename))
             {
-                tablesQuery += " AND  = '" + tablename + "'";
+                tablesQuery += " AND name = @tableName";
+                tableParams = new Dictionary<string, object?> { ["@tableName"] = tablename };
             }
 
-            var tables = await _db.ExecuteQueryAsync(tablesQuery).ConfigureAwait(false);
+            var tables = await _db.ExecuteQueryAsync(tablesQuery, tableParams).ConfigureAwait(false);
 
             foreach (DataRow row in tables.Rows)
             {
@@ -183,7 +185,7 @@ namespace Aion.DataEngine.Services
                             switch (dataType)
                             {
                                 case "int":
-                                case "smalint":
+                                case "smallint":
                                 case "float":
                                     maxLength = int.Parse(colRow["NUMERIC_PRECISION"].ToString()!);
                                     break;
@@ -198,8 +200,8 @@ namespace Aion.DataEngine.Services
                     var defaultvalue = colRow["COLUMN_DEFAULT"].ToString()!;
 
                     var isNullable = string.Equals(colRow["IS_NULLABLE"].ToString(), "YES", StringComparison.OrdinalIgnoreCase);
-                    var IsPrimaryKey = string.Equals(colRow["IsPrimaryKey"].ToString(), "OUI", StringComparison.OrdinalIgnoreCase);
-                    var IsUnique = string.Equals(colRow["IsUnique"].ToString(), "OUI", StringComparison.OrdinalIgnoreCase);
+                    var isPrimaryKey = string.Equals(colRow["IsPrimaryKey"].ToString(), "Oui", StringComparison.OrdinalIgnoreCase);
+                    var isUnique = string.Equals(colRow["IsUnique"].ToString(), "Oui", StringComparison.OrdinalIgnoreCase);
                     var FKTable = colRow["FKTable"].ToString()!;
 
                     const string checkColumnSql = "SELECT Id FROM SField WHERE TableId = @tableId AND LIBELLE = @colName";
@@ -229,11 +231,11 @@ namespace Aion.DataEngine.Services
                             ["@libelle"] = colName,
                             ["@alias"] = colName,
                             ["@dataType"] = dataType,
-                            ["@FKTable"] = FKTable,
+                            ["@FKTable"] = string.IsNullOrWhiteSpace(FKTable) ? null : FKTable,
                             ["@taille"] = maxLength,
-                            ["@isNullable"] = isNullable ? 1 : 0,
-                            ["@IsPrimaryKey"] = isNullable ? 1 : 0,
-                            ["@IsUnique"] = isNullable ? 1 : 0,
+                            ["@isNullable"] = isNullable,
+                            ["@IsPrimaryKey"] = isPrimaryKey,
+                            ["@IsUnique"] = isUnique,
                             ["@defaultvalue"] = defaultvalue,
                         };
                         await _db.ExecuteQueryAsync(insertColSql, colParams).ConfigureAwait(false);

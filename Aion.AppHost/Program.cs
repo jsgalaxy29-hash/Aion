@@ -22,6 +22,7 @@ using Microsoft.FluentUI.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Aion.DataEngine.Services;
 using Aion.Infrastructure.Data;
+using Aion.Infrastructure.Options;
 using System;
 using System.Linq;
 using Aion.Domain.UI.DynamicLayouts;
@@ -109,7 +110,7 @@ builder.Services.AddMemoryCache();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddCascadingAuthenticationState();
 
-builder.Services.AddSingleton<IUserContext, HttpContextUserContext>();
+builder.Services.AddScoped<IUserContext, HttpContextUserContext>();
 builder.Services.AddScoped<IRightService, RightService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IMenuProvider, MenuProvider>();
@@ -140,6 +141,7 @@ builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IScheduledActionService, ScheduledActionService>();
 builder.Services.AddHostedService<AgendaReminderWorker>();
 builder.Services.AddHostedService<ActionSchedulerWorker>();
+builder.Services.Configure<DataQueryResolverOptions>(builder.Configuration.GetSection("DataQueryResolver"));
 // ===== Build Application =====
 var app = builder.Build();
 
