@@ -20,7 +20,13 @@ public static class AiSystemSeeder
 
     private static async Task EnsureAiTablesExistAsync(AionDbContext dbContext, CancellationToken cancellationToken)
     {
-        const string ensureConfigSql = @"
+        if (!dbContext.Database.IsSqlServer())
+        {
+            await dbContext.Database.EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            const string ensureConfigSql = @"
 IF OBJECT_ID(N'dbo.SXAiConfig', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.SXAiConfig
@@ -47,7 +53,7 @@ BEGIN
     );
 END";
 
-        const string ensureSynonymSql = @"
+            const string ensureSynonymSql = @"
 IF OBJECT_ID(N'dbo.SXSynonym', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.SXSynonym
@@ -72,7 +78,7 @@ BEGIN
     CREATE UNIQUE INDEX IX_SXSynonym_DomainTerm ON dbo.SXSynonym(DomainTerm);
 END";
 
-        const string ensureTemplateSql = @"
+            const string ensureTemplateSql = @"
 IF OBJECT_ID(N'dbo.SXTemplate', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.SXTemplate
@@ -98,7 +104,7 @@ BEGIN
     CREATE UNIQUE INDEX IX_SXTemplate_TemplateKey ON dbo.SXTemplate(TemplateKey);
 END";
 
-        const string ensureGenerationLogSql = @"
+            const string ensureGenerationLogSql = @"
 IF OBJECT_ID(N'dbo.SXGenerationLog', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.SXGenerationLog
@@ -126,10 +132,11 @@ BEGIN
     );
 END";
 
-        await dbContext.Database.ExecuteSqlRawAsync(ensureConfigSql, cancellationToken).ConfigureAwait(false);
-        await dbContext.Database.ExecuteSqlRawAsync(ensureSynonymSql, cancellationToken).ConfigureAwait(false);
-        await dbContext.Database.ExecuteSqlRawAsync(ensureTemplateSql, cancellationToken).ConfigureAwait(false);
-        await dbContext.Database.ExecuteSqlRawAsync(ensureGenerationLogSql, cancellationToken).ConfigureAwait(false);
+            await dbContext.Database.ExecuteSqlRawAsync(ensureConfigSql, cancellationToken).ConfigureAwait(false);
+            await dbContext.Database.ExecuteSqlRawAsync(ensureSynonymSql, cancellationToken).ConfigureAwait(false);
+            await dbContext.Database.ExecuteSqlRawAsync(ensureTemplateSql, cancellationToken).ConfigureAwait(false);
+            await dbContext.Database.ExecuteSqlRawAsync(ensureGenerationLogSql, cancellationToken).ConfigureAwait(false);
+        }
     }
 
     private static async Task SeedConfigAsync(AionDbContext dbContext, CancellationToken cancellationToken)

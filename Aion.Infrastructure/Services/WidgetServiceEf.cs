@@ -27,13 +27,31 @@ namespace Aion.Infrastructure.Services
         public async Task<IReadOnlyList<WidgetEntity>> GetAvailableWidgetsAsync(int tenantId, CancellationToken ct)
         {
             await using var db = await _dbFactory.CreateDbContextAsync(ct);
-            return (IReadOnlyList<WidgetEntity>)await db.SWidget.Where(w => w.TenantId == tenantId || w.TenantId == 0).ToListAsync(ct);
+
+            var widgets = await db.SWidget
+                .AsNoTracking()
+                .Where(w => w.TenantId == tenantId || w.TenantId == 0)
+                .Select(w => new WidgetEntity
+                {
+                    Id = w.Id,
+                    TenantId = w.TenantId,
+                    Code = w.Code,
+                    Title = w.Title,
+                    Component = w.Component,
+                    ConfigJson = w.ConfigJson,
+                    IsActive = w.IsActive,
+                    DataQueryRef = w.DataQueryRef
+                })
+                .ToListAsync(ct)
+                .ConfigureAwait(false);
+
+            return widgets;
         }
 
         public async Task<object?> GetDataAsync(string widgetCode, IDictionary<string, object?>? settings, CancellationToken ct)
         {
             await using var db = await _dbFactory.CreateDbContextAsync(ct);
-            var widget = await db.SWidget.FirstOrDefaultAsync(w => w.Code == widgetCode, ct);
+            var widget = await db.SWidget.AsNoTracking().FirstOrDefaultAsync(w => w.Code == widgetCode, ct);
             if (widget is null) return null;
             return await _resolver.ExecuteAsync(widget.DataQueryRef, settings, ct);
         }
