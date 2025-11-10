@@ -14,3 +14,50 @@ main,
 .app-container {
     padding: 1.5rem;
 }
+
+/* -- FullCalendar + FluentUI harmonisation -- */
+
+.fc {
+    font-family: var(--body-font-family, "Segoe UI", system-ui);
+    color: var(--neutral-foreground-rest, #111);
+    background-color: var(--neutral-layer-1, #fafafa);
+}
+
+    .fc .fc-toolbar-title {
+        color: var(--neutral-foreground-rest, #111);
+    }
+
+    /* En-têtes de colonnes (jours) */
+    .fc .fc-col-header-cell {
+        background-color: var(--neutral-layer-2, #f5f5f5);
+        border-color: var(--neutral-stroke-layer-rest, #e0e0e0);
+        font-weight: 600;
+    }
+
+    /* Axe des heures */
+    .fc .fc-timegrid-slot-label {
+        color: var(--neutral-foreground-rest, #666);
+        font-size: 0.8rem;
+    }
+
+    /* Ligne All-day */
+    .fc .fc-timegrid-axis,
+    .fc .fc-timegrid-all-day {
+        background-color: var(--neutral-layer-2, #f5f5f5);
+        color: var(--neutral-foreground-rest, #333);
+    }
+
+    /* Événements */
+    .fc .fc-event {
+        border-radius: 4px;
+        border: 1px solid var(--accent-stroke-control-rest, #0078d4);
+        background-color: var(--accent-fill-rest, #0078d4);
+        color: var(--neutral-foreground-on-accent-rest, #fff);
+        padding: 2px 4px;
+        font-size: 0.8rem;
+    }
+
+    /* Sélection (quand on clique pour créer) */
+    .fc .fc-highlight {
+        background: var(--accent-fill-rest, rgba(0,120,212,0.2));
+    }

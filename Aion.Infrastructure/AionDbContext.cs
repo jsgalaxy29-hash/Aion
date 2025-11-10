@@ -19,12 +19,11 @@ namespace Aion.Infrastructure
         private readonly IUserContext _userContext = userContext ?? new DefaultUserContext();
 
         // System DbSets (unifiés)
-        public DbSet<SUser> Users => Set<SUser>(); // Gardé 'Users'
+        public DbSet<SUser> Users => Set<SUser>(); 
         public DbSet<SMenu> SMenu => Set<SMenu>();
         public DbSet<SModule> SModule => Set<SModule>();
         public DbSet<SAction> SAction => Set<SAction>();
         public DbSet<SReport> SReport => Set<SReport>();
-        // public DbSet<SUser> SUser => Set<SUser>(); // <-- 3. Supprimé car doublon de 'Users'
         public DbSet<SGroup> SGroup => Set<SGroup>();
         public DbSet<SUserGroup> SUserGroup => Set<SUserGroup>();
         public DbSet<SRightType> SRightType => Set<SRightType>();
