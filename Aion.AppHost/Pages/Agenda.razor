@@ -253,6 +253,7 @@ else
                en laissant un peu pour le titre / marges.
                Tu peux ajuster la valeur si besoin. */
         height: calc(100vh - 140px);
+        width: 100%;
     }
 
     .agenda-sidebar {
@@ -274,20 +275,19 @@ else
         flex-direction: column;
     }
 
-        .agenda-main > .fluent-stack {
+        .agenda-main > fluent-stack {
             /* Le stack qui contient les boutons + le calendrier */
+            display: flex;
+            flex-direction: column;
             flex: 1;
             min-height: 0;
-        }
-
-        .agenda-main {
-            flex: 1;
-            min-height: 0;
-            /* Pour que FullCalendar puisse s’étirer */
         }
 
         /* Calendrier pleine hauteur de la fenêtre (en laissant un peu pour le titre / toolbar) */
         .agenda-calendar {
+            flex: 1;
+            width: 100%;
+            min-height: 0;
             height: calc(100vh - 200px); /* ajuste 200 si tu veux + ou - haut */
         }
 
