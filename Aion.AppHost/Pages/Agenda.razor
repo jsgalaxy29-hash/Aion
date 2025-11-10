@@ -269,7 +269,7 @@ else
     {
         if (firstRender && _loaded)
         {
-            _agendaJsModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/aionAgenda.js");
+            _agendaJsModule = await JS.InvokeAsync<IJSObjectReference>("import", "/js/aionAgenda.js");
             _dotNetRef = DotNetObjectReference.Create(this);
 
             // initCalendar(dotNetRef, selectedAgendaId, defaultView)

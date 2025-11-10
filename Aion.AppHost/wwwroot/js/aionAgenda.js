@@ -1,19 +1,51 @@
-﻿// wwwroot/js/aionAgenda.js
-import { Calendar } from '/lib/fullcalendar/core/index.global.js';
-import timeGridPlugin from '/lib/fullcalendar/timegrid/index.global.js';
-import dayGridPlugin from '/lib/fullcalendar/daygrid/index.global.js';
-import interactionPlugin from '/lib/fullcalendar/interaction/index.global.js';
-
-// Optionnel : import des styles si tu veux les packager côté Blazor
-import '/lib/fullcalendar/core/index.global.min.css';
-import '/lib/fullcalendar/daygrid/index.global.min.css';
-import '/lib/fullcalendar/timegrid/index.global.min.css';
+// wwwroot/js/aionAgenda.js
 
 let calendar;
 let dotNetRef;
 
-export function initCalendar(dotNetRefRef, selectedAgendaId, defaultView) {
+async function ensureFullCalendar() {
+    if (window.FullCalendar) {
+        return window.FullCalendar;
+    }
+
+    let attempts = 20;
+
+    return new Promise((resolve, reject) => {
+        const intervalId = setInterval(() => {
+            if (window.FullCalendar) {
+                clearInterval(intervalId);
+                resolve(window.FullCalendar);
+                return;
+            }
+
+            attempts--;
+            if (attempts <= 0) {
+                clearInterval(intervalId);
+                reject(new Error('FullCalendar global not found'));
+            }
+        }, 100);
+    }).catch(err => {
+        console.error(err);
+        return null;
+    });
+}
+
+export async function initCalendar(dotNetRefRef, selectedAgendaId, defaultView) {
     dotNetRef = dotNetRefRef;
+
+    const fullCalendar = await ensureFullCalendar();
+    if (!fullCalendar) {
+        console.error("FullCalendar n'est pas disponible. Vérifiez que le script CDN est correctement chargé.");
+        return;
+    }
+
+    const { Calendar, dayGridPlugin, timeGridPlugin, interactionPlugin } = fullCalendar;
+
+    if (!Calendar || !dayGridPlugin || !timeGridPlugin || !interactionPlugin) {
+        console.error("Les modules FullCalendar requis ne sont pas disponibles. Vérifiez que le bundle CDN est correctement chargé.");
+        return;
+    }
+
     const calendarEl = document.getElementById("aion-agenda-calendar");
     if (!calendarEl) {
         console.error("Élément #aion-agenda-calendar introuvable");
@@ -34,6 +66,11 @@ export function initCalendar(dotNetRefRef, selectedAgendaId, defaultView) {
         slotDuration: "00:30:00",
         slotMinTime: "07:00:00",
         slotMaxTime: "20:00:00",
+        slotLabelFormat: {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false
+        },
         firstDay: 1,
         headerToolbar: false, // toolbar Blazor gérée côté Razor
 
