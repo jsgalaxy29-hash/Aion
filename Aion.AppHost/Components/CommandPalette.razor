@@ -94,7 +94,10 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    public Task Close()
+    public Task CloseAsync()
+        => CloseInternalAsync();
+
+    private async Task CloseInternalAsync()
     {
         if (!_isOpen)
         {
@@ -106,7 +109,7 @@
         _results.Clear();
         _command = null;
         _activeIndex = 0;
-        return InvokeAsync(StateHasChanged);
+        await InvokeAsync(StateHasChanged);
     }
 
     [JSInvokable]
@@ -180,7 +183,7 @@
         switch (args.Key)
         {
             case "Escape":
-                await Close();
+                await CloseAsync();
                 break;
             case "Enter":
                 await ExecuteSelectionAsync();
@@ -228,7 +231,7 @@
 
         var module = _results[index];
         await Navigation.OpenModuleAsync(module.Key, null, CancellationToken.None);
-        await Close();
+        await CloseAsync();
     }
 
     private async Task ExecuteCommandAsync()
@@ -251,8 +254,11 @@
                 break;
         }
 
-        await Close();
+        await CloseAsync();
     }
+
+    private Task OnDialogDismissAsync(DialogEventArgs args)
+        => CloseInternalAsync();
 
     private static Icon GetCommandIcon(NavigationCommandType type)
         => type switch
