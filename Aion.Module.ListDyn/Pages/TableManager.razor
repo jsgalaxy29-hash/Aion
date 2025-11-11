@@ -80,16 +80,25 @@ else
             return;
         }
 
+        var encoded = Uri.EscapeDataString(table.Libelle);
         var parameters = new Dictionary<string, object?> { ["TableName"] = table.Libelle };
 
-        var module = await ModuleCatalog.TryGetByRouteAsync("/dynamic/list", CancellationToken.None);
-        if (module is not null)
+        var listModule = await ModuleCatalog.TryGetByRouteAsync("/dynamic/list", CancellationToken.None);
+        if (listModule is not null)
         {
-            await Navigation.OpenModuleAsync(module.Key, parameters, CancellationToken.None);
+            await Navigation.OpenModuleAsync(listModule.Key, parameters, CancellationToken.None);
+            NavigationManager.NavigateTo($"/dynamic/list/{encoded}");
+
+            var managerModule = await ModuleCatalog.TryGetByRouteAsync("/dynamic/manager", CancellationToken.None);
+            if (managerModule is not null
+                && !string.Equals(managerModule.Key, listModule.Key, StringComparison.OrdinalIgnoreCase))
+            {
+                await Navigation.CloseModuleAsync(managerModule.Key, CancellationToken.None);
+            }
+
             return;
         }
 
-        var encoded = Uri.EscapeDataString(table.Libelle);
-        NavigationManager.NavigateTo($"/dynamic/list/{encoded}");
+        NavigationManager.NavigateTo($"/dynamic/list/{encoded}", true);
     }
 }
