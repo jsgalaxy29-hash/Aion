@@ -13,13 +13,13 @@
 @inject IJSRuntime Js
 @implements IAsyncDisposable
 
-<FluentDialog Visible="@_isOpen" OnDismiss="Close" Style="--dialog-width: min(720px, 100vw);">
+<FluentDialog Visible="@_isOpen" OnDismiss="@Close" Style="--dialog-width: min(720px, 100vw);">
     <div class="command-palette">
         <FluentTextField Value="_query"
                           ValueChanged="OnQueryChanged"
                           ValueExpression="() => _query"
                           Placeholder="Rechercher un module ou taper une commande"
-                          OnKeyDown="OnKeyDown"
+                          @onkeydown="OnKeyDown"
                           Clearable="true" />
 
         <div class="command-palette-shortcut">Ctrl + K</div>
