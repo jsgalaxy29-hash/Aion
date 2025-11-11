@@ -1,9 +1,11 @@
+@using System
 @using System.Collections.Generic
 @using System.Threading
 @using System.Linq
 @using Aion.AppHost.Services.Navigation
 @using Aion.Domain.Services.Navigation
 @using Aion.Domain.UI.Navigation
+@using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.FluentUI.AspNetCore.Components
 @using Microsoft.JSInterop
@@ -13,13 +15,16 @@
 @inject IJSRuntime Js
 @implements IAsyncDisposable
 
-<FluentDialog Visible="@_isOpen" OnDismiss="Close" Style="--dialog-width: min(720px, 100vw);">
+<FluentDialog @bind-Hidden="PaletteHidden"
+              @ondialogdismiss="OnDialogDismiss"
+              Style="--dialog-width: min(720px, 100vw);">
     <div class="command-palette">
         <FluentTextField Value="_query"
-                          ValueChanged="OnQueryChanged"
+                          ValueChanged="OnQueryChangedAsync"
                           ValueExpression="() => _query"
                           Placeholder="Rechercher un module ou taper une commande"
-                          OnKeyDown="OnKeyDown"
+                          @oninput="OnQueryInputAsync"
+                          @onkeydown="OnKeyDown"
                           Clearable="true" />
 
         <div class="command-palette-shortcut">Ctrl + K</div>
@@ -67,7 +72,7 @@
 </FluentDialog>
 
 @code {
-    private bool _isOpen;
+    private bool _isHidden = true;
     private string? _query;
     private readonly List<ModuleSummary> _results = new();
     private NavigationCommand? _command;
@@ -77,25 +82,26 @@
 
     public async Task OpenAsync()
     {
-        if (_isOpen)
+        if (IsOpen)
         {
             return;
         }
 
-        _isOpen = true;
+        PaletteHidden = false;
         _query = string.Empty;
         _activeIndex = 0;
         await EvaluateQueryAsync();
         await InvokeAsync(StateHasChanged);
     }
 
-    public Task Close()
+    public Task CloseAsync()
     {
-        _isOpen = false;
-        _query = string.Empty;
-        _results.Clear();
-        _command = null;
-        _activeIndex = 0;
+        if (_isHidden)
+        {
+            return Task.CompletedTask;
+        }
+
+        PaletteHidden = true;
         return InvokeAsync(StateHasChanged);
     }
 
@@ -113,15 +119,23 @@
         }
     }
 
-    private async Task OnQueryChanged(string? value)
+    private async Task OnQueryChangedAsync(string? value)
     {
+        if (string.Equals(_query, value, StringComparison.Ordinal))
+        {
+            return;
+        }
+
         _query = value;
         await EvaluateQueryAsync();
     }
 
+    private Task OnQueryInputAsync(ChangeEventArgs args)
+        => OnQueryChangedAsync(args.Value?.ToString());
+
     private async Task EvaluateQueryAsync()
     {
-        if (!_isOpen)
+        if (!IsOpen)
         {
             return;
         }
@@ -162,7 +176,7 @@
         switch (args.Key)
         {
             case "Escape":
-                await Close();
+                await CloseAsync();
                 break;
             case "Enter":
                 await ExecuteSelectionAsync();
@@ -210,7 +224,7 @@
 
         var module = _results[index];
         await Navigation.OpenModuleAsync(module.Key, null, CancellationToken.None);
-        await Close();
+        await CloseAsync();
     }
 
     private async Task ExecuteCommandAsync()
@@ -233,8 +247,35 @@
                 break;
         }
 
-        await Close();
+        await CloseAsync();
     }
+
+    private bool PaletteHidden
+    {
+        get => _isHidden;
+        set
+        {
+            if (_isHidden == value)
+            {
+                return;
+            }
+
+            _isHidden = value;
+
+            if (_isHidden)
+            {
+                _query = string.Empty;
+                _results.Clear();
+                _command = null;
+                _activeIndex = 0;
+            }
+        }
+    }
+
+    private bool IsOpen => !_isHidden;
+
+    private Task OnDialogDismiss(DialogEventArgs args)
+        => CloseAsync();
 
     private static Icon GetCommandIcon(NavigationCommandType type)
         => type switch
