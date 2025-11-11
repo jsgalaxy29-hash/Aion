@@ -81,12 +81,22 @@ namespace Aion.AppHost.Pages
 
             try
             {
-                var rawUsername = Input.Username?.Trim() ?? string.Empty;
-                var normalizedUsername = rawUsername.ToUpperInvariant();
+                var submittedUsername = Input.Username ?? string.Empty;
+                var trimmedUsername = submittedUsername.Trim();
+                var normalizedSubmitted = submittedUsername.ToUpperInvariant();
+                var normalizedTrimmed = trimmedUsername.ToUpperInvariant();
 
-                Input.Username = rawUsername;
+                Input.Username = trimmedUsername;
 
-                _logger.LogInformation("Tentative de connexion pour {Username}", rawUsername);
+                var usernameCandidates = trimmedUsername == submittedUsername
+                    ? new[] { trimmedUsername }
+                    : new[] { trimmedUsername, submittedUsername };
+
+                var normalizedCandidates = normalizedTrimmed == normalizedSubmitted
+                    ? new[] { normalizedTrimmed }
+                    : new[] { normalizedTrimmed, normalizedSubmitted };
+
+                _logger.LogInformation("Tentative de connexion pour {Username}", trimmedUsername);
 
                 // Recherche de l'utilisateur
                 await using var db = await _dbFactory.CreateDbContextAsync();
@@ -94,15 +104,15 @@ namespace Aion.AppHost.Pages
                 var user = await db.SUser
                     .AsNoTracking()
                     .FirstOrDefaultAsync(u =>
-                        (u.NormalizedUserName == normalizedUsername ||
-                         u.UserName == rawUsername) &&
+                        (normalizedCandidates.Contains(u.NormalizedUserName) ||
+                         usernameCandidates.Contains(u.UserName)) &&
                         u.TenantId == Input.TenantId &&
                         u.IsActive &&
                         !u.Deleted);
 
                 if (user == null)
                 {
-                    _logger.LogWarning("Utilisateur {Username} introuvable", rawUsername);
+                    _logger.LogWarning("Utilisateur {Username} introuvable", trimmedUsername);
                     ErrorMessage = "Identifiants incorrects.";
                     return Page();
                 }
@@ -110,7 +120,7 @@ namespace Aion.AppHost.Pages
                 // Vérification du mot de passe
                 if (!VerifyPassword(Input.Password, user.PasswordHash))
                 {
-                    _logger.LogWarning("Mot de passe incorrect pour {Username}", rawUsername);
+                    _logger.LogWarning("Mot de passe incorrect pour {Username}", trimmedUsername);
 
                     // CORRECTION CRITIQUE: Suppression de la logique de changement de mot de passe ici. 
                     // Si le mot de passe est incorrect, c'est un échec d'authentification.
@@ -166,7 +176,7 @@ namespace Aion.AppHost.Pages
                 // Vérification du lockout
                 if (user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTime.UtcNow)
                 {
-                    _logger.LogWarning("Compte {Username} verrouillé", rawUsername);
+                    _logger.LogWarning("Compte {Username} verrouillé", trimmedUsername);
                     ErrorMessage = $"Compte verrouillé jusqu'à {user.LockoutEnd.Value.ToLocalTime():HH:mm}";
                     return Page();
                 }
