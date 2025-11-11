@@ -1,9 +1,11 @@
+@using System
 @using System.Collections.Generic
 @using System.Threading
 @using System.Linq
 @using Aion.AppHost.Services.Navigation
 @using Aion.Domain.Services.Navigation
 @using Aion.Domain.UI.Navigation
+@using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.FluentUI.AspNetCore.Components
 @using Microsoft.JSInterop
@@ -13,13 +15,16 @@
 @inject IJSRuntime Js
 @implements IAsyncDisposable
 
-<FluentDialog Visible="@_isOpen" OnDismiss="Close" Style="--dialog-width: min(720px, 100vw);">
+<FluentDialog Visible="@_isOpen"
+              OnDismiss="Close"
+              Style="--dialog-width: min(720px, 100vw);">
     <div class="command-palette">
         <FluentTextField Value="_query"
-                          ValueChanged="OnQueryChanged"
+                          ValueChanged="OnQueryChangedAsync"
                           ValueExpression="() => _query"
                           Placeholder="Rechercher un module ou taper une commande"
-                          OnKeyDown="OnKeyDown"
+                          @oninput="OnQueryInputAsync"
+                          @onkeydown="OnKeyDown"
                           Clearable="true" />
 
         <div class="command-palette-shortcut">Ctrl + K</div>
@@ -91,6 +96,11 @@
 
     public Task Close()
     {
+        if (!_isOpen)
+        {
+            return Task.CompletedTask;
+        }
+
         _isOpen = false;
         _query = string.Empty;
         _results.Clear();
@@ -113,11 +123,19 @@
         }
     }
 
-    private async Task OnQueryChanged(string? value)
+    private async Task OnQueryChangedAsync(string? value)
     {
+        if (string.Equals(_query, value, StringComparison.Ordinal))
+        {
+            return;
+        }
+
         _query = value;
         await EvaluateQueryAsync();
     }
+
+    private Task OnQueryInputAsync(ChangeEventArgs args)
+        => OnQueryChangedAsync(args.Value?.ToString());
 
     private async Task EvaluateQueryAsync()
     {
