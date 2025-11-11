@@ -52,6 +52,7 @@ namespace Aion.Infrastructure.Startup
                 await _provisioning.EnsureDatabaseReadyAsync();
                 await _provisioning.SeedAgendaReferentialsAsync();
                 await _provisioning.EnsureAgendaModuleAsync();
+                await _provisioning.EnsureDynamicModulesAsync();
                 await _provisioning.SeedAgendaSystemScheduledActionsAsync();
                 await appDb.Database.MigrateAsync(ct);
                 await securityDb.Database.MigrateAsync(ct);
