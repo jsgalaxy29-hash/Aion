@@ -13,7 +13,7 @@
 @inject IJSRuntime Js
 @implements IAsyncDisposable
 
-<FluentDialog Visible="@_isOpen" OnDismiss="Close" Style="--dialog-width: min(720px, 100vw);">
+<FluentDialog Visible="@_isOpen" OnDismiss="@Close" Style="--dialog-width: min(720px, 100vw);">
     <div class="command-palette">
         <FluentTextField Value="_query"
                           ValueChanged="OnQueryChanged"
