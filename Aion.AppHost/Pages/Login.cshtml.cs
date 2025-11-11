@@ -104,6 +104,16 @@ namespace Aion.AppHost.Pages
                 {
                     _logger.LogWarning("Mot de passe incorrect pour {Username}", Input.Username);
 
+                    if (user.MustChangePassword &&
+                        !string.IsNullOrWhiteSpace(Input.NewPassword) &&
+                        !string.IsNullOrWhiteSpace(Input.ConfirmPassword))
+                    {
+                        RequirePasswordChange = true;
+                        ErrorMessage = "Le champ \"Mot de passe\" doit contenir votre mot de passe actuel (par défaut : admin).";
+                        SuccessMessage = null;
+                        return Page();
+                    }
+
                     // Incrémenter les échecs
                     await IncrementFailedLoginAsync(user.Id);
 
