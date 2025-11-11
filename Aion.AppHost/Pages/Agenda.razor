@@ -63,7 +63,11 @@
                 <FluentButton Appearance="Appearance.Stealth" 
                               IconStart="@(new Microsoft.FluentUI.AspNetCore.Components.Icons.Regular.Size20.Settings())" />
 
-               <FluentSelect Toption="string" Value="@_currentView" Class="view-selector">
+               <FluentSelect Toption="string"
+                              Value="@_currentView"
+                              ValueChanged="OnViewChanged"
+                              ValueExpression="() => _currentView"
+                              Class="view-selector">
                     <FluentOption Value="dayGridMonth">Mois</FluentOption>
                     <FluentOption Value="timeGridWeek">Semaine</FluentOption>
                     <FluentOption Value="timeGridDay">Jour</FluentOption>
@@ -1316,6 +1320,23 @@
         {
             await _agendaJsModule.InvokeVoidAsync("goNext");
         }
+    }
+
+    private async Task OnViewChanged(string? view)
+    {
+        if (string.IsNullOrWhiteSpace(view))
+        {
+            return;
+        }
+
+        if (view == _currentView)
+        {
+            return;
+        }
+
+        _currentView = view;
+
+        await ChangeView(view);
     }
 
     private async Task ChangeView(string viewName)
