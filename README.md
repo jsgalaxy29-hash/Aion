@@ -1,6 +1,6 @@
 # 🚀 Aion ERP - Moteur universel open-source
 
-![.NET 8](https://img.shields.io/badge/.NET-8.0-purple)
+![.NET 10](https://img.shields.io/badge/.NET-10.0-purple)
 ![Blazor Server](https://img.shields.io/badge/Blazor-Server-blue)
 ![EF Core 8](https://img.shields.io/badge/EF%20Core-8.0-green)
 ![License](https://img.shields.io/badge/license-MIT-orange)
@@ -47,7 +47,7 @@ Aion/
 
 ### Prérequis
 
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - [SQL Server 2019+](https://www.microsoft.com/sql-server) ou SQLite
 - IDE : Visual Studio 2022 / VS Code / Rider
 
