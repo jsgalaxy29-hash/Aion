@@ -248,12 +248,13 @@ namespace Aion.Infrastructure.Seeders
                 await appDb.SaveChangesAsync();
             }
 
-            var managerModule = await appDb.SModule.FirstOrDefaultAsync(m => m.Name == "Manager les tables");
-            if (managerModule == null)
+            var tableManagerModule = await appDb.SModule
+                .FirstOrDefaultAsync(m => m.Name == "TableManager" || m.Name == "Manager les tables");
+            if (tableManagerModule == null)
             {
-                managerModule = new SModule
+                tableManagerModule = new SModule
                 {
-                    Name = "Manager les tables",
+                    Name = "TableManager",
                     Description = "Sélection des tables dynamiques",
                     Order = formDynModule.Order + 1,
                     Route = "/dynamic/manager",
@@ -262,14 +263,30 @@ namespace Aion.Infrastructure.Seeders
                     DtCreation = utcNow,
                     UsrCreationId = 1
                 };
-                appDb.SModule.Add(managerModule);
+                appDb.SModule.Add(tableManagerModule);
                 await appDb.SaveChangesAsync();
             }
-            else if (string.IsNullOrWhiteSpace(managerModule.Route))
+            else
             {
-                managerModule.Route = "/dynamic/manager";
-                appDb.SModule.Update(managerModule);
-                await appDb.SaveChangesAsync();
+                var shouldUpdate = false;
+
+                if (!string.Equals(tableManagerModule.Name, "TableManager", StringComparison.Ordinal))
+                {
+                    tableManagerModule.Name = "TableManager";
+                    shouldUpdate = true;
+                }
+
+                if (string.IsNullOrWhiteSpace(tableManagerModule.Route) || tableManagerModule.Route != "/dynamic/manager")
+                {
+                    tableManagerModule.Route = "/dynamic/manager";
+                    shouldUpdate = true;
+                }
+
+                if (shouldUpdate)
+                {
+                    appDb.SModule.Update(tableManagerModule);
+                    await appDb.SaveChangesAsync();
+                }
             }
 
             var adminRootMenu = await appDb.SMenu.FirstOrDefaultAsync(m => m.Libelle == "Administration");
@@ -336,7 +353,7 @@ namespace Aion.Infrastructure.Seeders
             {
                 myTablesMenu = new SMenu
                 {
-                    ModuleId = managerModule.Id,
+                    ModuleId = tableManagerModule.Id,
                     Libelle = "Mes tables",
                     ParentId = adminRootMenu.Id,
                     Icon = "TableSimple20Regular",
@@ -352,9 +369,9 @@ namespace Aion.Infrastructure.Seeders
             }
             else
             {
-                if (myTablesMenu.ModuleId != managerModule.Id)
+                if (myTablesMenu.ModuleId != tableManagerModule.Id)
                 {
-                    myTablesMenu.ModuleId = managerModule.Id;
+                    myTablesMenu.ModuleId = tableManagerModule.Id;
                     appDb.SMenu.Update(myTablesMenu);
                     await appDb.SaveChangesAsync();
                 }
