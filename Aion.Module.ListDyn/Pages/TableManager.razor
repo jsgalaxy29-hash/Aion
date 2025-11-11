@@ -43,6 +43,10 @@ else
 }
 
 @code {
+    private const string DynamicListModuleRoute = "/dynamic/list";
+    private const string DynamicListModuleKey = "ListDyn";
+    private const string TableManagerModuleRoute = "/dynamic/manager";
+
     private List<STable>? _tables;
     private string _filter = string.Empty;
 
@@ -83,22 +87,28 @@ else
         var encoded = Uri.EscapeDataString(table.Libelle);
         var parameters = new Dictionary<string, object?> { ["TableName"] = table.Libelle };
 
-        var listModule = await ModuleCatalog.TryGetByRouteAsync("/dynamic/list", CancellationToken.None);
-        if (listModule is not null)
-        {
-            await Navigation.OpenModuleAsync(listModule.Key, parameters, CancellationToken.None);
-            NavigationManager.NavigateTo($"/dynamic/list/{encoded}");
+        var listModule = await ModuleCatalog.TryGetByRouteAsync(DynamicListModuleRoute, CancellationToken.None);
+        var forceReload = false;
 
-            var managerModule = await ModuleCatalog.TryGetByRouteAsync("/dynamic/manager", CancellationToken.None);
-            if (managerModule is not null
-                && !string.Equals(managerModule.Key, listModule.Key, StringComparison.OrdinalIgnoreCase))
+        if (listModule is null)
+        {
+            listModule = await ModuleCatalog.TryGetByKeyAsync(DynamicListModuleKey, CancellationToken.None);
+            if (listModule is null)
             {
-                await Navigation.CloseModuleAsync(managerModule.Key, CancellationToken.None);
+                return;
             }
 
-            return;
+            forceReload = true;
         }
 
-        NavigationManager.NavigateTo($"/dynamic/list/{encoded}", true);
+        await Navigation.OpenModuleAsync(listModule.Key, parameters, CancellationToken.None);
+        NavigationManager.NavigateTo($"/dynamic/list/{encoded}", forceReload);
+
+        var managerModule = await ModuleCatalog.TryGetByRouteAsync(TableManagerModuleRoute, CancellationToken.None);
+        if (managerModule is not null
+            && !string.Equals(managerModule.Key, listModule.Key, StringComparison.OrdinalIgnoreCase))
+        {
+            await Navigation.CloseModuleAsync(managerModule.Key, CancellationToken.None);
+        }
     }
 }
