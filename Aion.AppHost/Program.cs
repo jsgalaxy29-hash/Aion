@@ -208,7 +208,10 @@ app.MapRazorPages(); // IMPORTANT pour /login
 
 // ===== Démarrage =====
 app.Logger.LogInformation("🚀 Aion démarré");
-app.Logger.LogInformation("🔑 Connexion : https://localhost:5001/login");
-app.Logger.LogInformation("   User: admin / Pass: admin / Tenant: 1");
+if (app.Environment.IsDevelopment())
+{
+    app.Logger.LogInformation("🔑 Connexion : https://localhost:5001/login");
+    app.Logger.LogInformation("   User: admin / Pass: admin / Tenant: 1");
+}
 
 app.Run();

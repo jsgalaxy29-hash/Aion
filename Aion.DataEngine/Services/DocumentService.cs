@@ -29,8 +29,9 @@ namespace Aion.DataEngine.Services
                 SELECT CAST(SCOPE_IDENTITY() AS INT);",
                 new Dictionary<string, object?> { ["@t"]=tableName, ["@r"]=recId, ["@c"]=categorie, ["@p"]=path, ["@e"]=extension, ["@now"]=now, ["@uid"]=uid });
 
-            await _db.ExecuteNonQueryAsync($@"UPDATE dbo.{tableName} SET Doc = 1, DtModification=@now, UsrModificationId=@uid WHERE ID=@id",
-                new Dictionary<string, object?> { ["@id"]=recId, ["@now"]=now, ["@uid"]=uid });
+            var tableIdentifier = SqlIdentifierHelper.QuoteTable(tableName);
+            await _db.ExecuteNonQueryAsync($@"UPDATE {tableIdentifier} SET Doc = 1, DtModification=@now, UsrModificationId=@uid WHERE Id=@id AND TenantId=@tenant",
+                new Dictionary<string, object?> { ["@id"]=recId, ["@now"]=now, ["@uid"]=uid, ["@tenant"]=_user.TenantId });
 
             return Convert.ToInt32(id);
         }
@@ -57,18 +58,19 @@ namespace Aion.DataEngine.Services
 
             if (Convert.ToInt32(remain) == 0)
             {
+                var tableIdentifier = SqlIdentifierHelper.QuoteTable(table);
                 await _db.ExecuteNonQueryAsync(
-                    $@"UPDATE dbo.{table} SET Doc = 0, DtModification=@now, UsrModificationId=@uid WHERE ID=@id",
-                    new Dictionary<string, object?> { ["@id"]=recId, ["@now"]=now, ["@uid"]=uid });
+                    $@"UPDATE {tableIdentifier} SET Doc = 0, DtModification=@now, UsrModificationId=@uid WHERE Id=@id AND TenantId=@tenant",
+                    new Dictionary<string, object?> { ["@id"]=recId, ["@now"]=now, ["@uid"]=uid, ["@tenant"]=_user.TenantId });
             }
         }
 
         public async Task<IEnumerable<FDocument>> GetAsync(string tableName, int recId, bool withDeleted = false)
         {
-            var sql = "SELECT * FROM dbo.FDocument WHERE TableName=@t AND RecID=@r";
+            var sql = "SELECT * FROM dbo.FDocument WHERE TableName=@t AND RecID=@r AND TenantId=@tenant";
             if (!withDeleted) sql += " AND Deleted=0";
 
-            var dt = await _db.ExecuteQueryAsync(sql, new Dictionary<string, object?> { ["@t"]=tableName, ["@r"]=recId });
+            var dt = await _db.ExecuteQueryAsync(sql, new Dictionary<string, object?> { ["@t"]=tableName, ["@r"]=recId, ["@tenant"]=_user.TenantId });
             return dt.AsEnumerable().Select(r => new FDocument
             {
                 Id = Convert.ToInt32(r["ID"]),

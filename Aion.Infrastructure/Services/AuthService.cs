@@ -1,72 +1,236 @@
+using System.Security.Claims;
+using Aion.DataEngine.Entities;
 using Aion.Domain.Contracts;
+using Aion.Security;
+using BCrypt.Net;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
+using Microsoft.Extensions.Logging;
 
-namespace Aion.Infrastructure.Services
+namespace Aion.Infrastructure.Services;
+
+/// <summary>
+/// Cookie-based authentication service that validates credentials against the security database.
+/// </summary>
+public sealed class AuthService : IAuthService
 {
-    /// <summary>
-    /// Implémentation minimale de IAuthService. Utilise Cookie Authentication pour créer l'identité d'un utilisateur.
-    /// Cette version valide un login unique "admin" / "admin" et retourne un tenant fixe.
-    /// </summary>
-    public sealed class AuthService : IAuthService
-    {
-        private readonly IHttpContextAccessor _http;
-        private readonly IDbContextFactory<AionDbContext> _dbFactory;
+    private readonly IDbContextFactory<SecurityDbContext> _dbFactory;
+    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ILogger<AuthService> _logger;
 
-        public AuthService(IHttpContextAccessor http, IDbContextFactory<AionDbContext> dbFactory)
+    public AuthService(
+        IDbContextFactory<SecurityDbContext> dbFactory,
+        IHttpContextAccessor httpContextAccessor,
+        ILogger<AuthService> logger)
+    {
+        _dbFactory = dbFactory;
+        _httpContextAccessor = httpContextAccessor;
+        _logger = logger;
+    }
+
+    public async Task<bool> LoginAsync(string username, string password, int tenantId, bool rememberMe = false)
+    {
+        if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
         {
-            _http = http;
-            _dbFactory = dbFactory;
+            return false;
         }
 
-        public async Task<SignInResult> SignInAsync(string login, string password, CancellationToken ct)
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext is null)
         {
-            if (string.IsNullOrWhiteSpace(login) || string.IsNullOrWhiteSpace(password))
+            _logger.LogWarning("HttpContext unavailable during login for {Username}", username);
+            return false;
+        }
+
+        if (httpContext.Response.HasStarted)
+        {
+            _logger.LogWarning("HTTP response already started before login for {Username}", username);
+            return false;
+        }
+
+        try
+        {
+            var normalizedUserName = username.Trim().ToUpperInvariant();
+
+            await using var db = await _dbFactory.CreateDbContextAsync().ConfigureAwait(false);
+
+            var user = await db.SUser
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u =>
+                    u.TenantId == tenantId &&
+                    !u.Deleted &&
+                    u.IsActive &&
+                    u.NormalizedUserName == normalizedUserName)
+                .ConfigureAwait(false);
+
+            if (user is null)
             {
-                return SignInResult.Fail("Identifiant ou mot de passe manquant");
+                _logger.LogInformation("Authentication failed for {Username}: user not found", username);
+                return false;
             }
 
-            // Retrieve the user for the default tenant (Guid.Empty) with the specified login.
-            await using var db = await _dbFactory.CreateDbContextAsync(ct);
-
-            var user = await db.SUser.FirstOrDefaultAsync(u => u.TenantId == 0 && u.Login == login, ct);
-            if (user == null)
+            if (user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTime.UtcNow)
             {
-                return SignInResult.Fail("Invalid credentials");
+                _logger.LogWarning("Account {Username} locked until {LockoutEnd}", username, user.LockoutEnd);
+                return false;
             }
 
-            // Compute the SHA‑256 hash of the provided password in hexadecimal form and compare.
-            string hash;
-            using (var sha = System.Security.Cryptography.SHA256.Create())
+            if (!VerifyPassword(password, user.PasswordHash))
             {
-                var bytes = System.Text.Encoding.UTF8.GetBytes(password);
-                var hashed = sha.ComputeHash(bytes);
-                hash = BitConverter.ToString(hashed).Replace("-", string.Empty).ToLowerInvariant();
-            }
-            if (!string.Equals(hash, user.PasswordHash, StringComparison.OrdinalIgnoreCase))
-            {
-                return SignInResult.Fail("Invalid credentials");
+                _logger.LogInformation("Authentication failed for {Username}: invalid password", username);
+                await IncrementFailedLoginAsync(user.Id).ConfigureAwait(false);
+                return false;
             }
 
-            // Build identity claims.  Use Name claim from the user entity and store user and tenant identifiers.
-            var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.Name, user.Name?.Name ?? string.Empty),
-                new Claim("sub", user.Id.ToString()),
-                new Claim("tenant", user.TenantId.ToString())
-            };
+            var claims = BuildClaims(user);
             var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
             var principal = new ClaimsPrincipal(identity);
-            await _http.HttpContext!.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
-            return SignInResult.Success;
+
+            var properties = new AuthenticationProperties
+            {
+                IsPersistent = rememberMe,
+                AllowRefresh = true,
+                IssuedUtc = DateTimeOffset.UtcNow,
+                ExpiresUtc = rememberMe
+                    ? DateTimeOffset.UtcNow.AddDays(30)
+                    : DateTimeOffset.UtcNow.AddHours(8)
+            };
+
+            await httpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                principal,
+                properties).ConfigureAwait(false);
+
+            await ResetLockoutAsync(user.Id).ConfigureAwait(false);
+
+            _logger.LogInformation("User {Username} authenticated successfully", username);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error during login for {Username}", username);
+            return false;
+        }
+    }
+
+    public async Task LogoutAsync()
+    {
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext is null)
+        {
+            return;
         }
 
-        public async Task SignOutAsync(CancellationToken ct)
+        if (httpContext.Response.HasStarted)
         {
-            await _http.HttpContext!.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            _logger.LogWarning("Cannot logout because response has already started");
+            return;
         }
+
+        await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme).ConfigureAwait(false);
+    }
+
+    public async Task<SUser?> GetCurrentUserAsync()
+    {
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext?.User?.Identity?.IsAuthenticated != true)
+        {
+            return null;
+        }
+
+        var subjectClaim = httpContext.User.FindFirst("sub") ?? httpContext.User.FindFirst(ClaimTypes.NameIdentifier);
+        if (subjectClaim is null || !int.TryParse(subjectClaim.Value, out var userId))
+        {
+            return null;
+        }
+
+        await using var db = await _dbFactory.CreateDbContextAsync().ConfigureAwait(false);
+        return await db.SUser
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == userId && !u.Deleted)
+            .ConfigureAwait(false);
+    }
+
+    private async Task IncrementFailedLoginAsync(int userId)
+    {
+        try
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync().ConfigureAwait(false);
+            var now = DateTime.UtcNow;
+            var lockoutEnd = now.AddMinutes(30);
+
+            FormattableString sql = $@"
+UPDATE [SUser]
+SET [AccessFailedCount] = [AccessFailedCount] + 1,
+    [LockoutEnd] = CASE WHEN [AccessFailedCount] + 1 >= 4 THEN {lockoutEnd} ELSE [LockoutEnd] END,
+    [DtModification] = {now}
+WHERE [Id] = {userId};";
+
+            await db.Database.ExecuteSqlInterpolatedAsync(sql).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to increment lockout counter for user {UserId}", userId);
+        }
+    }
+
+    private async Task ResetLockoutAsync(int userId)
+    {
+        try
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync().ConfigureAwait(false);
+            var entity = await db.SUser.FirstOrDefaultAsync(u => u.Id == userId).ConfigureAwait(false);
+            if (entity is null)
+            {
+                return;
+            }
+
+            entity.AccessFailedCount = 0;
+            entity.LockoutEnd = null;
+            entity.LastLoginDate = DateTime.UtcNow;
+            entity.DtModification = DateTime.UtcNow;
+            entity.UsrModificationId = userId;
+
+            await db.SaveChangesAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to reset lockout information for user {UserId}", userId);
+        }
+    }
+
+    private static bool VerifyPassword(string password, string? hash)
+    {
+        if (string.IsNullOrEmpty(password) || string.IsNullOrEmpty(hash))
+        {
+            return false;
+        }
+
+        try
+        {
+            return BCrypt.Verify(password, hash);
+        }
+        catch (SaltParseException)
+        {
+            return false;
+        }
+    }
+
+    private static IEnumerable<Claim> BuildClaims(SUser user)
+    {
+        yield return new Claim("sub", user.Id.ToString());
+        yield return new Claim("tenant", user.TenantId.ToString());
+        yield return new Claim(ClaimTypes.NameIdentifier, user.Id.ToString());
+        yield return new Claim(ClaimTypes.Name, user.UserName);
+
+        if (!string.IsNullOrWhiteSpace(user.Email))
+        {
+            yield return new Claim(ClaimTypes.Email, user.Email);
+        }
+
+        var fullName = string.IsNullOrWhiteSpace(user.FullName) ? user.UserName : user.FullName;
+        yield return new Claim("fullname", fullName ?? string.Empty);
     }
 }

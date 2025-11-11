@@ -2,6 +2,7 @@
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.FluentUI.AspNetCore.Components
 @using Microsoft.FluentUI.AspNetCore.Components.Icons
+@using Aion.DataEngine.Models
 
 <div class="aion-grid">
     @if (_isLoading)
@@ -42,7 +43,7 @@
                                 case DynamicColumnInputKind.Boolean:
                                     <FluentSelect TOption="string"
                                                   Value="@GetSearchValue(column.FieldName)"
-                                                  ValueChanged="@((string? value) => OnSearchChanged(column.FieldName, value))"
+                                                  ValueChanged="@(async (string? value) => await OnSearchChanged(column.FieldName, value))"
                                                   Style="min-width:120px;">
                                         <FluentOption Value="">(Tous)</FluentOption>
                                         <FluentOption Value="true">Oui</FluentOption>
@@ -53,24 +54,24 @@
                                     <input type="date"
                                            class="form-control"
                                            value="@GetSearchValue(column.FieldName)"
-                                           @onchange="@(e => OnSearchChanged(column.FieldName, e.Value?.ToString()))" />
+                                           @onchange="@(async e => await OnSearchChanged(column.FieldName, e.Value?.ToString()))" />
                                     break;
                                 case DynamicColumnInputKind.DateTime:
                                     <input type="datetime-local"
                                            class="form-control"
                                            value="@GetSearchValue(column.FieldName)"
-                                           @onchange="@(e => OnSearchChanged(column.FieldName, e.Value?.ToString()))" />
+                                           @onchange="@(async e => await OnSearchChanged(column.FieldName, e.Value?.ToString()))" />
                                     break;
                                 case DynamicColumnInputKind.Number or DynamicColumnInputKind.Decimal:
                                     <input type="number"
                                            class="form-control"
                                            value="@GetSearchValue(column.FieldName)"
-                                           @onchange="@(e => OnSearchChanged(column.FieldName, e.Value?.ToString()))" />
+                                           @onchange="@(async e => await OnSearchChanged(column.FieldName, e.Value?.ToString()))" />
                                     break;
                                 case DynamicColumnInputKind.Select when column.Options is not null:
                                     <FluentSelect TOption="string"
                                                   Value="@GetSearchValue(column.FieldName)"
-                                                  ValueChanged="@((string? value) => OnSearchChanged(column.FieldName, value))"
+                                                  ValueChanged="@(async (string? value) => await OnSearchChanged(column.FieldName, value))"
                                                   Style="min-width:180px;">
                                         <FluentOption Value="">(Tous)</FluentOption>
                                         @foreach (var option in column.Options)
@@ -81,7 +82,7 @@
                                     break;
                                 default:
                                     <FluentTextField Value="@GetSearchValue(column.FieldName)"
-                                                     ValueChanged="@((string? value) => OnSearchChanged(column.FieldName, value))" />
+                                                     ValueChanged="@(async (string? value) => await OnSearchChanged(column.FieldName, value))" />
                                     break;
                             }
                         </div>
@@ -90,7 +91,7 @@
             </div>
         }
 
-        @if (_viewRows.Count == 0)
+        @if (_rows.Count == 0)
         {
             <FluentCard class="text-center py-4">
                 <FluentLabel Typo="Typography.Body">Aucune donnée.</FluentLabel>
@@ -98,7 +99,7 @@
         }
         else
         {
-            <FluentDataGrid Items="@_viewRows.AsQueryable()"
+            <FluentDataGrid Items="@_rows.AsQueryable()"
                             TGridItem="DynamicRow"
                             GridTemplateColumns="@GridTemplateColumns"
                             SelectionMode="DataGridSelectionMode.None">
@@ -113,7 +114,7 @@
                         <HeaderCellTitleTemplate>
                             <FluentButton Appearance="Appearance.Stealth"
                                           Size="ButtonSize.Small"
-                                          OnClick="@((MouseEventArgs e) => OnColumnHeaderClick(col, e))">
+                                          OnClick="@(async (MouseEventArgs e) => await OnColumnHeaderClick(col, e))">
                                 @col.DisplayName
 
                                 @if (isSorted)
@@ -183,13 +184,13 @@
                 <FluentLabel>Page</FluentLabel>
                 <FluentButton Appearance="Appearance.Stealth"
                               Disabled="@(_page <= 1)"
-                              OnClick="PrevPage">
+                              OnClick="@(async () => await PrevPage())">
                     ◀
                 </FluentButton>
                 <FluentLabel>@_page / @_pageCount</FluentLabel>
                 <FluentButton Appearance="Appearance.Stealth"
                               Disabled="@(_page >= _pageCount)"
-                              OnClick="NextPage">
+                              OnClick="@(async () => await NextPage())">
                     ▶
                 </FluentButton>
             </FluentStack>
@@ -198,7 +199,7 @@
                 <FluentSelect TOption="int"
                               Items="@_pageSizes"
                               SelectedOption="@_pageSize"
-                              SelectedOptionChanged="@OnPageSizeChangedFluent">
+                              SelectedOptionChanged="@(async (int size) => await OnPageSizeChangedFluent(size))">
                     <OptionTemplate>@context</OptionTemplate>
                 </FluentSelect>
             </FluentStack>
@@ -279,7 +280,6 @@
     private readonly Dictionary<string, string?> _searchValues = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<int> _pageSizes = new() { 10, 20, 50, 100 };
     private readonly List<DynamicColumnDefinition> _columnsDraft = new();
-    private readonly List<DynamicRow> _viewRows = new();
     private readonly List<DynamicColumnDefinition> _searchableColumns = new();
 
     private bool _isLoading = true;
@@ -290,6 +290,7 @@
     private int _filteredCount = 0;
     private string? _errorMessage;
     private string? _loadedTableName;
+    private string? _primaryKeyName;
     private FluentDialog? _layoutEditorDialog;
     private bool _layoutEditorOpen;
     
@@ -306,7 +307,7 @@
         set => _layoutEditorOpen = !value;
     }
 
-    private void OnColumnHeaderClick(DynamicColumnDefinition column, MouseEventArgs e)
+    private async Task OnColumnHeaderClick(DynamicColumnDefinition column, MouseEventArgs e)
     {
         var multi = e.CtrlKey || e.ShiftKey; // clic simple = mono-tri, Ctrl/Shift+clic = multi-tri
 
@@ -350,8 +351,7 @@
             }
         }
 
-        _page = 1;
-        ApplyFilters();
+        await LoadPageAsync(resetPage: true);
     }
 
     /// <summary>
@@ -457,9 +457,12 @@
                 }
             }
 
+            _primaryKeyName = _columns.FirstOrDefault(c => c.IsPrimaryKey)?.FieldName
+                ?? _columns.FirstOrDefault(c => string.Equals(c.FieldName, "Id", StringComparison.OrdinalIgnoreCase))?.FieldName;
+
             await LoadLayoutAsync();
             await LoadReferentialsAsync();
-            await LoadDataAsync();
+            await LoadPageAsync(resetPage: true);
         }
         catch (Exception ex)
         {
@@ -561,167 +564,76 @@
     }
 
 
-    private async Task LoadDataAsync()
+    private async Task LoadPageAsync(bool resetPage = false)
     {
-        var dt = await DataEngine.GetAllAsync(TableName);
-        _rows.Clear();
-
-        DynamicColumnDefinition? primaryKeyColumn = _columns.FirstOrDefault(c => c.IsPrimaryKey)
-            ?? _columns.FirstOrDefault(c => string.Equals(c.FieldName, "Id", StringComparison.OrdinalIgnoreCase));
-
-        foreach (System.Data.DataRow dataRow in dt.Rows)
+        if (string.IsNullOrWhiteSpace(TableName))
         {
-            var dict = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
-            foreach (System.Data.DataColumn col in dt.Columns)
-            {
-                var value = dataRow[col];
-                dict[col.ColumnName] = value == DBNull.Value ? null : value;
-            }
-
-            var row = new DynamicRow(dict)
-            {
-                PrimaryKeyName = primaryKeyColumn?.FieldName,
-                PrimaryKeyValue = primaryKeyColumn is not null && dict.TryGetValue(primaryKeyColumn.FieldName, out var pk) ? pk : null,
-            };
-
-            var firstColumn = VisibleColumns.FirstOrDefault();
-            row.DisplayLabel = firstColumn is not null ? row.GetValueAsString(firstColumn.FieldName) : null;
-            _rows.Add(row);
+            _rows.Clear();
+            _filteredCount = 0;
+            _pageCount = 1;
+            return;
         }
 
-        ApplyFilters();
-    }
-
-    private void ApplyFilters()
-    {
-        IEnumerable<DynamicRow> query = _rows;
-
-        foreach (var kvp in _searchValues)
+        if (resetPage)
         {
-            if (string.IsNullOrWhiteSpace(kvp.Value))
-            {
-                continue;
-            }
-
-            var column = _columns.FirstOrDefault(c => string.Equals(c.FieldName, kvp.Key, StringComparison.OrdinalIgnoreCase));
-            if (column is null)
-            {
-                continue;
-            }
-
-            query = query.Where(row => FilterRow(row, column, kvp.Value!));
+            _page = 1;
         }
 
-        if (_sortDescriptors.Count > 0)
+        try
         {
-            var comparer = Comparer<object?>.Create(CompareValues);
+            _errorMessage = null;
+            var filters = _searchValues
+                .Where(kvp => !string.IsNullOrWhiteSpace(kvp.Value))
+                .Select(kvp =>
+                {
+                    var column = _columns.FirstOrDefault(c => string.Equals(c.FieldName, kvp.Key, StringComparison.OrdinalIgnoreCase));
+                    var op = column?.SearchOperator ?? "contains";
+                    return new DataFilter(kvp.Key, kvp.Value, op);
+                })
+                .ToList();
 
-            IOrderedEnumerable<DynamicRow>? ordered = null;
+            var sorts = _sortDescriptors
+                .Select(sd => new DataSort(sd.FieldName, sd.Descending))
+                .ToList();
 
-            foreach (var sd in _sortDescriptors)
+            var request = new DataPageRequest(TableName, (_page - 1) * _pageSize, _pageSize, filters, sorts);
+            var page = await DataEngine.GetPageAsync(request, CancellationToken.None);
+
+            _rows.Clear();
+
+            foreach (var rowValues in page.Rows)
             {
-                var fieldName = sd.FieldName;
-
-                Func<DynamicRow, object?> keySelector = row => row.GetValue(fieldName);
-
-                if (ordered == null)
+                var dict = new Dictionary<string, object?>(rowValues, StringComparer.OrdinalIgnoreCase);
+                var row = new DynamicRow(dict)
                 {
-                    ordered = sd.Descending
-                        ? query.OrderByDescending(keySelector, comparer)
-                        : query.OrderBy(keySelector, comparer);
-                }
-                else
+                    PrimaryKeyName = _primaryKeyName,
+                    PrimaryKeyValue = _primaryKeyName is not null && dict.TryGetValue(_primaryKeyName, out var pk) ? pk : null,
+                };
+
+                var firstColumn = VisibleColumns.FirstOrDefault();
+                row.DisplayLabel = firstColumn is not null ? row.GetValueAsString(firstColumn.FieldName) : null;
+                _rows.Add(row);
+            }
+
+            _filteredCount = page.TotalCount;
+            _pageCount = Math.Max(1, (int)Math.Ceiling(page.TotalCount / (double)_pageSize));
+
+            if (_page > _pageCount)
+            {
+                _page = _pageCount;
+                if (page.TotalCount > 0)
                 {
-                    ordered = sd.Descending
-                        ? ordered.ThenByDescending(keySelector, comparer)
-                        : ordered.ThenBy(keySelector, comparer);
+                    await LoadPageAsync();
                 }
             }
-
-            if (ordered != null)
-            {
-                query = ordered;
-            }
         }
-
-
-        var result = query.ToList();
-        _filteredCount = result.Count;
-        _pageCount = Math.Max(1, (int)Math.Ceiling(_filteredCount / (double)_pageSize));
-        if (_page > _pageCount)
+        catch (Exception ex)
         {
-            _page = _pageCount;
+            _errorMessage = ex.Message;
         }
-        var skip = (_page - 1) * _pageSize;
-        _viewRows.Clear();
-        _viewRows.AddRange(result.Skip(skip).Take(_pageSize));
     }
 
-    private bool FilterRow(DynamicRow row, DynamicColumnDefinition column, string filterValue)
-    {
-        var rowValue = row.GetValue(column.FieldName);
-        if (rowValue is null)
-        {
-            return false;
-        }
-
-        var op = column.SearchOperator?.Trim().ToLowerInvariant() ?? "contains";
-        if (column.InputKind == DynamicColumnInputKind.Boolean)
-        {
-            if (bool.TryParse(filterValue, out var boolFilter) && rowValue is bool boolValue)
-            {
-                return boolValue == boolFilter;
-            }
-            return false;
-        }
-
-        if (column.InputKind == DynamicColumnInputKind.Number || column.InputKind == DynamicColumnInputKind.Decimal)
-        {
-            if (decimal.TryParse(filterValue, out var numericFilter) && decimal.TryParse(Convert.ToString(rowValue), out var numericRow))
-            {
-                return op switch
-                {
-                    "=" or "eq" => numericRow == numericFilter,
-                    "!=" or "ne" => numericRow != numericFilter,
-                    ">" => numericRow > numericFilter,
-                    ">=" => numericRow >= numericFilter,
-                    "<" => numericRow < numericFilter,
-                    "<=" => numericRow <= numericFilter,
-                    _ => numericRow == numericFilter
-                };
-            }
-            return false;
-        }
-
-        if (column.InputKind == DynamicColumnInputKind.Date || column.InputKind == DynamicColumnInputKind.DateTime)
-        {
-            if (DateTime.TryParse(filterValue, out var dateFilter) && DateTime.TryParse(Convert.ToString(rowValue), out var dateRow))
-            {
-                return op switch
-                {
-                    "=" or "eq" => dateRow.Date == dateFilter.Date,
-                    ">" => dateRow > dateFilter,
-                    ">=" => dateRow >= dateFilter,
-                    "<" => dateRow < dateFilter,
-                    "<=" => dateRow <= dateFilter,
-                    _ => dateRow.Date == dateFilter.Date
-                };
-            }
-            return false;
-        }
-
-        var str = Convert.ToString(rowValue) ?? string.Empty;
-        return op switch
-        {
-            "=" or "eq" => string.Equals(str, filterValue, StringComparison.OrdinalIgnoreCase),
-            "!=" or "ne" => !string.Equals(str, filterValue, StringComparison.OrdinalIgnoreCase),
-            "starts" => str.StartsWith(filterValue, StringComparison.OrdinalIgnoreCase),
-            "ends" => str.EndsWith(filterValue, StringComparison.OrdinalIgnoreCase),
-            _ => str.Contains(filterValue, StringComparison.OrdinalIgnoreCase)
-        };
-    }
-
-    private void OnSearchChanged(string fieldName, string? value)
+    private async Task OnSearchChanged(string fieldName, string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
         {
@@ -731,39 +643,39 @@
         {
             _searchValues[fieldName] = value;
         }
-        _page = 1;
-        ApplyFilters();
+
+        await LoadPageAsync(resetPage: true);
     }
 
     private string? GetSearchValue(string fieldName)
         => _searchValues.TryGetValue(fieldName, out var value) ? value : string.Empty;
 
-    private void PrevPage()
+    private async Task PrevPage()
     {
         if (_page > 1)
         {
             _page--;
-            ApplyFilters();
+            await LoadPageAsync();
         }
     }
 
-    private void NextPage()
+    private async Task NextPage()
     {
         if (_page < _pageCount)
         {
             _page++;
-            ApplyFilters();
+            await LoadPageAsync();
         }
     }
 
-    private void OnPageSizeChangedFluent(int size)
+    private async Task OnPageSizeChangedFluent(int size)
     {
         if (size > 0)
         {
             _pageSize = size;
             _pageSizeDraft = size;
             _page = 1;
-            ApplyFilters();
+            await LoadPageAsync();
         }
     }
 
@@ -882,13 +794,13 @@
             if (row.IsNew)
             {
                 await DataEngine.InsertAsync(TableName, values);
+                await LoadPageAsync(resetPage: true);
             }
             else if (row.HasPrimaryKey && row.PrimaryKeyValue is not null)
             {
                 await DataEngine.UpdateAsync(TableName, row.PrimaryKeyName!, row.PrimaryKeyValue, values);
+                await LoadPageAsync();
             }
-
-            await LoadDataAsync();
         }
         catch (Exception ex)
         {
@@ -906,7 +818,7 @@
         try
         {
             await DataEngine.DeleteAsync(TableName, row.PrimaryKeyName!, row.PrimaryKeyValue);
-            await LoadDataAsync();
+            await LoadPageAsync();
         }
         catch (Exception ex)
         {
@@ -947,7 +859,7 @@
             row.IsNew = false;
             row.ClearEditValues();
         }
-        ApplyFilters();
+        StateHasChanged();
     }
 
     private void CreateRow()
@@ -957,11 +869,11 @@
         {
             IsNew = true,
             IsEditing = true,
-            PrimaryKeyName = _columns.FirstOrDefault(c => c.IsPrimaryKey)?.FieldName
+            PrimaryKeyName = _primaryKeyName
         };
         _rows.Insert(0, row);
         _page = 1;
-        ApplyFilters();
+        StateHasChanged();
     }
 
     private async Task ReloadAsync()
@@ -1064,7 +976,7 @@
         _pageSize = _pageSizeDraft;
         _layoutEditorOpen = false;
         _page = 1;
-        ApplyFilters();
+        await LoadPageAsync(resetPage: true);
     }
 
 
