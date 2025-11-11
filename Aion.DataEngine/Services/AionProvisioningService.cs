@@ -1173,7 +1173,7 @@ BEGIN
       Actif = 1
   WHERE ID = @tableManagerModuleId;
 END
-"";
+";
 
         private static string SqlEnsureAgendaModule() => @"
 -- ===== MODULE & MENUS AGENDA =====
