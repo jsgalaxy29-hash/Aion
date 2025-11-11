@@ -41,7 +41,7 @@ namespace Aion.AppHost.Pages
             [Required]
             public string Username { get; set; } = "admin";
 
-            [Required]
+            [Required(ErrorMessage = "Le mot de passe actuel est requis.")]
             public string Password { get; set; } = "admin";
 
             [Required]
@@ -69,6 +69,43 @@ namespace Aion.AppHost.Pages
         public async Task<IActionResult> OnPostAsync(string? returnUrl = null)
         {
             ReturnUrl = returnUrl;
+
+            if (Request.HasFormContentType)
+            {
+                var form = Request.Form;
+
+                if (form.TryGetValue("Input.Password", out var postedPasswordValues))
+                {
+                    Input.Password = postedPasswordValues.ToString();
+                }
+                else
+                {
+                    Input.Password = string.Empty;
+                }
+
+                if (form.TryGetValue("Input.NewPassword", out var newPasswordValues))
+                {
+                    var newPassword = newPasswordValues.ToString();
+                    Input.NewPassword = string.IsNullOrWhiteSpace(newPassword) ? null : newPassword;
+                }
+                else
+                {
+                    Input.NewPassword = null;
+                }
+
+                if (form.TryGetValue("Input.ConfirmPassword", out var confirmPasswordValues))
+                {
+                    var confirmPassword = confirmPasswordValues.ToString();
+                    Input.ConfirmPassword = string.IsNullOrWhiteSpace(confirmPassword) ? null : confirmPassword;
+                }
+                else
+                {
+                    Input.ConfirmPassword = null;
+                }
+
+                ModelState.ClearValidationState(nameof(Input));
+                TryValidateModel(Input, nameof(Input));
+            }
 
             if (!ModelState.IsValid)
             {
@@ -103,6 +140,16 @@ namespace Aion.AppHost.Pages
                 if (!VerifyPassword(Input.Password, user.PasswordHash))
                 {
                     _logger.LogWarning("Mot de passe incorrect pour {Username}", Input.Username);
+
+                    if (user.MustChangePassword &&
+                        !string.IsNullOrWhiteSpace(Input.NewPassword) &&
+                        !string.IsNullOrWhiteSpace(Input.ConfirmPassword))
+                    {
+                        RequirePasswordChange = true;
+                        ErrorMessage = "Le champ \"Mot de passe\" doit contenir votre mot de passe actuel (par défaut : admin).";
+                        SuccessMessage = null;
+                        return Page();
+                    }
 
                     // Incrémenter les échecs
                     await IncrementFailedLoginAsync(user.Id);
