@@ -210,7 +210,8 @@ WHERE [Id] = {userId};";
 
         try
         {
-            return BCrypt.Verify(password, hash);
+            
+            return BCrypt.Net.BCrypt.Verify(password, hash);
         }
         catch (SaltParseException)
         {
