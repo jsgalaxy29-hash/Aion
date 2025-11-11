@@ -99,6 +99,10 @@ else
             return;
         }
 
-        NavigationManager.NavigateTo($"/dynamic/list/{encoded}", true);
+        var modules = await ModuleCatalog.GetModulesAsync(CancellationToken.None);
+        if (modules.Count == 0)
+        {
+            NavigationManager.NavigateTo($"/dynamic/list/{encoded}", true);
+        }
     }
 }
