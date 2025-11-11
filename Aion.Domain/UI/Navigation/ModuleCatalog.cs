@@ -10,7 +10,7 @@ using Aion.DataEngine.Interfaces;
 using Aion.Domain.Contracts;
 using Aion.Domain.UI.Navigation;
 
-namespace Aion.AppHost.Services.Navigation;
+namespace Aion.Domain.Services.Navigation;
 
 /// <summary>
 /// Loads module metadata from the metabase and exposes a filtered catalog for UI components.

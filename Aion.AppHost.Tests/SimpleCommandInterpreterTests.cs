@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Aion.AppHost.Services.Navigation;
+using Aion.Domain.Services.Navigation;
 using Aion.Domain.UI.Navigation;
 using FluentAssertions;
 using Xunit;

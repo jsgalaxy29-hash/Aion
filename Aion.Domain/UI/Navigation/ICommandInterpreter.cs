@@ -1,4 +1,6 @@
-namespace Aion.AppHost.Services.Navigation;
+using Aion.Domain.Services.Navigation;
+
+namespace Aion.Domain.UI.Navigation;
 
 /// <summary>
 /// Parses natural language navigation commands.

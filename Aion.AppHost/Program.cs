@@ -33,6 +33,7 @@ using Aion.Domain.Agenda;
 using Aion.Infrastructure.Services.Agenda;
 using Aion.AppHost.Services.Navigation;
 using Aion.Domain.UI.Navigation;
+using Aion.Domain.Services.Navigation;
 
 var builder = WebApplication.CreateBuilder(args);
 

@@ -7,7 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Aion.Domain.UI.Navigation;
 
-namespace Aion.AppHost.Services.Navigation;
+namespace Aion.Domain.Services.Navigation;
 
 /// <summary>
 /// Baseline implementation that recognises a small set of French navigation commands.

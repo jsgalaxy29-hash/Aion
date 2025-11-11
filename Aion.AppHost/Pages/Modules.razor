@@ -155,12 +155,12 @@
             var childSeq = 0;
             childBuilder.OpenElement(childSeq++, "header");
             childBuilder.AddContent(childSeq++, module.Title);
-            if (!string.IsNullOrWhiteSpace(module.Icon))
-            {
-                childBuilder.OpenComponent<FluentIcon>(childSeq++);
-                childBuilder.AddAttribute(childSeq++, "Value", FluentIconResolver.Resolve(module.Icon));
-                childBuilder.CloseComponent();
-            }
+            // if (!string.IsNullOrWhiteSpace(module.Icon))
+            // {
+            //     childBuilder.OpenComponent<FluentIcon>(childSeq++);
+            //     childBuilder.AddAttribute(childSeq++, "Value", FluentIconResolver.Resolve(module.Icon));
+            //     childBuilder.CloseComponent();
+            // }
             childBuilder.CloseElement();
 
             if (!string.IsNullOrWhiteSpace(module.Description))

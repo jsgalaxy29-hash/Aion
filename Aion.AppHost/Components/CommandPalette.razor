@@ -2,6 +2,7 @@
 @using System.Threading
 @using System.Linq
 @using Aion.AppHost.Services.Navigation
+@using Aion.Domain.Services.Navigation
 @using Aion.Domain.UI.Navigation
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.FluentUI.AspNetCore.Components
@@ -19,8 +20,7 @@
                           ValueExpression="() => _query"
                           Placeholder="Rechercher un module ou taper une commande"
                           OnKeyDown="OnKeyDown"
-                          Clearable="true"
-                          Size="ControlSize.Large" />
+                          Clearable="true" />
 
         <div class="command-palette-shortcut">Ctrl + K</div>
 

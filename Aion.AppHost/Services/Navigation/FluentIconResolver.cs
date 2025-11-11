@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using Microsoft.FluentUI.AspNetCore.Components;
+using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
 
 namespace Aion.AppHost.Services.Navigation;
 
@@ -16,8 +17,10 @@ internal static class FluentIconResolver
 
     private static readonly ConcurrentDictionary<string, Icon> Cache = new(StringComparer.Ordinal);
 
+    // Token de base attendu : "TabDesktop20Regular"
+    // Fallback concret : une icône calendrier 20px Regular
     private static readonly Icon DefaultIcon = CreateOrFallback("TabDesktop20Regular")
-        ?? new Microsoft.FluentUI.AspNetCore.Components.Icons.Regular.Size20.CalendarLtr();
+        ?? new Icons.Regular.Size20.CalendarLtr();
 
     /// <summary>
     /// Resolves a Fluent <see cref="Icon"/> instance for the provided token, using a default icon if none can be found.
@@ -55,11 +58,17 @@ internal static class FluentIconResolver
             return null;
         }
 
-        var style = match.Groups["style"].Value;
-        var size = match.Groups["size"].Value;
-        var name = match.Groups["name"].Value;
+        var style = match.Groups["style"].Value; // "Regular" ou "Filled"
+        var size = match.Groups["size"].Value;   // "16", "20", "24", ...
+        var name = match.Groups["name"].Value;   // "TabDesktop", "CalendarLtr", ...
+
+        // Exemple : "Microsoft.FluentUI.AspNetCore.Components.Icons.Regular.Size20.TabDesktop"
         var typeName = $"Microsoft.FluentUI.AspNetCore.Components.Icons.{style}.Size{size}.{name}";
-        var assembly = typeof(FluentIcon).Assembly;
+
+        // Très important : on prend l'assembly d'une classe d'icône,
+        // pas celui du composant FluentIcon.
+        var assembly = typeof(Icons.Regular.Size20.CalendarLtr).Assembly;
+
         var type = assembly.GetType(typeName, throwOnError: false, ignoreCase: false);
         if (type is null)
         {

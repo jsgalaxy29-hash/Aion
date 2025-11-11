@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Text.Json;
 using Aion.Domain.UI;
 
-namespace Aion.AppHost.Services.Navigation;
+namespace Aion.Domain.Services.Navigation;
 
-internal static class NavigationParameterParser
+public static class NavigationParameterParser
 {
     public static IReadOnlyDictionary<string, object?> BuildDefaultParameters(string route, string? raw)
     {

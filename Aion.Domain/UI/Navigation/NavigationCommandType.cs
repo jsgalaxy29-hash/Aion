@@ -1,4 +1,4 @@
-namespace Aion.AppHost.Services.Navigation;
+namespace Aion.Domain.Services.Navigation;
 
 /// <summary>
 /// Supported navigation command types.

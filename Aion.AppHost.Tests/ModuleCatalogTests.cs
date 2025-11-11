@@ -1,4 +1,5 @@
 using Aion.AppHost.Services.Navigation;
+using Aion.Domain.Services.Navigation;
 using FluentAssertions;
 using Xunit;
 

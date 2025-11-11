@@ -1,6 +1,6 @@
 using Aion.Domain.UI.Navigation;
 
-namespace Aion.AppHost.Services.Navigation;
+namespace Aion.Domain.Services.Navigation;
 
 /// <summary>
 /// Represents a parsed command extracted from the command palette input.
