@@ -1,15 +1,127 @@
-﻿.aion-shell {
-    display: grid;
-    grid-template-columns: 280px 1fr;
-    grid-template-rows: 100vh;
-    overflow: hidden;
+.aion-shell {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: var(--neutral-layer-1);
 }
 
-.aion-nav {
-    border-right: 1px solid #ddd;
-    overflow: auto;
+.aion-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem 1.5rem;
+    border-bottom: 1px solid var(--neutral-stroke-control-rest);
+    background-color: var(--neutral-layer-2);
+}
+
+.aion-topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.aion-topbar-left span {
+    font-size: 1.1rem;
+}
+
+.aion-topbar-center {
+    flex: 1 1 auto;
+    display: flex;
+    justify-content: center;
+}
+
+.aion-command-button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 320px;
+    justify-content: space-between;
+}
+
+.aion-command-button kbd {
+    background-color: var(--neutral-layer-3);
+    border-radius: 4px;
+    padding: 0.125rem 0.375rem;
+    font-size: 0.75rem;
+}
+
+.aion-command-button .plus {
+    margin: 0 0.25rem;
+    color: var(--neutral-foreground-hint);
+}
+
+.aion-topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.aion-body {
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-columns: 64px 1fr;
+    min-height: 0;
+}
+
+.aion-side-rail {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 0.5rem;
+    border-right: 1px solid var(--neutral-stroke-control-rest);
+}
+
+.aion-side-rail fluent-button {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
 }
 
 .aion-content {
-    overflow: auto;
+    padding: 1rem;
+    min-height: 0;
+}
+
+.aion-bottom-nav {
+    display: none;
+    border-top: 1px solid var(--neutral-stroke-control-rest);
+    background-color: var(--neutral-layer-2);
+}
+
+.aion-bottom-nav button {
+    flex: 1 1 0;
+    padding: 0.75rem 0.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    border: none;
+    background: transparent;
+}
+
+@media (max-width: 900px) {
+    .aion-command-button {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .aion-body {
+        grid-template-columns: 1fr;
+    }
+
+    .aion-side-rail {
+        display: none;
+    }
+
+    .aion-bottom-nav {
+        display: flex;
+    }
+
+    .aion-content {
+        padding: 0.5rem;
+    }
 }

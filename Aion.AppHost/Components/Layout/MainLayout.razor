@@ -1,6 +1,7 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 @using Aion.AppHost.Services
-@using Aion.Domain.Contracts
+@using Aion.AppHost.Services.Navigation
+@using Aion.Domain.UI.Navigation
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.FluentUI.AspNetCore.Components
 @inject AuthenticationStateProvider Auth
@@ -13,72 +14,123 @@
                    NeutralBaseColor="@ThemeService.Current.NeutralBaseColor"
                    OfficeColor="@ThemeService.Current.OfficeColor"
                    CustomColor="@ThemeService.Current.CustomColor">
+    <div class="aion-shell">
+        <header class="aion-topbar">
+            <div class="aion-topbar-left" @onclick="@(() => Navigation.NavigateTo("/"))">
+                <FluentIcon Value='@FluentIconResolver.Resolve("Apps24Regular")' />
+                <span>Aion</span>
+            </div>
 
-    @* Conteneur horizontal plein écran *@
-    <FluentStack Horizontal="true" Style="height:100vh; max-height:100vh;">
-
-        @* Outlook bar (menu) *@
-        <div class="p-2" style="flex:0 0 260px; width:260px; overflow:auto;">
-            @if (_authState?.User.Identity?.IsAuthenticated == true)
-            {
-                <OutlookBar />
-            }
-        </div>
-
-        <FluentDivider Vertical="true" />
-
-        @* Zone principale qui prend tout le reste *@
-        <div style="flex:1; min-width:0; height:100%; display:flex; flex-direction:column; overflow-x:auto;">
-            @if (_authState?.User.Identity?.IsAuthenticated == true)
-            {
-                @* TabHost peut maintenant occuper 100% de la zone principale *@
-                <TabHost />
-            }
-            else
-            {
-                @Body
-            }
-        </div>
-
-        @* Header fixe en haut à droite *@
-        <div class="position-fixed top-0 end-0 p-2" style="z-index:1000">
-            @if (_authState?.User.Identity?.IsAuthenticated == true)
-            {
-                <div class="d-flex gap-2 align-items-center">
-                    <FluentSelect TOption="string"
-                                  Value="_selectedTheme"
-                                  ValueChanged="OnThemeSelectionChanged"
-                                  Style="min-width: 140px;">
-                        <FluentOption Value="light">Thème clair</FluentOption>
-                        <FluentOption Value="dark">Thème sombre</FluentOption>
-                    </FluentSelect>
-
-                    <FluentButton OnClick="Logout">
-                        Se déconnecter (@_authState.User.Identity?.Name)
+            <div class="aion-topbar-center">
+                @if (_isAuthenticated)
+                {
+                    <FluentButton Appearance="Appearance.Stealth"
+                                  Class="aion-command-button"
+                                  OnClick="OpenCommandPalette">
+                        <FluentIcon Value='@FluentIconResolver.Resolve("Search20Regular")' />
+                        <span>Rechercher ou exécuter une commande</span>
+                        <kbd>Ctrl</kbd><span class="plus">+</span><kbd>K</kbd>
                     </FluentButton>
-                </div>
-            }
-        </div>
-    </FluentStack>
+                }
+            </div>
 
-    @* Providers FluentUI à mettre en bas du layout *@
+            <div class="aion-topbar-right">
+                <FluentSelect TOption="string"
+                              Value="_selectedTheme"
+                              ValueChanged="OnThemeSelectionChanged"
+                              Style="min-width: 140px;">
+                    <FluentOption Value="light">Thème clair</FluentOption>
+                    <FluentOption Value="dark">Thème sombre</FluentOption>
+                </FluentSelect>
+
+                @if (_isAuthenticated)
+                {
+                    <FluentMenu>
+                        <FluentMenuButton>
+                            <FluentAvatar Name="@_username" />
+                        </FluentMenuButton>
+                        <FluentMenuList>
+                            <FluentMenuItem OnClick="Logout">Se déconnecter</FluentMenuItem>
+                        </FluentMenuList>
+                    </FluentMenu>
+                }
+            </div>
+        </header>
+
+        <div class="aion-body">
+            @if (_isAuthenticated)
+            {
+                <nav class="aion-side-rail">
+                    <FluentButton Appearance="Appearance.Stealth" StartIcon='@FluentIconResolver.Resolve("Home20Regular")' OnClick="@(() => Navigation.NavigateTo("/"))" />
+                    <FluentButton Appearance="Appearance.Stealth" StartIcon='@FluentIconResolver.Resolve("Search20Regular")' OnClick="OpenCommandPalette" />
+                    <FluentButton Appearance="Appearance.Stealth" StartIcon='@FluentIconResolver.Resolve("CalendarLtr20Regular")' OnClick="@(() => Navigation.NavigateTo("/agenda"))" />
+                    <FluentButton Appearance="Appearance.Stealth" StartIcon='@FluentIconResolver.Resolve("Apps20Regular")' OnClick="@(() => Navigation.NavigateTo("/modules"))" />
+                    <FluentButton Appearance="Appearance.Stealth" StartIcon='@FluentIconResolver.Resolve("Settings20Regular")' OnClick="@(() => Navigation.NavigateTo("/admin/catalog"))" />
+                </nav>
+            }
+
+            <main class="aion-content">
+                @if (_isAuthenticated)
+                {
+                    <ModuleHost />
+                }
+                else
+                {
+                    @Body
+                }
+            </main>
+        </div>
+
+        @if (_isAuthenticated)
+        {
+            <nav class="aion-bottom-nav">
+                <button type="button" @onclick="@(() => Navigation.NavigateTo("/"))">
+                    <FluentIcon Value='@FluentIconResolver.Resolve("Home20Regular")' />
+                    <span>Accueil</span>
+                </button>
+                <button type="button" @onclick="OpenCommandPalette">
+                    <FluentIcon Value='@FluentIconResolver.Resolve("Search20Regular")' />
+                    <span>Recherche</span>
+                </button>
+                <button type="button" @onclick="@(() => Navigation.NavigateTo("/agenda"))">
+                    <FluentIcon Value='@FluentIconResolver.Resolve("CalendarLtr20Regular")' />
+                    <span>Agenda</span>
+                </button>
+                <button type="button" @onclick="@(() => Navigation.NavigateTo("/modules"))">
+                    <FluentIcon Value='@FluentIconResolver.Resolve("Apps20Regular")' />
+                    <span>Modules</span>
+                </button>
+                <button type="button" @onclick="OpenUserMenu">
+                    <FluentIcon Value='@FluentIconResolver.Resolve("Person20Regular")' />
+                    <span>Profil</span>
+                </button>
+            </nav>
+        }
+
+        <CommandPalette @ref="_commandPalette" />
+    </div>
+
     <FluentToastProvider />
     <FluentDialogProvider />
     <FluentTooltipProvider />
     <FluentMessageBarProvider />
     <FluentMenuProvider />
-
 </FluentDesignTheme>
 
 @code {
     private AuthenticationState? _authState;
+    private bool _isAuthenticated;
     private string _selectedTheme = "light";
+    private string _username = "Utilisateur";
+    private CommandPalette? _commandPalette;
 
     protected override async Task OnInitializedAsync()
     {
         ThemeService.ThemeChanged += OnThemeChanged;
         _selectedTheme = ThemeService.Current.Mode == DesignThemeModes.Dark ? "dark" : "light";
         _authState = await Auth.GetAuthenticationStateAsync();
+        _isAuthenticated = _authState.User.Identity?.IsAuthenticated == true;
+        _username = _authState.User.Identity?.Name ?? _username;
     }
 
     private void OnThemeChanged()
@@ -107,9 +159,27 @@
         Navigation.NavigateTo("/login", true);
     }
 
+    private async Task OpenCommandPalette()
+    {
+        if (!_isAuthenticated)
+        {
+            return;
+        }
+
+        if (_commandPalette is not null)
+        {
+            await _commandPalette.OpenAsync();
+        }
+    }
+
+    private void OpenUserMenu()
+    {
+        // Placeholder: user menu already available in top bar. Optionally open command palette.
+        _ = OpenCommandPalette();
+    }
+
     public void Dispose()
     {
         ThemeService.ThemeChanged -= OnThemeChanged;
     }
 }
-

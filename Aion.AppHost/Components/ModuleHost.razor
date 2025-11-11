@@ -1,0 +1,131 @@
+@using System.Collections.Generic
+@using System.Linq
+@using System.Threading
+@using Aion.AppHost.Services.Navigation
+@using Aion.Domain.UI.Navigation
+@using Microsoft.FluentUI.AspNetCore.Components
+@inject IAionNavigationService Navigation
+@inject AionNavigationState NavigationState
+@inject IModuleCatalog ModuleCatalog
+
+@if (_tabs.Count > 0)
+{
+    <div class="modulehost">
+        <FluentTabs ActiveTabId="@_activeModuleKey"
+                    OnTabChange="OnTabChange"
+                    OnTabClose="OnTabClose"
+                    ShowClose="true"
+                    Orientation="Orientation.Horizontal">
+            @foreach (var tab in _tabs)
+            {
+                <FluentTab Id="@tab.ModuleKey" Label="@tab.Title" StartIcon="@FluentIconResolver.Resolve(tab.Icon)" />
+            }
+        </FluentTabs>
+
+        <div class="modulehost-content">
+            @_activeTab?.Content
+        </div>
+    </div>
+}
+else
+{
+    <div class="modulehost-empty">
+        <FluentIcon Value='@FluentIconResolver.Resolve("Home48Regular")' Size="FluentIconSize.ExtraLarge" />
+        <h2>Bienvenue dans Aion</h2>
+        <p>Sélectionnez un module via la palette de commande (Ctrl+K) ou depuis le menu.</p>
+
+        @if (_recentModules.Count > 0)
+        {
+            <div class="modulehost-recents">
+                <h3>Modules récents</h3>
+                <FluentStack Orientation="Orientation.Vertical" Gap="12">
+                    @foreach (var module in _recentModules)
+                    {
+                        <FluentButton Appearance="Appearance.Stealth" OnClick="() => OpenModule(module.Key)">
+                            <FluentIcon Value="@FluentIconResolver.Resolve(module.Icon)" />
+                            <span>@module.Title</span>
+                        </FluentButton>
+                    }
+                </FluentStack>
+            </div>
+        }
+    </div>
+}
+
+@implements IDisposable
+
+@code {
+    private IReadOnlyList<OpenModuleTab> _tabs = Array.Empty<OpenModuleTab>();
+    private OpenModuleTab? _activeTab;
+    private string? _activeModuleKey;
+    private readonly List<ModuleSummary> _recentModules = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        NavigationState.TabsChanged += OnTabsChanged;
+        NavigationState.ActiveTabChanged += OnActiveChanged;
+        await RefreshAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        _tabs = Navigation.GetOpenTabs();
+        _activeModuleKey = NavigationState.ActiveModuleKey ?? _tabs.LastOrDefault()?.ModuleKey;
+        _activeTab = _tabs.FirstOrDefault(t => string.Equals(t.ModuleKey, _activeModuleKey, StringComparison.OrdinalIgnoreCase));
+        await LoadRecentModulesAsync();
+        StateHasChanged();
+    }
+
+    private async Task LoadRecentModulesAsync()
+    {
+        _recentModules.Clear();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var key in NavigationState.RecentModuleKeys)
+        {
+            var module = await ModuleCatalog.TryGetByKeyAsync(key, CancellationToken.None);
+            if (module is not null && seen.Add(module.Key))
+            {
+                _recentModules.Add(module);
+            }
+        }
+    }
+
+    private Task OnTabChange(FluentTab tab)
+    {
+        _activeModuleKey = tab.Id;
+        return Navigation.FocusModuleAsync(tab.Id ?? string.Empty);
+    }
+
+    private async Task OnTabClose(FluentTab tab)
+    {
+        if (tab.Id is null)
+        {
+            return;
+        }
+
+        await Navigation.CloseModuleAsync(tab.Id);
+        await RefreshAsync();
+    }
+
+    private async Task OpenModule(string moduleKey)
+    {
+        await Navigation.OpenModuleAsync(moduleKey, null, CancellationToken.None);
+    }
+
+    private async void OnTabsChanged(object? sender, EventArgs e)
+    {
+        await InvokeAsync(RefreshAsync);
+    }
+
+    private async void OnActiveChanged(object? sender, string? moduleKey)
+    {
+        _activeModuleKey = moduleKey;
+        await InvokeAsync(RefreshAsync);
+    }
+
+    public void Dispose()
+    {
+        NavigationState.TabsChanged -= OnTabsChanged;
+        NavigationState.ActiveTabChanged -= OnActiveChanged;
+    }
+}

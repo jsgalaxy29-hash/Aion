@@ -1,0 +1,44 @@
+.modulehost {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.modulehost ::deep fluent-tabs {
+    flex: 0 0 auto;
+}
+
+.modulehost-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 0.75rem;
+    background-color: var(--neutral-layer-1);
+    overflow: auto;
+}
+
+.modulehost-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    height: 100%;
+    text-align: center;
+    padding: 2rem 1.5rem;
+}
+
+.modulehost-empty p {
+    max-width: 480px;
+    color: var(--neutral-foreground-hint);
+}
+
+.modulehost-recents {
+    margin-top: 2rem;
+    width: 100%;
+    max-width: 480px;
+}
+
+.modulehost-recents fluent-button {
+    justify-content: flex-start;
+    gap: 0.75rem;
+}

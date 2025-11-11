@@ -1,0 +1,87 @@
+.command-palette {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto 1fr;
+    gap: 0.75rem 1rem;
+    padding: 1.25rem;
+    min-height: 260px;
+}
+
+.command-palette-shortcut {
+    align-self: center;
+    color: var(--neutral-foreground-hint);
+    font-size: 0.75rem;
+}
+
+.command-palette-command {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    background-color: var(--neutral-layer-2);
+    cursor: pointer;
+}
+
+.command-palette-command:hover {
+    background-color: var(--neutral-layer-3);
+}
+
+.command-palette-command-sub {
+    font-size: 0.75rem;
+    color: var(--neutral-foreground-hint);
+}
+
+.command-palette-results {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 360px;
+    overflow-y: auto;
+}
+
+.command-palette-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+}
+
+.command-palette-item:hover,
+.command-palette-item.active {
+    background-color: var(--neutral-layer-2);
+}
+
+.command-palette-item-title {
+    font-weight: 600;
+}
+
+.command-palette-item-desc {
+    font-size: 0.75rem;
+    color: var(--neutral-foreground-hint);
+}
+
+.command-palette-empty {
+    padding: 1rem;
+    color: var(--neutral-foreground-hint);
+    text-align: center;
+}
+
+@media (max-width: 640px) {
+    .command-palette {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto 1fr;
+        padding: 1rem;
+    }
+
+    .command-palette-shortcut {
+        justify-self: end;
+    }
+}
