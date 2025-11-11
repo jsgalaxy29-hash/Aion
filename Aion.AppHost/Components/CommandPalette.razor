@@ -15,8 +15,8 @@
 @inject IJSRuntime Js
 @implements IAsyncDisposable
 
-<FluentDialog Hidden="@(!_isOpen)"
-              @ondialogdismiss="OnDialogDismissAsync"
+<FluentDialog Visible="@_isOpen"
+              OnDismiss="Close"
               Style="--dialog-width: min(720px, 100vw);">
     <div class="command-palette">
         <FluentTextField Value="_query"
@@ -101,7 +101,7 @@
     {
         if (!_isOpen)
         {
-            return;
+            return Task.CompletedTask;
         }
 
         _isOpen = false;
@@ -126,13 +126,7 @@
         }
     }
 
-    private Task OnQueryChangedAsync(string? value)
-        => UpdateQueryAsync(value);
-
-    private Task OnQueryInputAsync(ChangeEventArgs args)
-        => UpdateQueryAsync(args.Value?.ToString());
-
-    private async Task UpdateQueryAsync(string? value)
+    private async Task OnQueryChangedAsync(string? value)
     {
         if (string.Equals(_query, value, StringComparison.Ordinal))
         {
@@ -142,6 +136,9 @@
         _query = value;
         await EvaluateQueryAsync();
     }
+
+    private Task OnQueryInputAsync(ChangeEventArgs args)
+        => OnQueryChangedAsync(args.Value?.ToString());
 
     private async Task EvaluateQueryAsync()
     {
