@@ -206,7 +206,9 @@
             @if (Model.RequirePasswordChange || !string.IsNullOrWhiteSpace(Model.Input.NewPassword))
             {
                 <div class="alert alert-warning" style="margin-bottom: 1rem;">
-                    🔄 Votre mot de passe doit être mis à jour avant d'accéder à l'application.
+                    🔄 Votre mot de passe doit être mis à jour avant d'accéder à l'application.<br />
+                    👉 Saisissez votre mot de passe actuel dans le champ «&nbsp;Mot de passe&nbsp;» (par défaut : <strong>admin</strong>),
+                    puis choisissez un nouveau mot de passe ci-dessous.
                 </div>
 
                 <div class="form-group">
