@@ -166,11 +166,21 @@ export async function initCalendar(dotNetRefRef, selectedAgendaId, defaultView) 
 
         // Drag & drop d'événement
         eventDrop: function (info) {
+            if (!confirmScheduleChange()) {
+                info.revert();
+                return;
+            }
+
             persistEventDates(info.event);
         },
 
         // Redimensionnement d'événement
         eventResize: function (info) {
+            if (!confirmScheduleChange()) {
+                info.revert();
+                return;
+            }
+
             persistEventDates(info.event);
         },
 
@@ -383,6 +393,10 @@ async function persistEventDates(event) {
             event.revert();
         }
     }
+}
+
+function confirmScheduleChange() {
+    return window.confirm("Voulez-vous enregistrer la modification de l'horaire ?");
 }
 
 /**
