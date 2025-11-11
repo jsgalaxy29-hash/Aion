@@ -3,6 +3,7 @@
 @inject IDbContextFactory<Aion.Infrastructure.AionDbContext> DbFactory
 @inject IAionNavigationService Navigation
 @inject IModuleCatalog ModuleCatalog
+@inject NavigationManager NavigationManager
 
 <FluentLabel Typo="Typography.PageTitle">Mes tables</FluentLabel>
 
@@ -30,10 +31,10 @@ else
             @foreach (var table in FilterTables())
             {
                 <tr>
-                    <FluentLabel>@table.Libelle</FluentLabel>
-                    <FluentLabel>@table.Description</FluentLabel>
+                    <td><FluentLabel>@table.Libelle</FluentLabel></td>
+                    <td><FluentLabel>@table.Description</FluentLabel></td>
                     <td class="text-end">
-                        <FluentButton Appearance="Appearance.Accent" OnClick="() => OpenTableAsync(table)" Size="ControlSize.Small">Ouvrir</FluentButton>
+                        <FluentButton Appearance="Appearance.Accent" OnClick="@(async () => await OpenTableAsync(table))" Size="ControlSize.Small">Ouvrir</FluentButton>
                     </td>
                 </tr>
             }
@@ -74,13 +75,30 @@ else
 
     private async Task OpenTableAsync(STable table)
     {
-        var module = await ModuleCatalog.TryGetByRouteAsync("/dynamic/list", CancellationToken.None);
-        if (module is null)
+        if (string.IsNullOrWhiteSpace(table.Libelle))
         {
             return;
         }
 
+        var encoded = Uri.EscapeDataString(table.Libelle);
         var parameters = new Dictionary<string, object?> { ["TableName"] = table.Libelle };
-        await Navigation.OpenModuleAsync(module.Key, parameters, CancellationToken.None);
+
+        var listModule = await ModuleCatalog.TryGetByRouteAsync("/dynamic/list", CancellationToken.None);
+        if (listModule is not null)
+        {
+            await Navigation.OpenModuleAsync(listModule.Key, parameters, CancellationToken.None);
+            NavigationManager.NavigateTo($"/dynamic/list/{encoded}");
+
+            var managerModule = await ModuleCatalog.TryGetByRouteAsync("/dynamic/manager", CancellationToken.None);
+            if (managerModule is not null
+                && !string.Equals(managerModule.Key, listModule.Key, StringComparison.OrdinalIgnoreCase))
+            {
+                await Navigation.CloseModuleAsync(managerModule.Key, CancellationToken.None);
+            }
+
+            return;
+        }
+
+        NavigationManager.NavigateTo($"/dynamic/list/{encoded}", true);
     }
 }
