@@ -59,6 +59,8 @@ public class AgendaService(IDbContextFactory<AionDbContext> dbContextFactory) : 
             throw new InvalidOperationException($"Événement {evt.Id} introuvable");
         }
 
+        existing.AgendaId = evt.AgendaId;
+        existing.TenantId = evt.TenantId;
         existing.Libelle = evt.Libelle;
         existing.Description = evt.Description;
         existing.StartUtc = evt.StartUtc;
