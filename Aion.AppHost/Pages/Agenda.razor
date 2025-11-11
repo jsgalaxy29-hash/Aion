@@ -174,19 +174,19 @@
                       Modal="true"
                       TrapFocus="true"
                       @ondialogdismiss="OnCreateDialogDismiss">
-            <EditForm Model="_formModel" OnValidSubmit="CreateEventAsync" Id="agenda-create-form">
-                <FluentDialogHeader ShowDismiss="false">
-                    <div class="dialog-header">
-                        <FluentLabel Typo="Typography.H5">Nouvel événement</FluentLabel>
-                        <div class="dialog-actions">
-                            <FluentButton Appearance="Appearance.Stealth"
-                                          IconStart="@(new Microsoft.FluentUI.AspNetCore.Components.Icons.Regular.Size20.Dismiss())"
-                                          OnClick="CloseCreateDialog" />
-                        </div>
+            <FluentDialogHeader ShowDismiss="false">
+                <div class="dialog-header">
+                    <FluentLabel Typo="Typography.H5">Nouvel événement</FluentLabel>
+                    <div class="dialog-actions">
+                        <FluentButton Appearance="Appearance.Stealth"
+                                      IconStart="@(new Microsoft.FluentUI.AspNetCore.Components.Icons.Regular.Size20.Dismiss())"
+                                      OnClick="CloseCreateDialog" />
                     </div>
-                </FluentDialogHeader>
+                </div>
+            </FluentDialogHeader>
 
-                <FluentDialogBody>
+            <FluentDialogBody>
+                <EditForm Model="_formModel" OnValidSubmit="CreateEventAsync" Id="agenda-create-form">
                     <DataAnnotationsValidator />
 
                     <div class="event-form">
@@ -310,19 +310,19 @@
                             </div>
                         }
                     </div>
-                </FluentDialogBody>
+                </EditForm>
+            </FluentDialogBody>
 
-                <FluentDialogFooter>
-                    <FluentStack Orientation="Orientation.Horizontal" Gap="8" HorizontalAlignment="HorizontalAlignment.Right">
-                        <FluentButton Appearance="Appearance.Stealth" OnClick="CloseCreateDialog">
-                            Annuler
-                        </FluentButton>
-                        <FluentButton Appearance="Appearance.Accent" Type="ButtonType.Submit">
-                            Enregistrer
-                        </FluentButton>
-                    </FluentStack>
-                </FluentDialogFooter>
-            </EditForm>
+            <FluentDialogFooter>
+                <FluentStack Orientation="Orientation.Horizontal" Gap="8" HorizontalAlignment="HorizontalAlignment.Right">
+                    <FluentButton Appearance="Appearance.Stealth" OnClick="CloseCreateDialog">
+                        Annuler
+                    </FluentButton>
+                    <FluentButton Appearance="Appearance.Accent" Type="ButtonType.Submit" Form="agenda-create-form">
+                        Enregistrer
+                    </FluentButton>
+                </FluentStack>
+            </FluentDialogFooter>
         </FluentDialog>
     }
 </div>
