@@ -83,7 +83,7 @@
                 <!-- Bouton créer -->
                 <FluentButton Appearance="Appearance.Accent"
                               IconStart="@(new Microsoft.FluentUI.AspNetCore.Components.Icons.Regular.Size20.Add())"
-                              OnClick="OpenCreateDialog"
+                              OnClick="StartCreateEvent"
                               Class="create-button">
                     Créer
                 </FluentButton>
@@ -174,10 +174,10 @@
                       Modal="true"
                       TrapFocus="true"
                       @ondialogdismiss="OnCreateDialogDismiss">
-            <EditForm Model="_formModel" OnValidSubmit="CreateEventAsync" Id="agenda-create-form">
+            <EditForm Model="_formModel" OnValidSubmit="SaveEventAsync" Id="agenda-create-form">
                 <FluentDialogHeader ShowDismiss="false">
                     <div class="dialog-header">
-                        <FluentLabel Typo="Typography.H5">Nouvel événement</FluentLabel>
+                        <FluentLabel Typo="Typography.H5">@(_isEditing ? "Modifier l'événement" : "Nouvel événement")</FluentLabel>
                         <div class="dialog-actions">
                             <FluentButton Appearance="Appearance.Stealth"
                                           IconStart="@(new Microsoft.FluentUI.AspNetCore.Components.Icons.Regular.Size20.Dismiss())"
@@ -318,7 +318,7 @@
                             Annuler
                         </FluentButton>
                         <FluentButton Appearance="Appearance.Accent" Type="ButtonType.Submit">
-                            Enregistrer
+                            @(_isEditing ? "Mettre à jour" : "Enregistrer")
                         </FluentButton>
                     </FluentStack>
                 </FluentDialogFooter>
@@ -756,6 +756,8 @@
     private bool _loaded;
     private FluentDialog? _createEventDialog;
     private bool _isCreateDialogOpen;
+    private bool _isEditing;
+    private int? _editingEventId;
     private string? _selectedAgendaId;
     private string? _selectedStatusId;
     private DateTime? _startDateLocal;
@@ -894,20 +896,7 @@
             .AsNoTracking()
             .ToListAsync();
 
-        if (_agendas.Any())
-        {
-            _formModel.AgendaId = _agendas.First().Id;
-        }
-
-        if (_statuses.Any())
-        {
-            _formModel.StatusId = _statuses.First().Id;
-        }
-
-        _formModel.StartUtc = DateTime.UtcNow;
-        _formModel.EndUtc = DateTime.UtcNow.AddHours(1);
-
-        SyncFormStateFromModel();
+        InitializeFormForCreate();
 
         await LoadEventsAsync();
 
@@ -1015,9 +1004,16 @@
         StateHasChanged();
     }
 
+    private void StartCreateEvent()
+    {
+        InitializeFormForCreate();
+        OpenCreateDialog();
+    }
+
     private void CloseCreateDialog()
     {
         _isCreateDialogOpen = false;
+        InitializeFormForCreate();
         StateHasChanged();
     }
 
@@ -1176,21 +1172,21 @@
     [JSInvokable]
     public Task OnEventCreatedAsync(string startStr, string endStr, bool allDay)
     {
+        DateTime? startUtc = null;
+        DateTime? endUtc = null;
+
         if (DateTime.TryParse(startStr, out var start))
         {
-            _formModel.StartUtc = DateTime.SpecifyKind(start, DateTimeKind.Utc);
+            startUtc = DateTime.SpecifyKind(start, DateTimeKind.Utc);
         }
 
         if (DateTime.TryParse(endStr, out var end))
         {
-            _formModel.EndUtc = DateTime.SpecifyKind(end, DateTimeKind.Utc);
+            endUtc = DateTime.SpecifyKind(end, DateTimeKind.Utc);
         }
 
-        _formModel.AllDay = allDay;
-        _enableReminders = false;
-        _reminders.Clear();
+        InitializeFormForCreate(startUtc, endUtc, allDay);
 
-        SyncFormStateFromModel();
         OpenCreateDialog();
         return Task.CompletedTask;
     }
@@ -1198,7 +1194,19 @@
     [JSInvokable]
     public Task OnEventClickAsync(string eventId)
     {
-        // TODO: Ouvrir dialog d'édition
+        if (!int.TryParse(eventId, NumberStyles.Integer, CultureInfo.InvariantCulture, out var id))
+        {
+            return Task.CompletedTask;
+        }
+
+        var evt = _events.FirstOrDefault(e => e.Id == id);
+        if (evt is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        LoadEventForEdit(evt);
+        OpenCreateDialog();
         return Task.CompletedTask;
     }
 
@@ -1240,7 +1248,7 @@
         reminder.TriggerAtUtc = _formModel.StartUtc.AddMinutes(reminder.OffsetMinutes);
     }
 
-    private async Task CreateEventAsync(EditContext _)
+    private async Task SaveEventAsync(EditContext _)
     {
         UpdateModelFromLocalValues();
 
@@ -1248,31 +1256,42 @@
         _formModel.Actif = true;
         _formModel.EnableReminders = _enableReminders && _reminders.Count > 0;
 
-        foreach (var reminder in _reminders)
+        var reminders = _enableReminders
+            ? _reminders.Select(r => new SAgendaReminder
+            {
+                OffsetMinutes = r.OffsetMinutes,
+                ChannelId = r.ChannelId,
+                TriggerAtUtc = r.TriggerAtUtc,
+                TenantId = r.TenantId,
+                Actif = r.Actif,
+                Doc = r.Doc,
+                Deleted = r.Deleted
+            }).ToList()
+            : null;
+
+        if (reminders is not null)
         {
-            NormalizeReminder(reminder);
-            reminder.TenantId = UserContext.TenantId;
-            reminder.Actif = true;
+            foreach (var reminder in reminders)
+            {
+                NormalizeReminder(reminder);
+                reminder.TenantId = UserContext.TenantId;
+                reminder.Actif = true;
+            }
         }
 
         var evt = _formModel.ToEntity();
+        evt.TenantId = UserContext.TenantId;
+        evt.Actif = true;
 
-        await AgendaService.CreateEventAsync(
-            evt,
-            _enableReminders ? _reminders.ToList() : null);
-
-        var nextStartUtc = DateTime.UtcNow;
-
-        _formModel.Libelle = string.Empty;
-        _formModel.Description = string.Empty;
-        _formModel.AllDay = false;
-        _formModel.IsPrivate = false;
-        _enableReminders = false;
-        _reminders.Clear();
-        _formModel.EnableReminders = false;
-
-        _formModel.StartUtc = nextStartUtc;
-        _formModel.EndUtc = nextStartUtc.AddHours(1);
+        if (_isEditing && _editingEventId.HasValue)
+        {
+            evt.Id = _editingEventId.Value;
+            await AgendaService.UpdateEventAsync(evt, reminders);
+        }
+        else
+        {
+            await AgendaService.CreateEventAsync(evt, reminders);
+        }
 
         await LoadEventsAsync();
 
@@ -1292,7 +1311,7 @@
             await _agendaJsModule.InvokeVoidAsync("setEvents", jsEvents);
         }
 
-        SyncFormStateFromModel();
+        InitializeFormForCreate();
         _isCreateDialogOpen = false;
 
         StateHasChanged();
@@ -1347,6 +1366,123 @@
         }
     }
 
+    private void InitializeFormForCreate(DateTime? startUtc = null, DateTime? endUtc = null, bool? allDay = null)
+    {
+        var previousAgendaId = _formModel.AgendaId;
+        var previousStatusId = _formModel.StatusId;
+
+        _isEditing = false;
+        _editingEventId = null;
+
+        if (_agendas.Any() && (previousAgendaId == 0 || !_agendas.Any(a => a.Id == previousAgendaId)))
+        {
+            _formModel.AgendaId = _agendas.First().Id;
+        }
+        else
+        {
+            _formModel.AgendaId = previousAgendaId;
+        }
+
+        if (_statuses.Any() && (previousStatusId == 0 || !_statuses.Any(s => s.Id == previousStatusId)))
+        {
+            _formModel.StatusId = _statuses.First().Id;
+        }
+        else
+        {
+            _formModel.StatusId = previousStatusId;
+        }
+
+        _formModel.Id = 0;
+        _formModel.Libelle = string.Empty;
+        _formModel.Description = string.Empty;
+        _formModel.IsPrivate = false;
+        _formModel.ContextEntityType = null;
+        _formModel.ContextEntityId = null;
+        _formModel.EnableReminders = false;
+        _formModel.AllDay = allDay ?? false;
+        _formModel.TenantId = UserContext.TenantId;
+        _formModel.Actif = true;
+        _formModel.Doc = false;
+        _formModel.Deleted = false;
+        _formModel.DtCreation = DateTime.UtcNow;
+        _formModel.DtModification = null;
+        _formModel.DtSuppression = null;
+        _formModel.UsrCreationId = UserContext.UserId;
+        _formModel.UsrModificationId = null;
+        _formModel.UsrSuppressionId = null;
+
+        var startValue = startUtc ?? DateTime.UtcNow;
+        _formModel.StartUtc = EnsureUtc(startValue);
+
+        var endValue = endUtc ?? _formModel.StartUtc.AddHours(1);
+        _formModel.EndUtc = EnsureUtc(endValue);
+
+        EnsureEndAfterStart();
+
+        _enableReminders = false;
+        _reminders.Clear();
+
+        SyncFormStateFromModel();
+    }
+
+    private void LoadEventForEdit(SAgendaEvent evt)
+    {
+        _isEditing = true;
+        _editingEventId = evt.Id;
+
+        _formModel.Id = evt.Id;
+        _formModel.AgendaId = evt.AgendaId;
+        _formModel.Libelle = evt.Libelle;
+        _formModel.Description = evt.Description;
+        _formModel.StartUtc = EnsureUtc(evt.StartUtc);
+        _formModel.EndUtc = EnsureUtc(evt.EndUtc);
+        _formModel.AllDay = evt.AllDay;
+        _formModel.IsPrivate = evt.IsPrivate;
+        _formModel.StatusId = evt.StatusId;
+        _formModel.ContextEntityType = evt.ContextEntityType;
+        _formModel.ContextEntityId = evt.ContextEntityId;
+        _formModel.EnableReminders = evt.EnableReminders;
+        _formModel.TenantId = evt.TenantId;
+        _formModel.Actif = evt.Actif;
+        _formModel.Doc = evt.Doc;
+        _formModel.Deleted = evt.Deleted;
+        _formModel.DtCreation = evt.DtCreation;
+        _formModel.DtModification = evt.DtModification;
+        _formModel.DtSuppression = evt.DtSuppression;
+        _formModel.UsrCreationId = evt.UsrCreationId;
+        _formModel.UsrModificationId = evt.UsrModificationId;
+        _formModel.UsrSuppressionId = evt.UsrSuppressionId;
+
+        _enableReminders = evt.EnableReminders && (evt.Reminders?.Any() ?? false);
+        _reminders.Clear();
+
+        foreach (var reminder in evt.Reminders ?? Enumerable.Empty<SAgendaReminder>())
+        {
+            _reminders.Add(new SAgendaReminder
+            {
+                OffsetMinutes = reminder.OffsetMinutes,
+                ChannelId = reminder.ChannelId,
+                TriggerAtUtc = EnsureUtc(reminder.TriggerAtUtc),
+                TenantId = reminder.TenantId,
+                Actif = reminder.Actif,
+                Doc = reminder.Doc,
+                Deleted = reminder.Deleted
+            });
+        }
+
+        SyncFormStateFromModel();
+    }
+
+    private static DateTime EnsureUtc(DateTime value)
+    {
+        return value.Kind switch
+        {
+            DateTimeKind.Utc => value,
+            DateTimeKind.Local => value.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
+        };
+    }
+
     private sealed class AgendaFormModel : SAgendaEvent
     {
         public AgendaFormModel()
@@ -1358,6 +1494,7 @@
         {
             return new SAgendaEvent
             {
+                Id = Id,
                 AgendaId = AgendaId,
                 Libelle = Libelle,
                 Description = Description,
