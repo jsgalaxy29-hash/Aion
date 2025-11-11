@@ -15,6 +15,133 @@ main,
     padding: 1.5rem;
 }
 
+
+.agenda-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+    gap: 1.5rem;
+    align-items: stretch;
+    min-height: calc(100vh - 220px);
+}
+
+.agenda-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.agenda-card {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--neutral-layer-1, #ffffff);
+}
+
+.agenda-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.agenda-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+}
+
+.agenda-toolbar fluent-stack {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.agenda-calendar-card {
+    flex: 1;
+    display: flex;
+    padding: 0;
+    min-height: 640px;
+}
+
+.agenda-calendar-card #aion-agenda-calendar {
+    flex: 1;
+}
+
+.agenda-upcoming {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-height: calc(100vh - 320px);
+    overflow-y: auto;
+    padding-right: 0.25rem;
+}
+
+.agenda-upcoming-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.5rem 0.25rem;
+    border-bottom: 1px solid var(--neutral-stroke-layer-rest, #e0e0e0);
+}
+
+.agenda-upcoming-title {
+    font-weight: 600;
+}
+
+.agenda-upcoming-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    font-size: 0.85rem;
+    color: var(--neutral-foreground-hint, #666);
+}
+
+.agenda-reminder-row {
+    align-items: center;
+}
+
+.agenda-upcoming-card {
+    max-height: calc(100vh - 220px);
+}
+
+.agenda-dialog-body {
+    max-height: 65vh;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+}
+
+.agenda-datetime-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.agenda-reminder-group {
+    gap: 1rem !important;
+}
+
+.agenda-reminder-group .agenda-reminder-row {
+    flex-wrap: wrap;
+}
+
+@media (max-width: 992px) {
+    .agenda-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .agenda-sidebar {
+        order: -1;
+    }
+
+    .agenda-upcoming {
+        max-height: unset;
+    }
+}
+
 /* -- FullCalendar + FluentUI harmonisation -- */
 
 .fc {
@@ -61,3 +188,5 @@ main,
     .fc .fc-highlight {
         background: var(--accent-fill-rest, rgba(0,120,212,0.2));
     }
+
+}
