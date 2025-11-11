@@ -15,245 +15,738 @@
 @inject IJSRuntime JS
 @attribute [Authorize]
 
-<FluentLabel Typo="Typography.H2">Agenda</FluentLabel>
-
-@if (!_loaded)
-{
-    <FluentStack Orientation="Orientation.Horizontal" Gap="8">
-        <FluentProgressRing />
-        <FluentLabel>Chargement des agendas...</FluentLabel>
-    </FluentStack>
-}
-else if (!_agendas.Any())
-{
-    <FluentMessageBar Intent="MessageIntent.Warning">
-        Aucun agenda disponible pour cet utilisateur.
-    </FluentMessageBar>
-}
-else
-{
-    <div class="agenda-layout">
-        <div class="agenda-main">
-            <div class="agenda-toolbar">
-                <FluentStack Orientation="Orientation.Horizontal"
-                             Gap="8"
-                             AlignItems="AlignItems.Center">
-                    <FluentButton Appearance="Appearance.Stealth" Icon="CalendarToday24Regular" OnClick="GoToday">Aujourd'hui</FluentButton>
-                    <FluentButton Appearance="Appearance.Stealth" Icon="ArrowLeft24Regular" OnClick="GoPrev">Précédent</FluentButton>
-                    <FluentButton Appearance="Appearance.Stealth" Icon="ArrowRight24Regular" OnClick="GoNext">Suivant</FluentButton>
-
-                    <FluentDivider Orientation="Orientation.Vertical" />
-
-                    <FluentButton Appearance="Appearance.Stealth" OnClick="@(() => ChangeView("dayGridMonth"))">Mois</FluentButton>
-                    <FluentButton Appearance="Appearance.Stealth" OnClick="@(() => ChangeView("timeGridWeek"))">Semaine</FluentButton>
-                    <FluentButton Appearance="Appearance.Stealth" OnClick="@(() => ChangeView("timeGridDay"))">Jour</FluentButton>
-                </FluentStack>
-
-                <FluentStack Orientation="Orientation.Horizontal" Gap="8" AlignItems="AlignItems.Center">
-                    <FluentButton Appearance="Appearance.Accent"
-                                   Icon="Add24Regular"
-                                   OnClick="OpenCreateDialog">
-                        Nouvel événement
-                    </FluentButton>
-                </FluentStack>
+<div class="google-agenda-container">
+    @if (!_loaded)
+    {
+        <div class="agenda-loading">
+            <FluentProgressRing />
+            <FluentLabel>Chargement des agendas...</FluentLabel>
+        </div>
+    }
+    else if (!_agendas.Any())
+    {
+        <FluentMessageBar Intent="MessageIntent.Warning">
+            Aucun agenda disponible pour cet utilisateur.
+        </FluentMessageBar>
+    }
+    else
+    {
+        <!-- En-tête style Google Agenda -->
+        <div class="agenda-header">
+            <div class="header-left">
+                <FluentButton Appearance="Appearance.Stealth" 
+                              IconStart="@(new Microsoft.FluentUI.AspNetCore.Components.Icons.Regular.Size20.Navigation())"
+                              Class="menu-toggle">
+                </FluentButton>
+                <div class="header-logo">
+                    <FluentIcon Value="@(new Microsoft.FluentUI.AspNetCore.Components.Icons.Regular.Size24.Calendar())" Color="Color.Accent" />
+                    <span class="header-title">Agenda</span>
+                </div>
+                <FluentButton Appearance="Appearance.Stealth" OnClick="GoToday" Class="today-btn">
+                    Aujourd'hui
+                </FluentButton>
+                <div class="nav-buttons">
+                    <FluentButton Appearance="Appearance.Stealth" 
+                                  IconStart="@(new Microsoft.FluentUI.AspNetCore.Components.Icons.Regular.Size20.ChevronLeft())"
+                                  OnClick="GoPrev" />
+                    <FluentButton Appearance="Appearance.Stealth" 
+                                  IconStart="@(new Microsoft.FluentUI.AspNetCore.Components.Icons.Regular.Size20.ChevronRight())"
+                                  OnClick="GoNext" />
+                </div>
+                <h2 class="current-period">@GetCurrentPeriodTitle()</h2>
             </div>
+            <div class="header-right">
+                <FluentButton Appearance="Appearance.Stealth" 
+                              IconStart="@(new Microsoft.FluentUI.AspNetCore.Components.Icons.Regular.Size20.Search())" />
+                <FluentButton Appearance="Appearance.Stealth" 
+                              IconStart="@(new Microsoft.FluentUI.AspNetCore.Components.Icons.Regular.Size20.Question())" />
+                <FluentButton Appearance="Appearance.Stealth" 
+                              IconStart="@(new Microsoft.FluentUI.AspNetCore.Components.Icons.Regular.Size20.Settings())" />
 
-            <FluentCard Class="agenda-calendar-card">
-                <div id="aion-agenda-calendar"></div>
-            </FluentCard>
+               <FluentSelect Toption="string" Value="@_currentView" Class="view-selector">
+                    <FluentOption Value="dayGridMonth">Mois</FluentOption>
+                    <FluentOption Value="timeGridWeek">Semaine</FluentOption>
+                    <FluentOption Value="timeGridDay">Jour</FluentOption>
+                    <FluentOption Value="listWeek">Agenda</FluentOption>
+                </FluentSelect>
+
+            </div>
         </div>
 
-        <div class="agenda-sidebar">
-            <FluentCard Class="agenda-card agenda-upcoming-card">
-                <FluentStack Orientation="Orientation.Vertical" Gap="12">
-                    <FluentStack Orientation="Orientation.Horizontal"
-                                 AlignItems="AlignItems.Center"
-                                 JustifyContent="JustifyContent.SpaceBetween">
-                        <FluentLabel Typo="Typography.H5">À venir</FluentLabel>
-                        <FluentBadge Appearance="Appearance.Stealth">
-                            @_events.Count(e => e.StartUtc >= DateTime.UtcNow)
-                        </FluentBadge>
-                    </FluentStack>
+        <div class="agenda-layout">
+            <!-- Sidebar gauche style Google -->
+            <div class="agenda-sidebar">
+                <!-- Bouton créer -->
+                <FluentButton Appearance="Appearance.Accent"
+                              IconStart="@(new Microsoft.FluentUI.AspNetCore.Components.Icons.Regular.Size20.Add())"
+                              OnClick="OpenCreateDialog"
+                              Class="create-button">
+                    Créer
+                </FluentButton>
 
-                    @if (!_events.Any())
+                <!-- Mini calendrier -->
+                <div class="mini-calendar">
+                    <div class="mini-calendar-header">
+                        <FluentButton Appearance="Appearance.Stealth" 
+                                      IconStart="@(new Microsoft.FluentUI.AspNetCore.Components.Icons.Regular.Size16.ChevronLeft())"
+                                      OnClick="PreviousMiniMonth" />
+                        <span class="mini-month-label">@_miniCalendarDate.ToString("MMMM yyyy", new CultureInfo("fr-FR"))</span>
+                        <FluentButton Appearance="Appearance.Stealth" 
+                                      IconStart="@(new Microsoft.FluentUI.AspNetCore.Components.Icons.Regular.Size16.ChevronRight())"
+                                      OnClick="NextMiniMonth" />
+                    </div>
+                    <div class="mini-calendar-body">
+                        <div class="mini-calendar-weekdays">
+                            @foreach (var day in new[] { "L", "M", "M", "J", "V", "S", "D" })
+                            {
+                                <div class="mini-weekday">@day</div>
+                            }
+                        </div>
+                        <div class="mini-calendar-days">
+                            @foreach (var day in GetMiniCalendarDays())
+                            {
+                                <button class="mini-day @GetMiniDayClass(day)" 
+                                        @onclick="() => SelectMiniDay(day)">
+                                    @day.Day
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Liste des agendas -->
+                <div class="agenda-list">
+                    <FluentLabel Typo="Typography.Body" Weight="FontWeight.Bold" Class="agenda-list-title">
+                        Mes agendas
+                    </FluentLabel>
+                    @foreach (var agenda in _agendas)
                     {
-                        <FluentMessageBar Intent="MessageIntent.Info">
-                            Aucun événement planifié.
-                        </FluentMessageBar>
+                        <div class="agenda-item">
+                            <FluentCheckbox Checked="true" Class="agenda-checkbox">
+                                <span class="agenda-color" style="background-color: @GetAgendaColor(agenda.Id);"></span>
+                                <span class="agenda-name">@agenda.Libelle</span>
+                            </FluentCheckbox>
+                        </div>
+                    }
+                </div>
+
+                <!-- Événements à venir -->
+                <div class="upcoming-events">
+                    <FluentLabel Typo="Typography.Body" Weight="FontWeight.Bold" Class="upcoming-title">
+                        À venir
+                    </FluentLabel>
+                    @if (_events.Any(e => e.StartUtc >= DateTime.UtcNow))
+                    {
+                        @foreach (var evt in _events.Where(e => e.StartUtc >= DateTime.UtcNow).OrderBy(e => e.StartUtc).Take(5))
+                        {
+                            <div class="upcoming-event" @onclick="() => OnEventClickAsync(evt.Id.ToString())">
+                                <div class="upcoming-event-time">
+                                    <span class="event-color-dot" style="background-color: @GetAgendaColor(evt.AgendaId);"></span>
+                                    @evt.StartUtc.ToLocalTime().ToString("t")
+                                </div>
+                                <div class="upcoming-event-title">@evt.Libelle</div>
+                            </div>
+                        }
                     }
                     else
                     {
-                        <div class="agenda-upcoming">
-                            @foreach (var evt in _events.OrderBy(e => e.StartUtc).Take(8))
-                            {
-                                var agenda = _agendas.FirstOrDefault(a => a.Id == evt.AgendaId);
-                                var status = _statuses.FirstOrDefault(s => s.Id == evt.StatusId);
-
-                                <div class="agenda-upcoming-item">
-                                    <div class="agenda-upcoming-title">@evt.Libelle</div>
-                                    <div class="agenda-upcoming-meta">
-                                        <span>@agenda?.Libelle</span>
-                                        <span>@evt.StartUtc.ToLocalTime():g</span>
-                                        @if (evt.EndUtc != default)
-                                        {
-                                            <span>→ @evt.EndUtc.ToLocalTime():t</span>
-                                        }
-                                        <span>@status?.Libelle</span>
-                                    </div>
-                                </div>
-                            }
-                        </div>
+                        <div class="no-upcoming">Aucun événement à venir</div>
                     }
-                </FluentStack>
-            </FluentCard>
+                </div>
+            </div>
+
+            <!-- Zone principale du calendrier -->
+            <div class="agenda-main">
+                <FluentCard Class="calendar-card">
+                    <div id="aion-agenda-calendar"></div>
+                </FluentCard>
+            </div>
         </div>
-    </div>
 
-    <FluentDialog @ref="_createEventDialog"
-                  @bind-Hidden="CreateDialogHidden"
-                  Style="max-width: 640px;"
-                  Modal="true"
-                  TrapFocus="true"
-                  @ondialogdismiss="OnCreateDialogDismiss">
-        <FluentDialogHeader>
-            <FluentStack Orientation="Orientation.Horizontal"
-                         AlignItems="AlignItems.Center"
-                         JustifyContent="JustifyContent.SpaceBetween">
-                <FluentLabel Typo="Typography.H4">Nouvel événement</FluentLabel>
-                <FluentButton Appearance="Appearance.Stealth" Icon="Dismiss24Regular" OnClick="CloseCreateDialog" />
-            </FluentStack>
-        </FluentDialogHeader>
+        <!-- Dialog de création d'événement style Google -->
+        <FluentDialog @ref="_createEventDialog"
+                      @bind-Hidden="CreateDialogHidden"
+                      Class="event-dialog"
+                      Modal="true"
+                      TrapFocus="true"
+                      @ondialogdismiss="OnCreateDialogDismiss">
+            <FluentDialogHeader ShowDismiss="false">
+                <div class="dialog-header">
+                    <FluentLabel Typo="Typography.H5">Nouvel événement</FluentLabel>
+                    <div class="dialog-actions">
+                        <FluentButton Appearance="Appearance.Stealth" 
+                                      IconStart="@(new Microsoft.FluentUI.AspNetCore.Components.Icons.Regular.Size20.Dismiss())"
+                                      OnClick="CloseCreateDialog" />
+                    </div>
+                </div>
+            </FluentDialogHeader>
 
-        <FluentDialogBody>
-            <div class="agenda-dialog-body">
+            <FluentDialogBody>
                 <EditForm Model="_formModel" OnValidSubmit="CreateEventAsync" Id="agenda-create-form">
                     <DataAnnotationsValidator />
-                    <ValidationSummary />
+                    
+                    <div class="event-form">
+                        <!-- Titre -->
+                        <div class="form-row">
+                            <FluentIcon Value="@(new Microsoft.FluentUI.AspNetCore.Components.Icons.Regular.Size20.TextDescription())" Class="form-icon" />
+                            <FluentTextField @bind-Value="_formModel.Libelle"
+                                             Placeholder="Ajouter un titre"
+                                             Class="title-input" />
+                        </div>
 
-                    <FluentStack Orientation="Orientation.Vertical" Gap="12">
-                        <FluentStack Orientation="Orientation.Vertical" Gap="4">
-                            <FluentLabel>Agenda</FluentLabel>
+                        <!-- Date et heure -->
+                        <div class="form-row">
+                            <FluentIcon Value="@(new Microsoft.FluentUI.AspNetCore.Components.Icons.Regular.Size20.Clock())" Class="form-icon" />
+                            <div class="datetime-container">
+                                <div class="datetime-row">
+                                    <FluentDatePicker @bind-Value="_startDateLocal"
+                                                      Placeholder="Date de début" />
+                                    @if (!_formModel.AllDay)
+                                    {
+                                        <FluentTimePicker @bind-Value="_startTimeLocal" />
+                                    }
+                                </div>
+                                <div class="datetime-row">
+                                    <FluentDatePicker @bind-Value="_endDateLocal"
+                                                      Placeholder="Date de fin" />
+                                    @if (!_formModel.AllDay)
+                                    {
+                                        <FluentTimePicker @bind-Value="_endTimeLocal" />
+                                    }
+                                </div>
+                                <FluentCheckbox @bind-Value="_formModel.AllDay" OnChange="OnAllDayChanged">
+                                    Journée entière
+                                </FluentCheckbox>
+                            </div>
+                        </div>
+
+                        <!-- Agenda -->
+                        <div class="form-row">
+                            <FluentIcon Value="@(new Microsoft.FluentUI.AspNetCore.Components.Icons.Regular.Size20.CalendarLtr())" Class="form-icon" />
                             <FluentSelect TOption="string"
                                           Value="@_selectedAgendaId"
                                           ValueChanged="OnAgendaChanged"
-                                          Style="min-width: 100%">
+                                          Class="full-width">
                                 @foreach (var agenda in _agendas)
                                 {
-                                    <FluentOption Value="@agenda.Id.ToString()">@agenda.Libelle</FluentOption>
+                                    <FluentOption Value="@agenda.Id.ToString()">
+                                        <span class="agenda-option">
+                                            <span class="option-color" style="background-color: @GetAgendaColor(agenda.Id);"></span>
+                                            @agenda.Libelle
+                                        </span>
+                                    </FluentOption>
                                 }
                             </FluentSelect>
-                        </FluentStack>
-
-                        <FluentStack Orientation="Orientation.Vertical" Gap="4">
-                            <FluentLabel>Titre</FluentLabel>
-                            <FluentTextField @bind-Value="_formModel.Libelle"
-                                             Placeholder="Titre de l'événement" />
-                        </FluentStack>
-
-                        <FluentStack Orientation="Orientation.Vertical" Gap="4">
-                            <FluentLabel>Description</FluentLabel>
-                            <FluentTextArea @bind-Value="_formModel.Description"
-                                           Rows="3"
-                                           Placeholder="Détails ou description" />
-                        </FluentStack>
-
-                        <div class="agenda-datetime-grid">
-                            <FluentStack Orientation="Orientation.Vertical" Gap="4">
-                                <FluentLabel>Début</FluentLabel>
-                                <FluentDatePicker Value="@_startDateLocal"
-                                                  ValueChanged="OnStartDateChanged"
-                                                  Placeholder="Date de début" />
-                                <FluentTimePicker Value="@_startTimeLocal"
-                                                  ValueChanged="OnStartTimeChanged" />
-                            </FluentStack>
-
-                            <FluentStack Orientation="Orientation.Vertical" Gap="4">
-                                <FluentLabel>Fin</FluentLabel>
-                                <FluentDatePicker Value="@_endDateLocal"
-                                                  ValueChanged="OnEndDateChanged"
-                                                  Placeholder="Date de fin" />
-                                <FluentTimePicker Value="@_endTimeLocal"
-                                                  ValueChanged="OnEndTimeChanged" />
-                            </FluentStack>
                         </div>
 
-                        <FluentStack Orientation="Orientation.Vertical" Gap="4">
-                            <FluentLabel>Statut</FluentLabel>
+                        <!-- Description -->
+                        <div class="form-row">
+                            <FluentIcon Value="@(new Microsoft.FluentUI.AspNetCore.Components.Icons.Regular.Size20.TextAlignLeft())" Class="form-icon" />
+                            <FluentTextArea @bind-Value="_formModel.Description"
+                                            Rows="3"
+                                            Placeholder="Ajouter une description"
+                                            Class="full-width" />
+                        </div>
+
+                        <!-- Statut -->
+                        <div class="form-row">
+                            <FluentIcon Value="@(new Microsoft.FluentUI.AspNetCore.Components.Icons.Regular.Size20.Status())" Class="form-icon" />
                             <FluentSelect TOption="string"
                                           Value="@_selectedStatusId"
-                                          ValueChanged="OnStatusChanged">
+                                          ValueChanged="OnStatusChanged"
+                                          Class="full-width">
                                 @foreach (var status in _statuses)
                                 {
                                     <FluentOption Value="@status.Id.ToString()">@status.Libelle</FluentOption>
                                 }
                             </FluentSelect>
-                        </FluentStack>
+                        </div>
 
-                        <FluentStack Orientation="Orientation.Vertical" Gap="8">
-                            <FluentStack Orientation="Orientation.Horizontal" Gap="8">
-                                <FluentCheckbox @bind-Value="_formModel.AllDay" OnChange="OnAllDayChanged">Journée entière</FluentCheckbox>
+                        <!-- Options supplémentaires -->
+                        <div class="form-row">
+                            <FluentIcon Value="@(new Microsoft.FluentUI.AspNetCore.Components.Icons.Regular.Size20.Options())" Class="form-icon" />
+                            <div class="options-container">
                                 <FluentCheckbox @bind-Value="_formModel.IsPrivate">Privé</FluentCheckbox>
-                                <FluentCheckbox @bind-Value="_enableReminders" OnChange="OnReminderToggleChanged">Activer les rappels</FluentCheckbox>
-                            </FluentStack>
+                                <FluentCheckbox @bind-Value="_enableReminders" OnChange="OnReminderToggleChanged">
+                                    Ajouter des rappels
+                                </FluentCheckbox>
+                            </div>
+                        </div>
 
-                            @if (_enableReminders)
-                            {
-                                <FluentStack Orientation="Orientation.Vertical" Gap="8" Class="agenda-reminder-group">
-                                    @if (!_reminders.Any())
-                                    {
-                                        <FluentMessageBar Intent="MessageIntent.Info">Aucun rappel défini.</FluentMessageBar>
-                                    }
-
-                                    @foreach (var reminder in _reminders)
-                                    {
-                                        <FluentStack Orientation="Orientation.Horizontal" Gap="8" AlignItems="AlignItems.Center" Class="agenda-reminder-row">
-                                            <FluentNumberField TValue="int"
-                                                               Value="@reminder.OffsetMinutes"
-                                                               ValueChanged="@((int value) => OnReminderOffsetChanged(reminder, value))"
-                                                               Style="width: 100px;" />
-                                            <FluentLabel>minutes avant</FluentLabel>
-                                            <FluentSelect TOption="string"
-                                                          Value="@reminder.ChannelId.ToString()"
-                                                          ValueChanged="@((string? value) => OnReminderChannelChanged(reminder, value))"
-                                                          Style="min-width: 160px;">
-                                                @foreach (var ch in _channels)
-                                                {
-                                                    <FluentOption Value="@ch.Id.ToString()">@ch.Libelle</FluentOption>
-                                                }
-                                            </FluentSelect>
-                                            <FluentButton Appearance="Appearance.Stealth"
-                                                           Icon="Delete16Regular"
-                                                           OnClick="@(() => RemoveReminder(reminder))" />
-                                        </FluentStack>
-                                    }
-
-                                    <FluentButton Appearance="Appearance.Stealth"
-                                                   Icon="Add16Regular"
-                                                   OnClick="AddReminder">
-                                        Ajouter un rappel
-                                    </FluentButton>
-                                </FluentStack>
-                            }
-                        </FluentStack>
-                    </FluentStack>
+                        <!-- Rappels -->
+                        @if (_enableReminders)
+                        {
+                            <div class="reminders-section">
+                                @foreach (var reminder in _reminders)
+                                {
+                                    <div class="reminder-row">
+                                        <FluentIcon Value="@(new Microsoft.FluentUI.AspNetCore.Components.Icons.Regular.Size16.Alert())" />
+                                        <FluentNumberField TValue="int"
+                                                           @bind-Value="reminder.OffsetMinutes"
+                                                           Style="width: 80px;" />
+                                        <span>min avant via</span>
+                                        <FluentSelect TOption="string"
+                                                      Value="@reminder.ChannelId.ToString()"
+                                                      ValueChanged="@((string? value) => OnReminderChannelChanged(reminder, value))">
+                                            @foreach (var ch in _channels)
+                                            {
+                                                <FluentOption Value="@ch.Id.ToString()">@ch.Libelle</FluentOption>
+                                            }
+                                        </FluentSelect>
+                                        <FluentButton Appearance="Appearance.Stealth"
+                                                      IconStart="@(new Microsoft.FluentUI.AspNetCore.Components.Icons.Regular.Size16.Delete())"
+                                                      OnClick="@(() => RemoveReminder(reminder))" />
+                                    </div>
+                                }
+                                <FluentButton Appearance="Appearance.Stealth"
+                                              IconStart="@(new Microsoft.FluentUI.AspNetCore.Components.Icons.Regular.Size16.Add())"
+                                              OnClick="AddReminder">
+                                    Ajouter un rappel
+                                </FluentButton>
+                            </div>
+                        }
+                    </div>
                 </EditForm>
-            </div>
-        </FluentDialogBody>
+            </FluentDialogBody>
 
-        <FluentDialogFooter>
-            <FluentStack Orientation="Orientation.Horizontal" Gap="8">
-                <FluentButton Appearance="Appearance.Accent" Type="ButtonType.Submit" Form="agenda-create-form">
-                    Enregistrer
-                </FluentButton>
-                <FluentButton Appearance="Appearance.Stealth" OnClick="CloseCreateDialog">Annuler</FluentButton>
-            </FluentStack>
-        </FluentDialogFooter>
-    </FluentDialog>
-}
+            <FluentDialogFooter>
+                <FluentStack Orientation="Orientation.Horizontal" Gap="8" HorizontalAlignment="HorizontalAlignment.Right">
+                    <FluentButton Appearance="Appearance.Stealth" OnClick="CloseCreateDialog">
+                        Annuler
+                    </FluentButton>
+                    <FluentButton Appearance="Appearance.Accent" Type="ButtonType.Submit" Form="agenda-create-form">
+                        Enregistrer
+                    </FluentButton>
+                </FluentStack>
+            </FluentDialogFooter>
+        </FluentDialog>
+    }
+</div>
 
 @implements IAsyncDisposable
 
+<style>
+    /* === Style Google Agenda === */
+    .google-agenda-container {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        background: var(--neutral-layer-1);
+        overflow: hidden;
+    }
+
+    /* En-tête */
+    .agenda-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 16px;
+        border-bottom: 1px solid var(--neutral-stroke-divider-rest);
+        background: var(--neutral-layer-2);
+        min-height: 64px;
+    }
+
+    .header-left, .header-right {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .header-logo {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-right: 16px;
+    }
+
+    .header-title {
+        font-size: 22px;
+        font-weight: 400;
+        color: var(--neutral-foreground-rest);
+    }
+
+    .today-btn {
+        border: 1px solid var(--neutral-stroke-control-rest);
+        padding: 0 24px;
+        border-radius: 4px;
+    }
+
+    .nav-buttons {
+        display: flex;
+        gap: 4px;
+    }
+
+    .current-period {
+        font-size: 22px;
+        font-weight: 400;
+        margin: 0;
+        margin-left: 16px;
+        color: var(--neutral-foreground-rest);
+    }
+
+    .view-selector {
+        min-width: 140px;
+    }
+
+    /* Layout principal */
+    .agenda-layout {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+    }
+
+    /* Sidebar */
+    .agenda-sidebar {
+        width: 256px;
+        padding: 16px;
+        border-right: 1px solid var(--neutral-stroke-divider-rest);
+        overflow-y: auto;
+        background: var(--neutral-layer-2);
+    }
+
+    .create-button {
+        width: 100%;
+        justify-content: flex-start;
+        margin-bottom: 24px;
+        border-radius: 24px;
+        padding: 12px 24px;
+        box-shadow: 0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
+    }
+
+    /* Mini calendrier */
+    .mini-calendar {
+        margin-bottom: 24px;
+    }
+
+    .mini-calendar-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+    }
+
+    .mini-month-label {
+        font-size: 14px;
+        font-weight: 500;
+        flex: 1;
+        text-align: center;
+    }
+
+    .mini-calendar-weekdays {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 2px;
+        margin-bottom: 4px;
+    }
+
+    .mini-weekday {
+        text-align: center;
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--neutral-foreground-hint);
+        padding: 4px 0;
+    }
+
+    .mini-calendar-days {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 2px;
+    }
+
+    .mini-day {
+        aspect-ratio: 1;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        border-radius: 50%;
+        font-size: 12px;
+        color: var(--neutral-foreground-rest);
+        transition: background-color 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .mini-day:hover {
+        background: var(--neutral-fill-secondary-hover);
+    }
+
+    .mini-day.other-month {
+        color: var(--neutral-foreground-hint);
+    }
+
+    .mini-day.today {
+        background: var(--accent-fill-rest);
+        color: var(--neutral-foreground-on-accent);
+    }
+
+    .mini-day.selected {
+        background: var(--accent-fill-rest);
+        color: var(--neutral-foreground-on-accent);
+    }
+
+    .mini-day.has-events {
+        font-weight: 700;
+    }
+
+    /* Liste des agendas */
+    .agenda-list {
+        margin-bottom: 24px;
+    }
+
+    .agenda-list-title {
+        margin-bottom: 8px;
+        display: block;
+    }
+
+    .agenda-item {
+        padding: 4px 0;
+    }
+
+    .agenda-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+    }
+
+    .agenda-color {
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+        flex-shrink: 0;
+    }
+
+    .agenda-name {
+        font-size: 14px;
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* Événements à venir */
+    .upcoming-events {
+        margin-top: 24px;
+    }
+
+    .upcoming-title {
+        margin-bottom: 12px;
+        display: block;
+    }
+
+    .upcoming-event {
+        padding: 8px;
+        margin-bottom: 4px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .upcoming-event:hover {
+        background: var(--neutral-fill-secondary-hover);
+    }
+
+    .upcoming-event-time {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--neutral-foreground-hint);
+        margin-bottom: 4px;
+    }
+
+    .event-color-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .upcoming-event-title {
+        font-size: 14px;
+        color: var(--neutral-foreground-rest);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .no-upcoming {
+        font-size: 14px;
+        color: var(--neutral-foreground-hint);
+        padding: 8px;
+    }
+
+    /* Zone calendrier principale */
+    .agenda-main {
+        flex: 1;
+        padding: 16px;
+        overflow: auto;
+        background: var(--neutral-layer-1);
+    }
+
+    .calendar-card {
+        height: 100%;
+        min-height: 600px;
+        padding: 0;
+    }
+
+    #aion-agenda-calendar {
+        height: 100%;
+        padding: 16px;
+    }
+
+    /* Personnalisation FullCalendar */
+    .fc {
+        font-family: var(--body-font);
+    }
+
+    .fc-theme-standard .fc-scrollgrid {
+        border-color: var(--neutral-stroke-divider-rest);
+    }
+
+    .fc-theme-standard td, .fc-theme-standard th {
+        border-color: var(--neutral-stroke-divider-rest);
+    }
+
+    .fc .fc-button {
+        background: var(--neutral-fill-rest);
+        border-color: var(--neutral-stroke-control-rest);
+        color: var(--neutral-foreground-rest);
+    }
+
+    .fc .fc-button:hover {
+        background: var(--neutral-fill-hover);
+    }
+
+    .fc .fc-button-primary:not(:disabled).fc-button-active {
+        background: var(--accent-fill-rest);
+        border-color: var(--accent-fill-rest);
+    }
+
+    .fc-event {
+        border-radius: 4px;
+        padding: 2px 4px;
+        font-size: 12px;
+    }
+
+    .fc-daygrid-event {
+        margin: 1px 2px;
+    }
+
+    /* Dialog événement */
+    .event-dialog {
+        max-width: 720px;
+    }
+
+    .dialog-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+    }
+
+    .event-form {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .form-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .form-icon {
+        margin-top: 8px;
+        color: var(--neutral-foreground-hint);
+        flex-shrink: 0;
+    }
+
+    .title-input {
+        flex: 1;
+        font-size: 22px;
+    }
+
+    .datetime-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .datetime-row {
+        display: flex;
+        gap: 8px;
+    }
+
+    .full-width {
+        width: 100%;
+    }
+
+    .options-container {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        flex: 1;
+    }
+
+    .agenda-option {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .option-color {
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+    }
+
+    .reminders-section {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding-left: 36px;
+    }
+
+    .reminder-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .agenda-loading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        gap: 16px;
+    }
+
+    /* Responsive */
+    @@media (max-width: 768px) {
+        .agenda-sidebar {
+            display: none;
+        }
+        
+        .header-left {
+            flex-wrap: wrap;
+        }
+        
+        .current-period {
+            font-size: 16px;
+        }
+    }
+</style>
+
 @code {
+    
+    // ... (Gardez tout le code C# existant exactement comme il est)
+    private string? _currentView = "timeGridWeek";
+    
     private readonly AgendaFormModel _formModel = new();
     private bool _enableReminders;
     private bool _loaded;
@@ -274,10 +767,13 @@ else
     private DateTime _visibleRangeStartUtc = DateTime.UtcNow.Date.AddDays(-7);
     private DateTime _visibleRangeEndUtc = DateTime.UtcNow.Date.AddDays(30);
     private bool _calendarInitialized;
+    private DateTime _miniCalendarDate = DateTime.Today;
+    private DateTime _selectedDate = DateTime.Today;
 
-    // JS interop
     private IJSObjectReference? _agendaJsModule;
     private DotNetObjectReference<Agenda>? _dotNetRef;
+
+
 
     private bool CreateDialogHidden
     {
@@ -285,6 +781,74 @@ else
         set => _isCreateDialogOpen = !value;
     }
 
+    // Méthodes pour le mini calendrier
+    private List<DateTime> GetMiniCalendarDays()
+    {
+        var firstDay = new DateTime(_miniCalendarDate.Year, _miniCalendarDate.Month, 1);
+        var lastDay = firstDay.AddMonths(1).AddDays(-1);
+        
+        var startDay = firstDay.AddDays(-(int)firstDay.DayOfWeek + (int)DayOfWeek.Monday);
+        if (startDay > firstDay) startDay = startDay.AddDays(-7);
+        
+        var endDay = lastDay.AddDays(7 - (int)lastDay.DayOfWeek);
+        if (endDay < lastDay) endDay = endDay.AddDays(7);
+        
+        var days = new List<DateTime>();
+        for (var day = startDay; day <= endDay; day = day.AddDays(1))
+        {
+            days.Add(day);
+        }
+        
+        return days;
+    }
+
+    private string GetMiniDayClass(DateTime day)
+    {
+        var classes = new List<string>();
+        
+        if (day.Month != _miniCalendarDate.Month)
+            classes.Add("other-month");
+        
+        if (day.Date == DateTime.Today)
+            classes.Add("today");
+        
+        if (day.Date == _selectedDate.Date)
+            classes.Add("selected");
+        
+        if (_events.Any(e => e.StartUtc.Date == day.Date))
+            classes.Add("has-events");
+        
+        return string.Join(" ", classes);
+    }
+
+    private void SelectMiniDay(DateTime day)
+    {
+        _selectedDate = day;
+        // Navigate calendar to this date if needed
+    }
+
+    private void PreviousMiniMonth()
+    {
+        _miniCalendarDate = _miniCalendarDate.AddMonths(-1);
+    }
+
+    private void NextMiniMonth()
+    {
+        _miniCalendarDate = _miniCalendarDate.AddMonths(1);
+    }
+
+    private string GetCurrentPeriodTitle()
+    {
+        return _miniCalendarDate.ToString("MMMM yyyy", new CultureInfo("fr-FR"));
+    }
+
+    private string GetAgendaColor(int agendaId)
+    {
+        var colors = new[] { "#1967D2", "#D81B60", "#E67C73", "#33B679", "#8E24AA", "#F4511E", "#039BE5", "#7CB342" };
+        return colors[agendaId % colors.Length];
+    }
+
+    // Gardez toutes les méthodes existantes (OnInitializedAsync, OnAfterRenderAsync, LoadEventsAsync, etc.)
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
@@ -293,13 +857,11 @@ else
 
         var userId = UserContext.UserId;
 
-        // Agendas possédés
         var ownedAgendas = await db.SAgendas
             .Where(a => a.OwnerUserId == userId && !a.Deleted)
             .AsNoTracking()
             .ToListAsync();
 
-        // Agendas partagés
         var sharedIds = await db.SAgendaUsers
             .Where(x => x.UserId == userId && !x.Deleted)
             .Select(x => x.AgendaId)
@@ -355,7 +917,6 @@ else
             _agendaJsModule ??= await JS.InvokeAsync<IJSObjectReference>("import", "/js/aionAgenda.js");
             _dotNetRef ??= DotNetObjectReference.Create(this);
 
-            // initCalendar(dotNetRef, selectedAgendaId, defaultView)
             await _agendaJsModule.InvokeVoidAsync(
                 "initCalendar",
                 _dotNetRef,
@@ -377,8 +938,6 @@ else
 
                 await _agendaJsModule.InvokeVoidAsync("setEvents", jsEvents);
             }
-
-            // Le premier datesSet côté JS rappellera OnVisibleRangeChangedAsync, qui chargera les events.
         }
     }
 
@@ -405,23 +964,23 @@ else
 
         var startLocal = _formModel.StartUtc.ToLocalTime();
         _startDateLocal = startLocal.Date;
-        _startTimeLocal = startLocal.Date;
+        _startTimeLocal = startLocal;
 
         var endLocal = _formModel.EndUtc.ToLocalTime();
         _endDateLocal = endLocal.Date;
-        _endTimeLocal = endLocal.Date;
+        _endTimeLocal = endLocal;
     }
 
     private void UpdateModelFromLocalValues()
     {
         var startDate = _startDateLocal ?? _formModel.StartUtc.ToLocalTime().Date;
-        var startTime = _startTimeLocal ?? _formModel.StartUtc.ToLocalTime().Date;
-        var startLocal = startDate.Date;
+        var startTime = _startTimeLocal ?? _formModel.StartUtc.ToLocalTime();
+        var startLocal = startDate.Date.Add(startTime.TimeOfDay);
         _formModel.StartUtc = DateTime.SpecifyKind(startLocal, DateTimeKind.Local).ToUniversalTime();
 
         var endDate = _endDateLocal ?? _formModel.EndUtc.ToLocalTime().Date;
-        var endTime = _endTimeLocal ?? _formModel.EndUtc.ToLocalTime().Date;
-        var endLocal = endDate.Date;
+        var endTime = _endTimeLocal ?? _formModel.EndUtc.ToLocalTime();
+        var endLocal = endDate.Date.Add(endTime.TimeOfDay);
         _formModel.EndUtc = DateTime.SpecifyKind(endLocal, DateTimeKind.Local).ToUniversalTime();
 
         EnsureEndAfterStart();
@@ -595,14 +1154,15 @@ else
         if (_agendaJsModule is null)
             return;
 
-        // Projection des événements au format attendu par FullCalendar
         var jsEvents = _events.Select(e => new
         {
             id = e.Id.ToString(),
             title = e.Libelle,
             start = e.StartUtc,
             end = e.EndUtc,
-            allDay = e.AllDay
+            allDay = e.AllDay,
+            backgroundColor = GetAgendaColor(e.AgendaId),
+            borderColor = GetAgendaColor(e.AgendaId)
         });
 
         await _agendaJsModule.InvokeVoidAsync("setEvents", jsEvents);
@@ -631,11 +1191,10 @@ else
         return Task.CompletedTask;
     }
 
-    // Pour l’instant, on ne fait rien de spécial sur le clic d’événement
     [JSInvokable]
     public Task OnEventClickAsync(string eventId)
     {
-        // Si plus tard tu veux remplir _formModel pour éditer : il faudra adapter ici
+        // TODO: Ouvrir dialog d'édition
         return Task.CompletedTask;
     }
 
@@ -713,7 +1272,6 @@ else
 
         await LoadEventsAsync();
 
-        // On rafraîchit aussi FullCalendar
         if (_agendaJsModule is not null)
         {
             var jsEvents = _events.Select(e => new
@@ -722,7 +1280,9 @@ else
                 title = e.Libelle,
                 start = e.StartUtc,
                 end = e.EndUtc,
-                allDay = e.AllDay
+                allDay = e.AllDay,
+                backgroundColor = GetAgendaColor(e.AgendaId),
+                borderColor = GetAgendaColor(e.AgendaId)
             });
 
             await _agendaJsModule.InvokeVoidAsync("setEvents", jsEvents);
@@ -806,11 +1366,9 @@ else
             }
             catch (JSDisconnectedException)
             {
-                // Ignored: the circuit is gone.
             }
             catch (ObjectDisposedException)
             {
-                // Module already disposed.
             }
 
             await _agendaJsModule.DisposeAsync();

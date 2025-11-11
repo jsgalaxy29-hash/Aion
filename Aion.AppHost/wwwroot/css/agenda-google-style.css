@@ -1,0 +1,446 @@
+﻿/* === Fichier CSS supplémentaire pour Agenda.razor === */
+/* Placez ce fichier dans wwwroot/css/agenda-google-style.css */
+/* Et ajoutez <link rel="stylesheet" href="css/agenda-google-style.css" /> dans App.razor */
+
+/* === Variables personnalisées === */
+:root {
+    --google-blue: #1a73e8;
+    --google-blue-hover: #1765cc;
+    --google-red: #d93025;
+    --google-yellow: #f9ab00;
+    --google-green: #1e8e3e;
+    --google-border: #dadce0;
+    --google-hover-bg: #f1f3f4;
+    --google-text: #3c4043;
+    --google-text-secondary: #5f6368;
+    --google-text-tertiary: #80868b;
+}
+
+/* === Améliorations FullCalendar === */
+.fc {
+    --fc-border-color: var(--google-border);
+    --fc-today-bg-color: rgba(26, 115, 232, 0.05);
+    --fc-event-bg-color: #1a73e8;
+    --fc-event-border-color: #1a73e8;
+}
+
+.fc-header-toolbar {
+    margin-bottom: 1.5em !important;
+}
+
+.fc-col-header-cell {
+    padding: 12px 0 !important;
+    font-weight: 500 !important;
+    font-size: 11px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.8px !important;
+    color: var(--google-text-secondary) !important;
+}
+
+.fc-daygrid-day-number {
+    padding: 8px !important;
+    font-size: 12px !important;
+    color: var(--google-text) !important;
+}
+
+.fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
+    background: var(--google-blue) !important;
+    color: white !important;
+    border-radius: 50% !important;
+    width: 32px !important;
+    height: 32px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.fc-timegrid-slot {
+    height: 48px !important;
+    border-color: var(--google-border) !important;
+}
+
+.fc-timegrid-slot-label {
+    font-size: 10px !important;
+    color: var(--google-text-tertiary) !important;
+}
+
+.fc-event {
+    border: none !important;
+    box-shadow: 0 1px 3px rgba(60, 64, 67, 0.3) !important;
+    transition: box-shadow 0.2s, transform 0.2s !important;
+}
+
+    .fc-event:hover {
+        box-shadow: 0 2px 6px rgba(60, 64, 67, 0.4) !important;
+        transform: translateY(-1px) !important;
+        cursor: pointer !important;
+    }
+
+.fc-event-title {
+    font-weight: 500 !important;
+    padding: 2px 6px !important;
+}
+
+.fc-event-time {
+    font-size: 11px !important;
+    opacity: 0.9 !important;
+}
+
+/* === Amélioration de la vue semaine === */
+.fc-timegrid-event {
+    border-radius: 4px !important;
+    padding: 4px !important;
+}
+
+.fc-timegrid-event-harness {
+    margin: 0 2px !important;
+}
+
+.fc-timegrid-now-indicator-line {
+    border-color: var(--google-red) !important;
+    border-width: 2px !important;
+}
+
+.fc-timegrid-now-indicator-arrow {
+    border-color: var(--google-red) !important;
+    border-width: 6px !important;
+}
+
+/* === Vue mois === */
+.fc-daygrid-event {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    padding: 2px 6px !important;
+    margin-bottom: 2px !important;
+}
+
+.fc-daygrid-more-link {
+    color: var(--google-blue) !important;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    padding: 4px !important;
+}
+
+    .fc-daygrid-more-link:hover {
+        background: var(--google-hover-bg) !important;
+        border-radius: 4px !important;
+    }
+
+/* === Améliorations du mini-calendrier === */
+.mini-calendar {
+    border-radius: 8px;
+    padding: 12px;
+    background: var(--neutral-layer-2);
+}
+
+.mini-day {
+    font-weight: 400;
+    position: relative;
+}
+
+    .mini-day.has-events::after {
+        content: '';
+        position: absolute;
+        bottom: 2px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: var(--google-blue);
+    }
+
+/* === Scrollbar personnalisée === */
+.agenda-sidebar::-webkit-scrollbar,
+.agenda-main::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.agenda-sidebar::-webkit-scrollbar-track,
+.agenda-main::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.agenda-sidebar::-webkit-scrollbar-thumb,
+.agenda-main::-webkit-scrollbar-thumb {
+    background: var(--google-border);
+    border-radius: 4px;
+}
+
+    .agenda-sidebar::-webkit-scrollbar-thumb:hover,
+    .agenda-main::-webkit-scrollbar-thumb:hover {
+        background: var(--google-text-tertiary);
+    }
+
+/* === Animations === */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.upcoming-event {
+    animation: slideIn 0.3s ease-out;
+}
+
+/* === Amélioration du dialog === */
+.event-dialog .fluent-dialog-content {
+    padding: 0 !important;
+}
+
+.event-dialog .dialog-header {
+    padding: 24px 24px 16px 24px;
+    border-bottom: 1px solid var(--google-border);
+}
+
+.event-dialog .fluent-dialog-body {
+    padding: 24px !important;
+}
+
+.event-dialog .fluent-dialog-footer {
+    padding: 16px 24px !important;
+    border-top: 1px solid var(--google-border);
+}
+
+/* === États de focus améliorés === */
+.fluent-button:focus-visible,
+.fluent-text-field:focus-within,
+.fluent-select:focus-within {
+    outline: 2px solid var(--google-blue) !important;
+    outline-offset: 2px !important;
+}
+
+/* === Badges et étiquettes === */
+.agenda-item .agenda-name {
+    transition: color 0.2s;
+}
+
+.agenda-item:hover .agenda-name {
+    color: var(--google-blue);
+}
+
+/* === Mode sombre === */
+[data-theme="dark"] {
+    --google-border: #3c4043;
+    --google-hover-bg: #2d2e30;
+    --google-text: #e8eaed;
+    --google-text-secondary: #9aa0a6;
+    --google-text-tertiary: #5f6368;
+}
+
+    [data-theme="dark"] .fc {
+        --fc-border-color: #3c4043;
+        --fc-today-bg-color: rgba(138, 180, 248, 0.1);
+    }
+
+    [data-theme="dark"] .fc-daygrid-day-number {
+        color: #e8eaed !important;
+    }
+
+    [data-theme="dark"] .fc-col-header-cell {
+        color: #9aa0a6 !important;
+    }
+
+    [data-theme="dark"] .mini-calendar {
+        background: #202124;
+    }
+
+/* === Responsive amélioré === */
+@media (max-width: 1200px) {
+    .upcoming-events {
+        display: none;
+    }
+}
+
+@media (max-width: 992px) {
+    .header-left {
+        gap: 4px;
+    }
+
+    .header-logo {
+        margin-right: 8px;
+    }
+
+    .current-period {
+        font-size: 18px;
+        margin-left: 8px;
+    }
+}
+
+@media (max-width: 768px) {
+    .google-agenda-container {
+        height: auto;
+    }
+
+    .agenda-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 12px;
+    }
+
+    .header-right {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .agenda-sidebar {
+        position: fixed;
+        left: -280px;
+        top: 0;
+        bottom: 0;
+        width: 280px;
+        z-index: 1000;
+        transition: left 0.3s;
+        box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+    }
+
+        .agenda-sidebar.open {
+            left: 0;
+        }
+
+    .agenda-main {
+        width: 100%;
+    }
+
+    .menu-toggle {
+        display: block !important;
+    }
+
+    .mini-calendar {
+        display: none;
+    }
+
+    .calendar-card {
+        min-height: 400px;
+    }
+}
+
+@media (max-width: 480px) {
+    .header-title {
+        display: none;
+    }
+
+    .create-button {
+        padding: 8px 16px;
+        font-size: 14px;
+    }
+
+    .event-dialog {
+        max-width: 100vw !important;
+        width: 100% !important;
+    }
+
+    .form-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .datetime-row {
+        flex-direction: column;
+        width: 100%;
+    }
+}
+
+/* === Impression === */
+@media print {
+    .agenda-header,
+    .agenda-sidebar,
+    .create-button {
+        display: none !important;
+    }
+
+    .agenda-main {
+        width: 100% !important;
+        padding: 0 !important;
+    }
+
+    .fc-event {
+        box-shadow: none !important;
+        page-break-inside: avoid;
+    }
+}
+
+/* === Accessibilité === */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* === Amélioration des tooltips === */
+.fluent-tooltip {
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 4px;
+    max-width: 300px;
+}
+
+/* === États de chargement === */
+.agenda-loading {
+    animation: slideIn 0.5s ease-out;
+}
+
+/* === Amélioration des sélections multiples === */
+.agenda-checkbox input[type="checkbox"] {
+    accent-color: var(--google-blue);
+}
+
+/* === Hover effects sur les événements à venir === */
+.upcoming-event {
+    position: relative;
+    overflow: hidden;
+}
+
+    .upcoming-event::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        width: 3px;
+        background: var(--google-blue);
+        transform: scaleY(0);
+        transition: transform 0.2s;
+    }
+
+    .upcoming-event:hover::before {
+        transform: scaleY(1);
+    }
+
+/* === États des boutons === */
+.fluent-button.today-btn:hover {
+    background: var(--google-hover-bg);
+}
+
+/* === Amélioration du drag & drop === */
+.fc-event.fc-event-dragging {
+    opacity: 0.7;
+    cursor: move;
+}
+
+.fc-event.fc-event-resizing {
+    opacity: 0.8;
+}
+
+/* === Grid layout pour les formulaires === */
+.datetime-container {
+    display: grid;
+    gap: 12px;
+}
+
+@media (min-width: 768px) {
+    .datetime-container {
+        grid-template-columns: 1fr 1fr;
+    }
+}

@@ -1,14 +1,17 @@
-// wwwroot/js/aionAgenda.js
+// wwwroot/js/aionAgenda.js - Version améliorée style Google Agenda
 
 let calendar;
 let dotNetRef;
 
+/**
+ * Attend que FullCalendar soit chargé
+ */
 async function ensureFullCalendar() {
     if (window.FullCalendar) {
         return window.FullCalendar;
     }
 
-    let attempts = 20;
+    let attempts = 30;
 
     return new Promise((resolve, reject) => {
         const intervalId = setInterval(() => {
@@ -21,15 +24,18 @@ async function ensureFullCalendar() {
             attempts--;
             if (attempts <= 0) {
                 clearInterval(intervalId);
-                reject(new Error('FullCalendar global not found'));
+                reject(new Error('FullCalendar global not found after 30 attempts'));
             }
         }, 100);
     }).catch(err => {
-        console.error(err);
+        console.error('Failed to load FullCalendar:', err);
         return null;
     });
 }
 
+/**
+ * Initialise le calendrier avec style Google
+ */
 export async function initCalendar(dotNetRefRef, selectedAgendaId, defaultView) {
     await disposeCalendar();
 
@@ -41,10 +47,10 @@ export async function initCalendar(dotNetRefRef, selectedAgendaId, defaultView) 
         return;
     }
 
-    const { Calendar, dayGridPlugin, timeGridPlugin, interactionPlugin } = fullCalendar;
+    const { Calendar } = fullCalendar;
 
-    if (!Calendar || !dayGridPlugin || !timeGridPlugin || !interactionPlugin) {
-        console.error("Les modules FullCalendar requis ne sont pas disponibles. Vérifiez que le bundle CDN est correctement chargé.");
+    if (!Calendar) {
+        console.error("Le module Calendar de FullCalendar n'est pas disponible.");
         return;
     }
 
@@ -54,103 +60,434 @@ export async function initCalendar(dotNetRefRef, selectedAgendaId, defaultView) 
         return;
     }
 
-    // instanciation complète
+    // Configuration style Google Agenda
     calendar = new Calendar(calendarEl, {
-        plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
         initialView: defaultView || "timeGridWeek",
         locale: "fr",
+
+        // Paramètres généraux
         selectable: true,
         editable: true,
+        droppable: true,
+        eventStartEditable: true,
+        eventDurationEditable: true,
+
+        // Affichage
         allDaySlot: true,
         nowIndicator: true,
         expandRows: true,
         height: "100%",
-        slotDuration: "00:30:00",
-        slotMinTime: "07:00:00",
-        slotMaxTime: "20:00:00",
+        aspectRatio: 1.8,
+
+        // Horaires
+        slotDuration: "00:15:00", // Intervalles de 15 minutes comme Google
+        slotLabelInterval: "01:00:00", // Afficher les labels toutes les heures
+        slotMinTime: "00:00:00",
+        slotMaxTime: "24:00:00",
+        scrollTime: "08:00:00", // Scroll initial à 8h
         slotLabelFormat: {
             hour: "2-digit",
             minute: "2-digit",
+            hour12: false,
+            omitZeroMinute: true
+        },
+
+        // Jour de début de semaine
+        firstDay: 1, // Lundi
+
+        // En-têtes
+        headerToolbar: false, // Géré côté Blazor
+        dayHeaderFormat: { weekday: 'short', day: 'numeric', month: 'numeric' },
+
+        // Apparence des événements
+        eventDisplay: 'block',
+        eventTimeFormat: {
+            hour: '2-digit',
+            minute: '2-digit',
             hour12: false
         },
-        firstDay: 1,
-        headerToolbar: false, // toolbar Blazor gérée côté Razor
 
-        // Rendu FluentUI
-        eventColor: "var(--accent-fill-rest, #0078d4)",
-        eventTextColor: "var(--neutral-foreground-on-accent-rest, #ffffff)",
-        eventBorderColor: "var(--accent-stroke-control-rest, #0078d4)",
-        dayMaxEvents: true,
+        // Nombre max d'événements dans la vue mois
+        dayMaxEvents: 3,
+        moreLinkText: (num) => `+${num} événements`,
 
+        // Options de vue
+        views: {
+            dayGridMonth: {
+                dayMaxEvents: 3,
+                fixedWeekCount: false
+            },
+            timeGridWeek: {
+                slotEventOverlap: false,
+                allDaySlot: true
+            },
+            timeGridDay: {
+                slotEventOverlap: false,
+                allDaySlot: true
+            }
+        },
+
+        // Style des boutons (même si toolbar est false)
+        buttonText: {
+            today: "Aujourd'hui",
+            month: 'Mois',
+            week: 'Semaine',
+            day: 'Jour',
+            list: 'Agenda'
+        },
+
+        // Événements vides par défaut
         events: [],
 
-        // Appels vers Blazor
-        datesSet: (info) => {
-            dotNetRef.invokeMethodAsync("OnVisibleRangeChangedAsync", info.startStr, info.endStr);
+        // === Callbacks vers Blazor ===
+
+        // Changement de dates visibles
+        datesSet: function (info) {
+            if (dotNetRef) {
+                dotNetRef.invokeMethodAsync("OnVisibleRangeChangedAsync", info.startStr, info.endStr);
+            }
         },
-        select: (info) => {
-            dotNetRef.invokeMethodAsync("OnEventCreatedAsync", info.startStr, info.endStr, info.allDay);
+
+        // Sélection de plage de dates (création d'événement)
+        select: function (info) {
+            if (dotNetRef) {
+                dotNetRef.invokeMethodAsync("OnEventCreatedAsync", info.startStr, info.endStr, info.allDay);
+            }
+            calendar.unselect();
         },
-        eventClick: (info) => {
-            dotNetRef.invokeMethodAsync("OnEventClickAsync", info.event.id);
+
+        // Clic sur un événement
+        eventClick: function (info) {
+            info.jsEvent.preventDefault();
+            if (dotNetRef && info.event.id) {
+                dotNetRef.invokeMethodAsync("OnEventClickAsync", info.event.id);
+            }
         },
-        eventDrop: (info) => persistEventDates(info.event),
-        eventResize: (info) => persistEventDates(info.event)
+
+        // Drag & drop d'événement
+        eventDrop: function (info) {
+            persistEventDates(info.event);
+        },
+
+        // Redimensionnement d'événement
+        eventResize: function (info) {
+            persistEventDates(info.event);
+        },
+
+        // Hover sur événement (pour tooltip futur)
+        eventMouseEnter: function (info) {
+            info.el.style.cursor = 'pointer';
+            info.el.style.transform = 'scale(1.02)';
+        },
+
+        eventMouseLeave: function (info) {
+            info.el.style.transform = 'scale(1)';
+        },
+
+        // Rendu personnalisé des événements
+        eventDidMount: function (info) {
+            // Ajouter des classes personnalisées
+            if (info.event.extendedProps.isPrivate) {
+                info.el.classList.add('event-private');
+            }
+
+            // Tooltip simple (pourrait être amélioré avec Fluent UI)
+            const title = info.event.title;
+            const start = info.event.start ? formatDateTime(info.event.start) : '';
+            const end = info.event.end ? formatDateTime(info.event.end) : '';
+
+            info.el.title = `${title}\n${start}${end ? ' - ' + end : ''}`;
+        },
+
+        // Limite de sélection
+        selectConstraint: {
+            start: '1900-01-01',
+            end: '2100-12-31'
+        },
+
+        // Permettre la sélection sur plusieurs jours
+        selectMirror: true,
+
+        // Overlay lors du drag
+        selectOverlap: function (event) {
+            return event.display !== 'background';
+        },
+
+        // Format pour les événements all-day
+        allDayContent: 'Journée entière',
+
+        // Week numbers (optionnel)
+        weekNumbers: false,
+        weekText: 'Sem.',
+
+        // Navigation par clic sur les numéros de jours
+        navLinks: true,
+        navLinkDayClick: function (date, jsEvent) {
+            calendar.changeView('timeGridDay', date);
+        },
+
+        // Réglages de langue supplémentaires
+        locale: 'fr',
+        timeZone: 'local',
+
+        // Business hours (heures de travail)
+        businessHours: {
+            daysOfWeek: [1, 2, 3, 4, 5], // Lun-Ven
+            startTime: '08:00',
+            endTime: '18:00'
+        },
+
+        // Afficher les heures de travail
+        selectConstraint: 'businessHours',
+
+        // Style pour week-ends
+        dayCellClassNames: function (arg) {
+            if (arg.date.getDay() === 0 || arg.date.getDay() === 6) {
+                return ['weekend-day'];
+            }
+            return [];
+        }
     });
 
     calendar.render();
+
+    // Rendre accessible globalement
     window.aionAgendaCalendar = calendar;
+
+    console.log('✓ Calendrier initialisé avec succès');
 }
 
+/**
+ * Définit les événements du calendrier
+ */
 export function setEvents(events) {
-    if (!window.aionAgendaCalendar) return;
+    if (!window.aionAgendaCalendar) {
+        console.warn('Calendrier non initialisé');
+        return;
+    }
+
     const calendar = window.aionAgendaCalendar;
+
+    // Supprimer tous les événements existants
     calendar.removeAllEvents();
-    calendar.addEventSource(events);
+
+    // Ajouter les nouveaux événements
+    if (events && events.length > 0) {
+        calendar.addEventSource(events);
+        console.log(`✓ ${events.length} événement(s) chargé(s)`);
+    }
 }
 
+/**
+ * Navigation - Aller à aujourd'hui
+ */
 export function goToday() {
-    window.aionAgendaCalendar?.today();
+    if (window.aionAgendaCalendar) {
+        window.aionAgendaCalendar.today();
+    }
 }
 
+/**
+ * Navigation - Période précédente
+ */
 export function goPrev() {
-    window.aionAgendaCalendar?.prev();
+    if (window.aionAgendaCalendar) {
+        window.aionAgendaCalendar.prev();
+    }
 }
 
+/**
+ * Navigation - Période suivante
+ */
 export function goNext() {
-    window.aionAgendaCalendar?.next();
+    if (window.aionAgendaCalendar) {
+        window.aionAgendaCalendar.next();
+    }
 }
 
+/**
+ * Changer la vue (mois, semaine, jour)
+ */
 export function changeView(viewName) {
-    window.aionAgendaCalendar?.changeView(viewName);
+    if (window.aionAgendaCalendar) {
+        window.aionAgendaCalendar.changeView(viewName);
+        console.log(`✓ Vue changée vers: ${viewName}`);
+    }
 }
 
-// Sauvegarde côté serveur des dates après drag/resizing
+/**
+ * Aller à une date spécifique
+ */
+export function gotoDate(dateStr) {
+    if (window.aionAgendaCalendar) {
+        window.aionAgendaCalendar.gotoDate(dateStr);
+    }
+}
+
+/**
+ * Obtenir la vue actuelle
+ */
+export function getCurrentView() {
+    if (window.aionAgendaCalendar) {
+        return window.aionAgendaCalendar.view.type;
+    }
+    return null;
+}
+
+/**
+ * Rafraîchir le calendrier
+ */
+export function refetchEvents() {
+    if (window.aionAgendaCalendar) {
+        window.aionAgendaCalendar.refetchEvents();
+    }
+}
+
+/**
+ * Sauvegarder les dates d'un événement après drag/resize
+ */
 async function persistEventDates(event) {
-    if (!event) return;
+    if (!event || !event.id) {
+        console.warn('Événement invalide pour persistEventDates');
+        return;
+    }
+
     const payload = {
         id: event.id,
         start: event.start ? event.start.toISOString() : null,
         end: event.end ? event.end.toISOString() : null,
         allDay: event.allDay ?? false
     };
+
     try {
-        await fetch(`/api/agenda/events/${event.id}/dates`, {
+        const response = await fetch(`/api/agenda/events/${event.id}/dates`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
             body: JSON.stringify(payload)
         });
+
+        if (!response.ok) {
+            console.error('Échec de la sauvegarde des dates:', response.statusText);
+            // Optionnel: Revert les changements
+            event.revert();
+        } else {
+            console.log('✓ Dates de l\'événement sauvegardées');
+        }
     } catch (err) {
-        console.error('Failed to persist event dates', err);
+        console.error('Erreur lors de la sauvegarde des dates:', err);
+        // Optionnel: Revert les changements
+        if (event.revert) {
+            event.revert();
+        }
     }
 }
 
+/**
+ * Formater une date pour l'affichage
+ */
+function formatDateTime(date) {
+    if (!date) return '';
+
+    return new Intl.DateTimeFormat('fr-FR', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    }).format(date);
+}
+
+/**
+ * Ajouter un événement programmatiquement
+ */
+export function addEvent(event) {
+    if (window.aionAgendaCalendar) {
+        window.aionAgendaCalendar.addEvent(event);
+    }
+}
+
+/**
+ * Supprimer un événement par son ID
+ */
+export function removeEvent(eventId) {
+    if (window.aionAgendaCalendar) {
+        const event = window.aionAgendaCalendar.getEventById(eventId);
+        if (event) {
+            event.remove();
+        }
+    }
+}
+
+/**
+ * Mettre à jour un événement
+ */
+export function updateEvent(eventId, updates) {
+    if (window.aionAgendaCalendar) {
+        const event = window.aionAgendaCalendar.getEventById(eventId);
+        if (event) {
+            event.setProp('title', updates.title);
+            if (updates.start) event.setStart(updates.start);
+            if (updates.end) event.setEnd(updates.end);
+            if (updates.backgroundColor) event.setProp('backgroundColor', updates.backgroundColor);
+        }
+    }
+}
+
+/**
+ * Obtenir tous les événements
+ */
+export function getAllEvents() {
+    if (window.aionAgendaCalendar) {
+        return window.aionAgendaCalendar.getEvents();
+    }
+    return [];
+}
+
+/**
+ * Nettoyer et détruire le calendrier
+ */
 export async function disposeCalendar() {
     if (window.aionAgendaCalendar) {
-        window.aionAgendaCalendar.destroy();
+        try {
+            window.aionAgendaCalendar.destroy();
+            console.log('✓ Calendrier détruit');
+        } catch (err) {
+            console.error('Erreur lors de la destruction du calendrier:', err);
+        }
         window.aionAgendaCalendar = null;
     }
 
     calendar = undefined;
     dotNetRef = null;
+}
+
+/**
+ * Redimensionner le calendrier (utile après changement de layout)
+ */
+export function resizeCalendar() {
+    if (window.aionAgendaCalendar) {
+        window.aionAgendaCalendar.updateSize();
+    }
+}
+
+/**
+ * Toggle menu mobile (pour responsive)
+ */
+export function toggleMobileSidebar() {
+    const sidebar = document.querySelector('.agenda-sidebar');
+    if (sidebar) {
+        sidebar.classList.toggle('open');
+    }
+}
+
+// Export pour debug
+if (typeof window !== 'undefined') {
+    window.aionAgendaDebug = {
+        getCalendar: () => window.aionAgendaCalendar,
+        getView: getCurrentView,
+        getEvents: getAllEvents
+    };
 }
