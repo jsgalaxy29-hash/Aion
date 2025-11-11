@@ -211,7 +211,7 @@ namespace Aion.AppHost.Pages
                     principal,
                     authProperties);
 
-                _logger.LogInformation("✅ Connexion réussie pour {Username}", rawUsername);
+                _logger.LogInformation("✅ Connexion réussie pour {Username}", submittedUsername);
 
                 // Mise à jour dernière connexion
                 await UpdateLastLoginAsync(user.Id);
