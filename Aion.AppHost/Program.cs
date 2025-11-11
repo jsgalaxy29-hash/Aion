@@ -2,6 +2,7 @@
 using Aion.Module.SystemCatalog;
 using Aion.Module.SecurityAdmin;
 using Aion.Module.ListDyn;
+using Aion.Module.TableManager;
 using Aion.Module.FormDyn;
 using Aion.AppHost;
 using Aion.AppHost.Services;
@@ -134,6 +135,7 @@ builder.Services.AddSingleton<IModuleBootstrapper, CrmBootstrapper>();
 builder.Services.AddSingleton<IModuleBootstrapper, SystemCatalogBootstrapper>();
 builder.Services.AddSingleton<IModuleBootstrapper, SecurityAdminBootstrapper>();
 builder.Services.AddSingleton<IModuleBootstrapper, ListDynBootstrapper>();
+builder.Services.AddSingleton<IModuleBootstrapper, TableManagerBootstrapper>();
 builder.Services.AddSingleton<IModuleBootstrapper, FormDynBootstrapper>();
 builder.Services.AddSingleton<IModuleBootstrapper, AgendaModuleBootstrapper>();
 builder.Services.AddScoped<StartupOrchestrator>();

@@ -8,7 +8,6 @@ namespace Aion.Module.ListDyn
         public void Register()
         {
             RouteRegistry.Register("/dynamic/list", typeof(Pages.DynamicList));
-            RouteRegistry.Register("/dynamic/manager", typeof(Pages.TableManager));
         }
     }
 }
