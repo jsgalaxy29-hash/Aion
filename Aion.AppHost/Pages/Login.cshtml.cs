@@ -70,6 +70,20 @@ namespace Aion.AppHost.Pages
         {
             ReturnUrl = returnUrl;
 
+            if (Request.HasFormContentType && Request.Form.TryGetValue("Input.Password", out var postedPasswordValues))
+            {
+                var postedPassword = postedPasswordValues.ToString();
+
+                Input.Password = postedPassword;
+
+                ModelState.Remove("Input.Password");
+
+                if (string.IsNullOrWhiteSpace(postedPassword))
+                {
+                    ModelState.AddModelError("Input.Password", "Le mot de passe actuel est requis.");
+                }
+            }
+
             if (!ModelState.IsValid)
             {
                 RequirePasswordChange = !string.IsNullOrWhiteSpace(Input.NewPassword) || !string.IsNullOrWhiteSpace(Input.ConfirmPassword);
