@@ -6,9 +6,11 @@
 @using System.Collections.Generic
 @using System
 @using System.Linq
-@using System.Text.Json
+@using System.Threading
+@using Aion.Domain.UI.Navigation
 @inject IMenuProvider MenuProvider
-@inject ITabService Tabs
+@inject IAionNavigationService Navigation
+@inject IModuleCatalog ModuleCatalog
 @inject AuthenticationStateProvider Auth
 
 <FluentSearch @bind-Value="Filter" Placeholder="Rechercher..." Class="mb-2" />
@@ -197,78 +199,19 @@ else
 
     private async Task OnClick(SMenu item)
     {
-        var route = item.Module?.Route;
-        if (!item.IsLeaf || string.IsNullOrEmpty(route))
+        if (!item.IsLeaf || item.Module is null || string.IsNullOrEmpty(item.Module.Route))
         {
             return;
         }
 
-        var parameters = ParseParameters(item.Parametre, out var routeSuffix);
-        if (!string.IsNullOrEmpty(routeSuffix))
+        var module = await ModuleCatalog.TryGetByKeyAsync(item.Module.Name, CancellationToken.None);
+        if (module is null)
         {
-            route = route.Contains('?') ? $"{route}&{routeSuffix}" : $"{route}?{routeSuffix}";
+            return;
         }
 
-        await Tabs.OpenAsync(item.Libelle, route, parameters, true, CancellationToken.None);
-    }
-
-    private IDictionary<string, object?>? ParseParameters(string? raw, out string? routeQuery)
-    {
-        routeQuery = null;
-        if (string.IsNullOrWhiteSpace(raw))
-        {
-            return null;
-        }
-
-        var trimmed = raw.Trim();
-        if (trimmed.StartsWith("#", StringComparison.Ordinal))
-        {
-            var dict = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
-            var payload = trimmed[1..];
-            foreach (var pair in payload.Split(new[] { '&', ';' }, StringSplitOptions.RemoveEmptyEntries))
-            {
-                var kv = pair.Split('=', 2, StringSplitOptions.TrimEntries);
-                if (kv.Length == 0)
-                {
-                    continue;
-                }
-
-                var key = RouteRegistry.NormalizeParameterKey(kv[0]);
-                var value = kv.Length > 1 ? Uri.UnescapeDataString(kv[1]) : "true";
-                dict[key] = value;
-            }
-            return dict.Count > 0 ? dict : null;
-        }
-
-        if (trimmed.StartsWith("{", StringComparison.Ordinal) && trimmed.EndsWith("}", StringComparison.Ordinal))
-        {
-            try
-            {
-                using var doc = JsonDocument.Parse(trimmed);
-                var dict = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
-                foreach (var prop in doc.RootElement.EnumerateObject())
-                {
-                    var key = RouteRegistry.NormalizeParameterKey(prop.Name);
-                    dict[key] = prop.Value.ValueKind switch
-                    {
-                        JsonValueKind.String => prop.Value.GetString(),
-                        JsonValueKind.Number when prop.Value.TryGetInt64(out var l) => l,
-                        JsonValueKind.Number => prop.Value.GetDecimal(),
-                        JsonValueKind.True => true,
-                        JsonValueKind.False => false,
-                        _ => prop.Value.ToString()
-                    };
-                }
-                return dict.Count > 0 ? dict : null;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        routeQuery = trimmed.TrimStart('?');
-        return null;
+        var parameters = NavigationParameterParser.BuildDefaultParameters(item.Module.Route, item.Parametre);
+        await Navigation.OpenModuleAsync(module.Key, parameters, CancellationToken.None);
     }
 
     protected override void OnParametersSet()

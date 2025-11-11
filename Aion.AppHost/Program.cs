@@ -31,6 +31,8 @@ using Aion.AI.Abstractions;
 using Aion.AppHost.Workers;
 using Aion.Domain.Agenda;
 using Aion.Infrastructure.Services.Agenda;
+using Aion.AppHost.Services.Navigation;
+using Aion.Domain.UI.Navigation;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -114,7 +116,10 @@ builder.Services.AddTransient<IUserContext, HttpContextUserContext>();
 builder.Services.AddScoped<IRightService, RightService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IMenuProvider, MenuProvider>();
-builder.Services.AddScoped<ITabService, TabService>();
+builder.Services.AddScoped<AionNavigationState>();
+builder.Services.AddScoped<IModuleCatalog, ModuleCatalog>();
+builder.Services.AddScoped<IAionNavigationService, AionNavigationService>();
+builder.Services.AddScoped<ICommandInterpreter, SimpleCommandInterpreter>();
 builder.Services.AddScoped<IDataQueryResolver, DataQueryResolver>();
 builder.Services.AddScoped<IWidgetService, WidgetServiceEf>();
 builder.Services.AddScoped<IAionProvisioningService, AionProvisioningService>();
