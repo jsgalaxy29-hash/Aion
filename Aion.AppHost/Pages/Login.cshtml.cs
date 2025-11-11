@@ -41,7 +41,7 @@ namespace Aion.AppHost.Pages
             [Required]
             public string Username { get; set; } = "admin";
 
-            [Required]
+            [Required(ErrorMessage = "Le mot de passe actuel est requis.")]
             public string Password { get; set; } = "admin";
 
             [Required]
@@ -70,18 +70,41 @@ namespace Aion.AppHost.Pages
         {
             ReturnUrl = returnUrl;
 
-            if (Request.HasFormContentType && Request.Form.TryGetValue("Input.Password", out var postedPasswordValues))
+            if (Request.HasFormContentType)
             {
-                var postedPassword = postedPasswordValues.ToString();
+                var form = Request.Form;
 
-                Input.Password = postedPassword;
-
-                ModelState.Remove("Input.Password");
-
-                if (string.IsNullOrWhiteSpace(postedPassword))
+                if (form.TryGetValue("Input.Password", out var postedPasswordValues))
                 {
-                    ModelState.AddModelError("Input.Password", "Le mot de passe actuel est requis.");
+                    Input.Password = postedPasswordValues.ToString();
                 }
+                else
+                {
+                    Input.Password = string.Empty;
+                }
+
+                if (form.TryGetValue("Input.NewPassword", out var newPasswordValues))
+                {
+                    var newPassword = newPasswordValues.ToString();
+                    Input.NewPassword = string.IsNullOrWhiteSpace(newPassword) ? null : newPassword;
+                }
+                else
+                {
+                    Input.NewPassword = null;
+                }
+
+                if (form.TryGetValue("Input.ConfirmPassword", out var confirmPasswordValues))
+                {
+                    var confirmPassword = confirmPasswordValues.ToString();
+                    Input.ConfirmPassword = string.IsNullOrWhiteSpace(confirmPassword) ? null : confirmPassword;
+                }
+                else
+                {
+                    Input.ConfirmPassword = null;
+                }
+
+                ModelState.ClearValidationState(nameof(Input));
+                TryValidateModel(Input, nameof(Input));
             }
 
             if (!ModelState.IsValid)
