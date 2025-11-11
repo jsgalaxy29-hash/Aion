@@ -1,3 +1,5 @@
+using Aion.Domain.UI.Navigation;
+
 namespace Aion.AppHost.Services.Navigation;
 
 /// <summary>

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Aion.Domain.UI.Navigation;
 
 namespace Aion.AppHost.Services.Navigation;
 

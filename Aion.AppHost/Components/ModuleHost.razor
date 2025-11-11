@@ -3,6 +3,7 @@
 @using System.Threading
 @using Aion.AppHost.Services.Navigation
 @using Aion.Domain.UI.Navigation
+@using Microsoft.FluentUI.AspNetCore.Components
 @inject IAionNavigationService Navigation
 @inject AionNavigationState NavigationState
 @inject IModuleCatalog ModuleCatalog
@@ -17,7 +18,7 @@
                     Orientation="Orientation.Horizontal">
             @foreach (var tab in _tabs)
             {
-                <FluentTab Id="@tab.ModuleKey" Label="@tab.Title" StartIcon="@tab.Icon" />
+                <FluentTab Id="@tab.ModuleKey" Label="@tab.Title" StartIcon="@FluentIconResolver.Resolve(tab.Icon)" />
             }
         </FluentTabs>
 
@@ -29,7 +30,7 @@
 else
 {
     <div class="modulehost-empty">
-        <FluentIcon Value="Home48Regular" Size="FluentIconSize.ExtraLarge" />
+        <FluentIcon Value='@FluentIconResolver.Resolve("Home48Regular")' Size="FluentIconSize.ExtraLarge" />
         <h2>Bienvenue dans Aion</h2>
         <p>Sélectionnez un module via la palette de commande (Ctrl+K) ou depuis le menu.</p>
 
@@ -41,7 +42,7 @@ else
                     @foreach (var module in _recentModules)
                     {
                         <FluentButton Appearance="Appearance.Stealth" OnClick="() => OpenModule(module.Key)">
-                            <FluentIcon Value="@(module.Icon ?? "TabDesktop20Regular")" />
+                            <FluentIcon Value="@FluentIconResolver.Resolve(module.Icon)" />
                             <span>@module.Title</span>
                         </FluentButton>
                     }

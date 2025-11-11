@@ -4,6 +4,8 @@
 @using Aion.AppHost.Services.Navigation
 @using Aion.Domain.UI.Navigation
 @using Microsoft.AspNetCore.Components.Web
+@using Microsoft.FluentUI.AspNetCore.Components
+@using Microsoft.JSInterop
 @inject IAionNavigationService Navigation
 @inject IModuleCatalog ModuleCatalog
 @inject ICommandInterpreter CommandInterpreter
@@ -49,7 +51,7 @@
                     <button type="button"
                             class="command-palette-item @(isActive ? "active" : string.Empty)"
                             @onclick="() => ExecuteModuleAsync(result.Index)">
-                        <FluentIcon Value="@(result.Module.Icon ?? "TabDesktop20Regular")" />
+                        <FluentIcon Value="@FluentIconResolver.Resolve(result.Module.Icon)" />
                         <div>
                             <div class="command-palette-item-title">@result.Module.Title</div>
                             @if (!string.IsNullOrWhiteSpace(result.Module.Description))
@@ -234,13 +236,13 @@
         await Close();
     }
 
-    private static string GetCommandIcon(NavigationCommandType type)
+    private static Icon GetCommandIcon(NavigationCommandType type)
         => type switch
         {
-            NavigationCommandType.OpenModule => "ArrowEnter20Regular",
-            NavigationCommandType.CloseModule => "Dismiss20Regular",
-            NavigationCommandType.CloseAll => "TabProhibited20Regular",
-            _ => "TextBulletList20Regular"
+            NavigationCommandType.OpenModule => FluentIconResolver.Resolve("ArrowEnter20Regular"),
+            NavigationCommandType.CloseModule => FluentIconResolver.Resolve("Dismiss20Regular"),
+            NavigationCommandType.CloseAll => FluentIconResolver.Resolve("TabProhibited20Regular"),
+            _ => FluentIconResolver.Resolve("TextBulletList20Regular")
         };
 
     private static string GetCommandLabel(NavigationCommand command)

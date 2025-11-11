@@ -158,7 +158,7 @@
             if (!string.IsNullOrWhiteSpace(module.Icon))
             {
                 childBuilder.OpenComponent<FluentIcon>(childSeq++);
-                childBuilder.AddAttribute(childSeq++, "Value", module.Icon);
+                childBuilder.AddAttribute(childSeq++, "Value", FluentIconResolver.Resolve(module.Icon));
                 childBuilder.CloseComponent();
             }
             childBuilder.CloseElement();
@@ -183,8 +183,10 @@
 
             childBuilder.OpenComponent<FluentButton>(childSeq++);
             childBuilder.AddAttribute(childSeq++, "Appearance", Appearance.Stealth);
-            childBuilder.AddAttribute(childSeq++, "StartIcon", NavigationState.IsFavorite(module.Key) ? "Star24Filled" : "Star24Regular");
-            childBuilder.AddAttribute(childSeq++, "ChildContent", (RenderFragment)(b => b.AddContent(0, NavigationState.IsFavorite(module.Key) ? "Favori" : "Ajouter")));
+            var isFavorite = NavigationState.IsFavorite(module.Key);
+            var favoriteIcon = isFavorite ? "Star24Filled" : "Star24Regular";
+            childBuilder.AddAttribute(childSeq++, "StartIcon", FluentIconResolver.Resolve(favoriteIcon));
+            childBuilder.AddAttribute(childSeq++, "ChildContent", (RenderFragment)(b => b.AddContent(0, isFavorite ? "Favori" : "Ajouter")));
             childBuilder.AddAttribute(childSeq++, "OnClick", EventCallback.Factory.Create(this, () => ToggleFavorite(module)));
             childBuilder.CloseComponent();
             childBuilder.CloseElement();

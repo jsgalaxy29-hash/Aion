@@ -17,7 +17,7 @@
     <div class="aion-shell">
         <header class="aion-topbar">
             <div class="aion-topbar-left" @onclick="@(() => Navigation.NavigateTo("/"))">
-                <FluentIcon Value="Apps24Regular" />
+                <FluentIcon Value='@FluentIconResolver.Resolve("Apps24Regular")' />
                 <span>Aion</span>
             </div>
 
@@ -27,7 +27,7 @@
                     <FluentButton Appearance="Appearance.Stealth"
                                   Class="aion-command-button"
                                   OnClick="OpenCommandPalette">
-                        <FluentIcon Value="Search20Regular" />
+                        <FluentIcon Value='@FluentIconResolver.Resolve("Search20Regular")' />
                         <span>Rechercher ou exécuter une commande</span>
                         <kbd>Ctrl</kbd><span class="plus">+</span><kbd>K</kbd>
                     </FluentButton>
@@ -61,11 +61,11 @@
             @if (_isAuthenticated)
             {
                 <nav class="aion-side-rail">
-                    <FluentButton Appearance="Appearance.Ghost" StartIcon="Home20Regular" OnClick="@(() => Navigation.NavigateTo("/"))" />
-                    <FluentButton Appearance="Appearance.Ghost" StartIcon="Search20Regular" OnClick="OpenCommandPalette" />
-                    <FluentButton Appearance="Appearance.Ghost" StartIcon="CalendarLtr20Regular" OnClick="@(() => Navigation.NavigateTo("/agenda"))" />
-                    <FluentButton Appearance="Appearance.Ghost" StartIcon="Apps20Regular" OnClick="@(() => Navigation.NavigateTo("/modules"))" />
-                    <FluentButton Appearance="Appearance.Ghost" StartIcon="Settings20Regular" OnClick="@(() => Navigation.NavigateTo("/admin/catalog"))" />
+                    <FluentButton Appearance="Appearance.Stealth" StartIcon='@FluentIconResolver.Resolve("Home20Regular")' OnClick="@(() => Navigation.NavigateTo("/"))" />
+                    <FluentButton Appearance="Appearance.Stealth" StartIcon='@FluentIconResolver.Resolve("Search20Regular")' OnClick="OpenCommandPalette" />
+                    <FluentButton Appearance="Appearance.Stealth" StartIcon='@FluentIconResolver.Resolve("CalendarLtr20Regular")' OnClick="@(() => Navigation.NavigateTo("/agenda"))" />
+                    <FluentButton Appearance="Appearance.Stealth" StartIcon='@FluentIconResolver.Resolve("Apps20Regular")' OnClick="@(() => Navigation.NavigateTo("/modules"))" />
+                    <FluentButton Appearance="Appearance.Stealth" StartIcon='@FluentIconResolver.Resolve("Settings20Regular")' OnClick="@(() => Navigation.NavigateTo("/admin/catalog"))" />
                 </nav>
             }
 
@@ -85,23 +85,23 @@
         {
             <nav class="aion-bottom-nav">
                 <button type="button" @onclick="@(() => Navigation.NavigateTo("/"))">
-                    <FluentIcon Value="Home20Regular" />
+                    <FluentIcon Value='@FluentIconResolver.Resolve("Home20Regular")' />
                     <span>Accueil</span>
                 </button>
                 <button type="button" @onclick="OpenCommandPalette">
-                    <FluentIcon Value="Search20Regular" />
+                    <FluentIcon Value='@FluentIconResolver.Resolve("Search20Regular")' />
                     <span>Recherche</span>
                 </button>
                 <button type="button" @onclick="@(() => Navigation.NavigateTo("/agenda"))">
-                    <FluentIcon Value="CalendarLtr20Regular" />
+                    <FluentIcon Value='@FluentIconResolver.Resolve("CalendarLtr20Regular")' />
                     <span>Agenda</span>
                 </button>
                 <button type="button" @onclick="@(() => Navigation.NavigateTo("/modules"))">
-                    <FluentIcon Value="Apps20Regular" />
+                    <FluentIcon Value='@FluentIconResolver.Resolve("Apps20Regular")' />
                     <span>Modules</span>
                 </button>
                 <button type="button" @onclick="OpenUserMenu">
-                    <FluentIcon Value="Person20Regular" />
+                    <FluentIcon Value='@FluentIconResolver.Resolve("Person20Regular")' />
                     <span>Profil</span>
                 </button>
             </nav>

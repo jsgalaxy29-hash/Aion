@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Aion.DataEngine.Entities;
 using Aion.DataEngine.Interfaces;
 using Aion.Domain.Contracts;
+using Aion.Domain.UI.Navigation;
 
 namespace Aion.AppHost.Services.Navigation;
 
