@@ -17,6 +17,8 @@ namespace Aion.AppHost.Pages
     [AllowAnonymous]
     public class LoginModel : PageModel
     {
+        private const int BcryptWorkFactor = 12;
+
         private readonly IDbContextFactory<SecurityDbContext> _dbFactory;
         private readonly ILogger<LoginModel> _logger;
 
@@ -32,6 +34,7 @@ namespace Aion.AppHost.Pages
         public string? ErrorMessage { get; set; }
         public string? SuccessMessage { get; set; }
         public string? ReturnUrl { get; set; }
+        public bool RequirePasswordChange { get; private set; }
 
         public class InputModel
         {
@@ -46,6 +49,16 @@ namespace Aion.AppHost.Pages
             public int TenantId { get; set; } = 1;
 
             public bool RememberMe { get; set; }
+
+            [DataType(DataType.Password)]
+            [Display(Name = "Nouveau mot de passe")]
+            [MinLength(8, ErrorMessage = "Le mot de passe doit contenir au moins 8 caractères.")]
+            public string? NewPassword { get; set; }
+
+            [DataType(DataType.Password)]
+            [Display(Name = "Confirmer le nouveau mot de passe")]
+            [Compare(nameof(NewPassword), ErrorMessage = "Les mots de passe ne correspondent pas.")]
+            public string? ConfirmPassword { get; set; }
         }
 
         public void OnGet(string? returnUrl = null)
@@ -59,7 +72,8 @@ namespace Aion.AppHost.Pages
 
             if (!ModelState.IsValid)
             {
-                ErrorMessage = "Veuillez remplir tous les champs.";
+                RequirePasswordChange = !string.IsNullOrWhiteSpace(Input.NewPassword) || !string.IsNullOrWhiteSpace(Input.ConfirmPassword);
+                ErrorMessage = "Veuillez corriger les erreurs du formulaire.";
                 return Page();
             }
 
@@ -95,6 +109,47 @@ namespace Aion.AppHost.Pages
 
                     ErrorMessage = "Identifiants incorrects.";
                     return Page();
+                }
+
+                if (user.MustChangePassword)
+                {
+                    RequirePasswordChange = true;
+
+                    if (string.IsNullOrWhiteSpace(Input.NewPassword) || string.IsNullOrWhiteSpace(Input.ConfirmPassword))
+                    {
+                        ErrorMessage = "Vous devez définir un nouveau mot de passe pour continuer.";
+                        SuccessMessage = "Veuillez renseigner un nouveau mot de passe sécurisé.";
+                        return Page();
+                    }
+
+                    if (Input.NewPassword.Length < 8)
+                    {
+                        ErrorMessage = "Le nouveau mot de passe doit contenir au moins 8 caractères.";
+                        return Page();
+                    }
+
+                    var hashed = BCrypt.Net.BCrypt.HashPassword(Input.NewPassword, workFactor: BcryptWorkFactor);
+
+                    await using (var updateContext = await _dbFactory.CreateDbContextAsync())
+                    {
+                        var entity = await updateContext.SUser
+                            .FirstAsync(u => u.Id == user.Id && u.TenantId == user.TenantId);
+
+                        entity.PasswordHash = hashed;
+                        entity.MustChangePassword = false;
+                        entity.DtModification = DateTime.UtcNow;
+                        entity.AccessFailedCount = 0;
+                        entity.LockoutEnd = null;
+
+                        await updateContext.SaveChangesAsync();
+                    }
+
+                    user.MustChangePassword = false;
+                    user.PasswordHash = hashed;
+                    user.AccessFailedCount = 0;
+                    user.LockoutEnd = null;
+                    SuccessMessage = "Votre mot de passe a été mis à jour.";
+                    RequirePasswordChange = false;
                 }
 
                 // Vérification du lockout

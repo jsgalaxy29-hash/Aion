@@ -135,6 +135,12 @@
             border: 1px solid #cfc;
         }
 
+        .alert-warning {
+            background-color: #fff8e5;
+            color: #8a6100;
+            border: 1px solid #f5c16c;
+        }
+
         .login-footer {
             margin-top: 2rem;
             padding-top: 1.5rem;
@@ -196,6 +202,31 @@
                        required />
                 <span asp-validation-for="Input.Password" class="text-danger"></span>
             </div>
+
+            @if (Model.RequirePasswordChange || !string.IsNullOrWhiteSpace(Model.Input.NewPassword))
+            {
+                <div class="alert alert-warning" style="margin-bottom: 1rem;">
+                    🔄 Votre mot de passe doit être mis à jour avant d'accéder à l'application.
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="Input.NewPassword">Nouveau mot de passe</label>
+                    <input asp-for="Input.NewPassword"
+                           type="password"
+                           placeholder="••••••••"
+                           required />
+                    <span asp-validation-for="Input.NewPassword" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="Input.ConfirmPassword">Confirmez le mot de passe</label>
+                    <input asp-for="Input.ConfirmPassword"
+                           type="password"
+                           placeholder="••••••••"
+                           required />
+                    <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
+                </div>
+            }
 
             <div class="form-group">
                 <label asp-for="Input.TenantId">Tenant ID</label>

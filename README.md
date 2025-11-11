@@ -23,6 +23,21 @@
 
 ---
 
+## 🧱 Modules livrés en v0.4.x
+
+- `SYSTEM_CATALOG` – gestion des menus, modules, tables et champs système.
+- `SECURITY_ADMIN` – administration utilisateurs, groupes, droits et tenants.
+- `TABLE_MANAGER` – inspection SQL des tables physiques et synchronisation métabase.
+- `LIST_DYN` – listes dynamiques (grilles Fluent UI avec tri multi-colonnes persisté).
+- `FORM_DYN` – rendu de formulaires dynamiques basés sur les métadonnées.
+- `DATA_ENGINE` – synchronisation de la métabase et configuration IA (`SXAiConfig`, synonymes, templates).
+- `ACTION_ENGINE` – exécution et planification des actions serveur.
+- `REPORT_ENGINE` – registres de rapports et génération dynamique.
+- `CRM` – module fonctionnel d'exemple (entreprises & contacts).
+- `AI_ENGINE` – orchestrateur IA (intents, planner, patcher, simulateur, audit `SAuditRecord`).
+
+---
+
 ## 🏗️ Architecture
 
 ```
@@ -78,7 +93,16 @@ dotnet run --project Aion.AppHost
 - Mot de passe : `admin`
 - TenantId : `1`
 
-⚠️ **IMPORTANT** : Changez le mot de passe admin en production !
+⚠️ **IMPORTANT** : lors de la première connexion, Aion impose la définition d'un nouveau mot de passe (BCrypt facteur 12).
+Profitez-en pour adopter un secret fort avant d'aller en production.
+
+### Build & tests
+
+```bash
+dotnet restore
+dotnet build --configuration Release --no-restore
+dotnet test --no-build
+```
 
 ---
 
@@ -261,7 +285,7 @@ private bool VerifyPassword(string password, string hash)
 }
 
 // Lors de la création d'utilisateur
-user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(password);
+user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(password, workFactor: 12);
 ```
 
 ### Multi-database

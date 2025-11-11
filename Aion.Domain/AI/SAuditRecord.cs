@@ -5,7 +5,7 @@ namespace Aion.Domain.AI;
 /// <summary>
 /// Stores the full trace of an AI driven generation attempt.
 /// </summary>
-public class SXGenerationLog : BaseEntity
+public class SAuditRecord : BaseEntity
 {
     public string RequestText { get; set; } = string.Empty;
 

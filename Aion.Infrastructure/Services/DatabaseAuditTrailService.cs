@@ -23,7 +23,7 @@ public sealed class DatabaseAuditTrailService : IAuditTrailService
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync(ct).ConfigureAwait(false);
 
-        var entity = new SXGenerationLog
+        var entity = new SAuditRecord
         {
             RequestText = record.RequestText,
             IntentsJson = record.IntentsJson,
@@ -35,7 +35,7 @@ public sealed class DatabaseAuditTrailService : IAuditTrailService
             ModelVersion = record.ModelVersion
         };
 
-        await dbContext.SXGenerationLogs.AddAsync(entity, ct).ConfigureAwait(false);
+        await dbContext.SAuditRecords.AddAsync(entity, ct).ConfigureAwait(false);
         await dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
 
         _logger.LogDebug("📘 Journal IA sauvegardé avec le statut {Status}", entity.Status);
