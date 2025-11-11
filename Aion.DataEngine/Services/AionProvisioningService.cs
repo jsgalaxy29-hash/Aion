@@ -98,6 +98,13 @@ namespace Aion.DataEngine.Services
             Console.WriteLine("   ✅ Module Agenda initialisé");
         }
 
+        public async Task EnsureDynamicModulesAsync()
+        {
+            Console.WriteLine("🧭 Synchronisation des modules dynamiques...");
+            await _db.ExecuteNonQueryAsync(SqlEnsureDynamicModules());
+            Console.WriteLine("   ✅ Modules dynamiques initialisés");
+        }
+
         public async Task EnsureAdminDefaultAgendaAsync()
         {
             Console.WriteLine("👤 Vérification de l'agenda par défaut administrateur...");
@@ -1068,6 +1075,105 @@ WHEN NOT MATCHED THEN
   INSERT(ID, Code, Libelle, TenantId, Actif, Doc, Deleted, DtCreation)
   VALUES(source.Id, source.Code, source.Libelle, 1, 1, 0, 0, GETUTCDATE());
 ";
+
+        private static string SqlEnsureDynamicModules() => @"
+-- ===== MODULES DYNAMIQUES (LISTES & TABLES) =====
+
+DECLARE @utcNow DATETIME = GETUTCDATE();
+
+DECLARE @adminModuleId INT = (SELECT ID FROM dbo.SModule WHERE Name = 'Gestion des tables' AND TenantId = 1);
+IF @adminModuleId IS NULL
+BEGIN
+  INSERT INTO dbo.SModule(Name, Description, Route, Icon, [Order], TenantId, Actif, Doc, Deleted, DtCreation)
+  VALUES('Gestion des tables', 'Administration des tables dynamiques', '/admin/catalog', NULL, 900, 1, 1, 0, 0, @utcNow);
+  SET @adminModuleId = SCOPE_IDENTITY();
+END
+ELSE
+BEGIN
+  UPDATE dbo.SModule
+  SET Description = 'Administration des tables dynamiques',
+      Route = '/admin/catalog',
+      Deleted = 0,
+      Actif = 1
+  WHERE ID = @adminModuleId;
+END
+
+DECLARE @adminOrder INT = (SELECT [Order] FROM dbo.SModule WHERE ID = @adminModuleId);
+
+DECLARE @rightsModuleId INT = (SELECT ID FROM dbo.SModule WHERE Name = 'Gestion Droit' AND TenantId = 1);
+IF @rightsModuleId IS NULL
+BEGIN
+  INSERT INTO dbo.SModule(Name, Description, Route, Icon, [Order], TenantId, Actif, Doc, Deleted, DtCreation)
+  VALUES('Gestion Droit', 'Gestion des droits utilisateurs', '/admin/rights', NULL, ISNULL(@adminOrder, 900) + 1, 1, 1, 0, 0, @utcNow);
+  SET @rightsModuleId = SCOPE_IDENTITY();
+END
+ELSE
+BEGIN
+  UPDATE dbo.SModule
+  SET Description = 'Gestion des droits utilisateurs',
+      Route = '/admin/rights',
+      Deleted = 0,
+      Actif = 1
+  WHERE ID = @rightsModuleId;
+END
+
+DECLARE @rightsOrder INT = (SELECT [Order] FROM dbo.SModule WHERE ID = @rightsModuleId);
+
+DECLARE @listDynModuleId INT = (SELECT ID FROM dbo.SModule WHERE Name = 'ListDyn' AND TenantId = 1);
+IF @listDynModuleId IS NULL
+BEGIN
+  INSERT INTO dbo.SModule(Name, Description, Route, Icon, [Order], TenantId, Actif, Doc, Deleted, DtCreation)
+  VALUES('ListDyn', 'Liste dynamique', '/dynamic/list', NULL, ISNULL(@rightsOrder, ISNULL(@adminOrder, 900) + 1) + 1, 1, 1, 0, 0, @utcNow);
+  SET @listDynModuleId = SCOPE_IDENTITY();
+END
+ELSE
+BEGIN
+  UPDATE dbo.SModule
+  SET Description = 'Liste dynamique',
+      Route = '/dynamic/list',
+      Deleted = 0,
+      Actif = 1
+  WHERE ID = @listDynModuleId;
+END
+
+DECLARE @listOrder INT = (SELECT [Order] FROM dbo.SModule WHERE ID = @listDynModuleId);
+
+DECLARE @formDynModuleId INT = (SELECT ID FROM dbo.SModule WHERE Name = 'FormDyn' AND TenantId = 1);
+IF @formDynModuleId IS NULL
+BEGIN
+  INSERT INTO dbo.SModule(Name, Description, Route, Icon, [Order], TenantId, Actif, Doc, Deleted, DtCreation)
+  VALUES('FormDyn', 'Formulaire dynamique', '/dynamic/form', NULL, ISNULL(@listOrder, ISNULL(@rightsOrder, ISNULL(@adminOrder, 900) + 1) + 1) + 1, 1, 1, 0, 0, @utcNow);
+  SET @formDynModuleId = SCOPE_IDENTITY();
+END
+ELSE
+BEGIN
+  UPDATE dbo.SModule
+  SET Description = 'Formulaire dynamique',
+      Route = '/dynamic/form',
+      Deleted = 0,
+      Actif = 1
+  WHERE ID = @formDynModuleId;
+END
+
+DECLARE @formOrder INT = (SELECT [Order] FROM dbo.SModule WHERE ID = @formDynModuleId);
+
+DECLARE @tableManagerModuleId INT = (SELECT ID FROM dbo.SModule WHERE Name IN ('TableManager', 'Manager les tables') AND TenantId = 1);
+IF @tableManagerModuleId IS NULL
+BEGIN
+  INSERT INTO dbo.SModule(Name, Description, Route, Icon, [Order], TenantId, Actif, Doc, Deleted, DtCreation)
+  VALUES('TableManager', 'Sélection des tables dynamiques', '/dynamic/manager', NULL, ISNULL(@formOrder, ISNULL(@listOrder, ISNULL(@rightsOrder, ISNULL(@adminOrder, 900) + 1) + 1) + 1) + 1, 1, 1, 0, 0, @utcNow);
+END
+ELSE
+BEGIN
+  UPDATE dbo.SModule
+  SET Name = 'TableManager',
+      Description = 'Sélection des tables dynamiques',
+      Route = '/dynamic/manager',
+      Deleted = 0,
+      Actif = 1
+  WHERE ID = @tableManagerModuleId;
+END
+"";
 
         private static string SqlEnsureAgendaModule() => @"
 -- ===== MODULE & MENUS AGENDA =====
