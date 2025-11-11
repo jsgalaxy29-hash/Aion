@@ -5,7 +5,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Remove="Services\AuthService.cs" />
     <Compile Remove="Services\DashboardServiceEf.cs" />
   </ItemGroup>
   <ItemGroup>

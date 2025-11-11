@@ -5,9 +5,11 @@ using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
 using System.Linq;
-using System.Threading.Tasks;
-using Aion.Infrastructure.Data;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using Aion.DataEngine.Models;
+using Aion.Infrastructure.Data;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace Aion.DataEngine.Services
@@ -21,6 +23,9 @@ namespace Aion.DataEngine.Services
         private readonly ICacheService _cache;
         private readonly IUserContext _user;
         private readonly IClock _clock;
+
+        private const int DefaultPageSize = 50;
+        private const int MaxPageSize = 500;
 
         /// <summary>
         /// Cache key for STable entries.
@@ -50,6 +55,252 @@ namespace Aion.DataEngine.Services
             _validator = validator ?? throw new ArgumentNullException(nameof(validator));
             _historizer = historizer ?? throw new ArgumentNullException(nameof(historizer));
             _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        }
+
+        private async Task<(STable table, IList<SField> fields)> GetMetadataAsync(string tableName)
+        {
+            var table = await GetTableMetadataAsync(tableName).ConfigureAwait(false)
+                ?? throw new InvalidOperationException($"Table '{tableName}' not found in metadata.");
+
+            var fields = await GetFieldsMetadataAsync(table.Id).ConfigureAwait(false);
+            return (table, fields);
+        }
+
+        private static bool HasColumn(IEnumerable<SField> fields, string columnName)
+            => fields.Any(f => string.Equals(f.Libelle, columnName, StringComparison.OrdinalIgnoreCase));
+
+        private bool TryAppendTenantFilter(IList<SField> fields, ICollection<string> whereClauses, IDictionary<string, object?> parameters)
+        {
+            var tenantField = fields.FirstOrDefault(f => string.Equals(f.Libelle, "TenantId", StringComparison.OrdinalIgnoreCase));
+            if (tenantField is null)
+            {
+                return false;
+            }
+
+            whereClauses.Add($"{SqlIdentifierHelper.QuoteColumn(tenantField.Libelle)} = @tenantId");
+            parameters["@tenantId"] = _user.TenantId;
+            return true;
+        }
+
+        private void AppendFilterClause(DataFilter filter, IList<SField> fields, ICollection<string> whereClauses, IDictionary<string, object?> parameters)
+        {
+            if (string.IsNullOrWhiteSpace(filter.FieldName) || string.IsNullOrWhiteSpace(filter.Value))
+            {
+                return;
+            }
+
+            var field = fields.FirstOrDefault(f => string.Equals(f.Libelle, filter.FieldName, StringComparison.OrdinalIgnoreCase));
+            if (field is null)
+            {
+                return;
+            }
+
+            var columnSql = SqlIdentifierHelper.QuoteColumn(field.Libelle);
+            var parameterName = $"@p{parameters.Count}";
+            var op = (filter.Operator ?? string.Empty).Trim().ToLowerInvariant();
+            if (string.IsNullOrEmpty(op))
+            {
+                op = "contains";
+            }
+
+            switch (op)
+            {
+                case "=":
+                case "eq":
+                    if (TryConvertFilterValue(field, filter.Value!, out var eqValue))
+                    {
+                        parameters[parameterName] = eqValue;
+                        if (IsStringField(field))
+                        {
+                            whereClauses.Add($"LOWER({columnSql}) = LOWER({parameterName})");
+                        }
+                        else
+                        {
+                            whereClauses.Add($"{columnSql} = {parameterName}");
+                        }
+                    }
+                    break;
+                case "ne":
+                case "!=":
+                    if (TryConvertFilterValue(field, filter.Value!, out var neValue))
+                    {
+                        parameters[parameterName] = neValue;
+                        if (IsStringField(field))
+                        {
+                            whereClauses.Add($"LOWER({columnSql}) <> LOWER({parameterName})");
+                        }
+                        else
+                        {
+                            whereClauses.Add($"{columnSql} <> {parameterName}");
+                        }
+                    }
+                    break;
+                case ">":
+                case "gt":
+                    if (TryConvertFilterValue(field, filter.Value!, out var gtValue))
+                    {
+                        parameters[parameterName] = gtValue;
+                        whereClauses.Add($"{columnSql} > {parameterName}");
+                    }
+                    break;
+                case ">=":
+                case "gte":
+                    if (TryConvertFilterValue(field, filter.Value!, out var gteValue))
+                    {
+                        parameters[parameterName] = gteValue;
+                        whereClauses.Add($"{columnSql} >= {parameterName}");
+                    }
+                    break;
+                case "<":
+                case "lt":
+                    if (TryConvertFilterValue(field, filter.Value!, out var ltValue))
+                    {
+                        parameters[parameterName] = ltValue;
+                        whereClauses.Add($"{columnSql} < {parameterName}");
+                    }
+                    break;
+                case "<=":
+                case "lte":
+                    if (TryConvertFilterValue(field, filter.Value!, out var lteValue))
+                    {
+                        parameters[parameterName] = lteValue;
+                        whereClauses.Add($"{columnSql} <= {parameterName}");
+                    }
+                    break;
+                case "starts":
+                    parameters[parameterName] = $"{EscapeLikeValue(filter.Value!)}%";
+                    whereClauses.Add($"LOWER({columnSql}) LIKE LOWER({parameterName})");
+                    break;
+                case "ends":
+                    parameters[parameterName] = $"%{EscapeLikeValue(filter.Value!)}";
+                    whereClauses.Add($"LOWER({columnSql}) LIKE LOWER({parameterName})");
+                    break;
+                default:
+                    parameters[parameterName] = $"%{EscapeLikeValue(filter.Value!)}%";
+                    whereClauses.Add($"LOWER({columnSql}) LIKE LOWER({parameterName})");
+                    break;
+            }
+        }
+
+        private string BuildOrderClause(IReadOnlyList<DataSort>? sorts, IList<SField> fields, string defaultOrder)
+        {
+            if (sorts is null || sorts.Count == 0)
+            {
+                return $"ORDER BY {defaultOrder}";
+            }
+
+            var parts = new List<string>();
+            foreach (var sort in sorts)
+            {
+                if (string.IsNullOrWhiteSpace(sort.FieldName))
+                {
+                    continue;
+                }
+
+                var field = fields.FirstOrDefault(f => string.Equals(f.Libelle, sort.FieldName, StringComparison.OrdinalIgnoreCase));
+                if (field is null)
+                {
+                    continue;
+                }
+
+                var columnSql = SqlIdentifierHelper.QuoteColumn(field.Libelle);
+                parts.Add($"{columnSql} {(sort.Descending ? "DESC" : "ASC")}");
+            }
+
+            if (parts.Count == 0)
+            {
+                return $"ORDER BY {defaultOrder}";
+            }
+
+            return $"ORDER BY {string.Join(", ", parts)}";
+        }
+
+        private string BuildPagingClause()
+            => _db switch
+            {
+                SqliteDataProvider => "LIMIT @take OFFSET @skip",
+                _ => "OFFSET @skip ROWS FETCH NEXT @take ROWS ONLY"
+            };
+
+        private static List<Dictionary<string, object?>> ConvertToRows(DataTable data)
+        {
+            var result = new List<Dictionary<string, object?>>(data.Rows.Count);
+            foreach (DataRow row in data.Rows)
+            {
+                var dict = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+                foreach (DataColumn column in data.Columns)
+                {
+                    var value = row[column];
+                    dict[column.ColumnName] = value == DBNull.Value ? null : value;
+                }
+
+                result.Add(dict);
+            }
+
+            return result;
+        }
+
+        private static bool TryConvertFilterValue(SField field, string value, out object? converted)
+        {
+            var dataType = (field.DataType ?? string.Empty).ToLowerInvariant();
+
+            if (dataType.Contains("int") && !dataType.Contains("point"))
+            {
+                if (int.TryParse(value, out var intValue))
+                {
+                    converted = intValue;
+                    return true;
+                }
+            }
+            else if (dataType.Contains("decimal") || dataType.Contains("numeric") || dataType.Contains("money"))
+            {
+                if (decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var decimalValue))
+                {
+                    converted = decimalValue;
+                    return true;
+                }
+            }
+            else if (dataType.Contains("date") || dataType.Contains("time"))
+            {
+                if (DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var dateValue))
+                {
+                    converted = dateValue;
+                    return true;
+                }
+            }
+            else if (dataType.Contains("bit") || dataType.Contains("bool"))
+            {
+                if (bool.TryParse(value, out var boolValue))
+                {
+                    converted = boolValue;
+                    return true;
+                }
+            }
+            else if (dataType.Contains("uniqueidentifier"))
+            {
+                if (Guid.TryParse(value, out var guidValue))
+                {
+                    converted = guidValue;
+                    return true;
+                }
+            }
+
+            converted = value;
+            return true;
+        }
+
+        private static bool IsStringField(SField field)
+        {
+            var dataType = (field.DataType ?? string.Empty).ToLowerInvariant();
+            return dataType.Contains("char") || dataType.Contains("text") || dataType.Contains("nchar") || dataType.Contains("nvarchar");
+        }
+
+        private static string EscapeLikeValue(string value)
+        {
+            return value
+                .Replace("[", "[[", StringComparison.Ordinal)
+                .Replace("%", "[%]", StringComparison.Ordinal)
+                .Replace("_", "[_]", StringComparison.Ordinal);
         }
 
  
@@ -518,9 +769,99 @@ namespace Aion.DataEngine.Services
         /// <exception cref="ArgumentNullException"></exception>
         public async Task<DataTable> GetAllAsync(string tableName)
         {
-            if (string.IsNullOrWhiteSpace(tableName)) throw new ArgumentNullException(nameof(tableName));
-            var sql = $"SELECT * FROM [{tableName}]";
-            return await _db.ExecuteQueryAsync(sql).ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(tableName))
+            {
+                throw new ArgumentNullException(nameof(tableName));
+            }
+
+            var (_, fields) = await GetMetadataAsync(tableName).ConfigureAwait(false);
+            var selectable = fields.Where(f => f.IsLinkToBdd).ToList();
+            if (selectable.Count == 0)
+            {
+                return new DataTable();
+            }
+
+            var columnList = string.Join(", ", selectable.Select(f => SqlIdentifierHelper.QuoteColumn(f.Libelle)));
+            var tableIdentifier = SqlIdentifierHelper.QuoteTable(tableName);
+            var filters = new List<string>();
+            var parameters = new Dictionary<string, object?>();
+
+            if (HasColumn(selectable, "TenantId"))
+            {
+                filters.Add("[TenantId] = @tenantId");
+                parameters["@tenantId"] = _user.TenantId;
+            }
+
+            if (HasColumn(selectable, "Deleted"))
+            {
+                filters.Add("[Deleted] = 0");
+            }
+
+            var whereClause = filters.Count > 0 ? $" WHERE {string.Join(" AND ", filters)}" : string.Empty;
+            var sql = $"SELECT {columnList} FROM {tableIdentifier}{whereClause}";
+
+            return await _db.ExecuteQueryAsync(sql, parameters).ConfigureAwait(false);
+        }
+
+        public async Task<DataPage> GetPageAsync(DataPageRequest request, CancellationToken ct = default)
+        {
+            if (request is null)
+            {
+                throw new ArgumentNullException(nameof(request));
+            }
+
+            var skip = Math.Max(0, request.Skip);
+            var take = request.Take <= 0 ? DefaultPageSize : Math.Min(request.Take, MaxPageSize);
+
+            var (tableMeta, fields) = await GetMetadataAsync(request.TableName).ConfigureAwait(false);
+            var selectable = fields.Where(f => f.IsLinkToBdd).ToList();
+            if (selectable.Count == 0)
+            {
+                return new DataPage(new List<Dictionary<string, object?>>(), 0);
+            }
+
+            var tableIdentifier = SqlIdentifierHelper.QuoteTable(request.TableName);
+            var columnList = string.Join(", ", selectable.Select(f => SqlIdentifierHelper.QuoteColumn(f.Libelle)));
+
+            var primaryField = fields.FirstOrDefault(f => f.IsClePrimaire) ?? selectable.First();
+            var defaultOrder = SqlIdentifierHelper.QuoteColumn(primaryField.Libelle);
+
+            var parameters = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["@skip"] = skip,
+                ["@take"] = take
+            };
+
+            var whereClauses = new List<string>();
+
+            if (TryAppendTenantFilter(selectable, whereClauses, parameters))
+            {
+                // tenant filter added
+            }
+
+            if (HasColumn(selectable, "Deleted"))
+            {
+                whereClauses.Add("[Deleted] = 0");
+            }
+
+            foreach (var filter in request.Filters ?? Array.Empty<DataFilter>())
+            {
+                AppendFilterClause(filter, selectable, whereClauses, parameters);
+            }
+
+            var whereClause = whereClauses.Count > 0 ? $" WHERE {string.Join(" AND ", whereClauses)}" : string.Empty;
+            var orderClause = BuildOrderClause(request.Sorts, selectable, defaultOrder);
+            var pagingClause = BuildPagingClause();
+
+            var dataSql = $"SELECT {columnList} FROM {tableIdentifier}{whereClause} {orderClause} {pagingClause}";
+            var countSql = $"SELECT COUNT(1) FROM {tableIdentifier}{whereClause}";
+
+            var data = await _db.ExecuteQueryAsync(dataSql, parameters).ConfigureAwait(false);
+            var totalObj = await _db.ExecuteScalarAsync(countSql, parameters).ConfigureAwait(false);
+            var total = Convert.ToInt32(totalObj ?? 0, CultureInfo.InvariantCulture);
+
+            var rows = ConvertToRows(data);
+            return new DataPage(rows, total);
         }
 
         /// <summary>
@@ -533,12 +874,50 @@ namespace Aion.DataEngine.Services
         /// <exception cref="ArgumentNullException"></exception>
         public async Task<IDictionary<string, object?>> GetByIdAsync(string tableName, string primaryKeyName, object id)
         {
-            if (string.IsNullOrWhiteSpace(tableName)) throw new ArgumentNullException(nameof(tableName));
-            if (string.IsNullOrWhiteSpace(primaryKeyName)) throw new ArgumentNullException(nameof(primaryKeyName));
-            var sql = $"SELECT * FROM [{tableName}] WHERE [{primaryKeyName}] = @id";
-            var result = await _db.ExecuteQueryAsync(sql, new Dictionary<string, object?> { ["@id"] = id }).ConfigureAwait(false);
-            if (result.Rows.Count == 0) return new Dictionary<string, object?>();
-            return result.Rows[0].Table.Columns.Cast<DataColumn>().ToDictionary(col => col.ColumnName, col => result.Rows[0][col]);
+            if (string.IsNullOrWhiteSpace(tableName))
+            {
+                throw new ArgumentNullException(nameof(tableName));
+            }
+
+            if (string.IsNullOrWhiteSpace(primaryKeyName))
+            {
+                throw new ArgumentNullException(nameof(primaryKeyName));
+            }
+
+            var (_, fields) = await GetMetadataAsync(tableName).ConfigureAwait(false);
+            var selectable = fields.Where(f => f.IsLinkToBdd).ToList();
+            if (selectable.Count == 0)
+            {
+                return new Dictionary<string, object?>();
+            }
+
+            var tableIdentifier = SqlIdentifierHelper.QuoteTable(tableName);
+            var columnList = string.Join(", ", selectable.Select(f => SqlIdentifierHelper.QuoteColumn(f.Libelle)));
+            var primaryColumn = SqlIdentifierHelper.QuoteColumn(primaryKeyName);
+
+            var filters = new List<string> { $"{primaryColumn} = @id" };
+            var parameters = new Dictionary<string, object?> { ["@id"] = id };
+
+            if (TryAppendTenantFilter(selectable, filters, parameters))
+            {
+                // Tenant filter appended.
+            }
+
+            if (HasColumn(selectable, "Deleted"))
+            {
+                filters.Add("[Deleted] = 0");
+            }
+
+            var whereClause = string.Join(" AND ", filters);
+            var sql = $"SELECT {columnList} FROM {tableIdentifier} WHERE {whereClause}";
+            var result = await _db.ExecuteQueryAsync(sql, parameters).ConfigureAwait(false);
+            if (result.Rows.Count == 0)
+            {
+                return new Dictionary<string, object?>();
+            }
+
+            var row = result.Rows[0];
+            return row.Table.Columns.Cast<DataColumn>().ToDictionary(col => col.ColumnName, col => row[col]);
         }
 
         /// <summary>
@@ -551,30 +930,69 @@ namespace Aion.DataEngine.Services
         /// <exception cref="ArgumentException"></exception>
         public async Task<int> InsertAsync(string tableName, IDictionary<string, object?> values)
         {
-            if (string.IsNullOrWhiteSpace(tableName)) throw new ArgumentNullException(nameof(tableName));
-            if (values == null || values.Count == 0) throw new ArgumentException("Values cannot be null or empty", nameof(values));
-            var columns = values.Keys.ToArray();
-            var parameters = columns.Select(c => "@" + c).ToArray();
-            var sql = $"INSERT INTO [{tableName}] ({string.Join(", ", columns.Select(c => $"[{c}]"))}) VALUES ({string.Join(", ", parameters)})";
-            var paramDict = values.ToDictionary(kvp => "@" + kvp.Key, kvp => kvp.Value);
-            var affected = await _db.ExecuteNonQueryAsync(sql, paramDict).ConfigureAwait(false);
-            // Record history only if enabled on the table.  Since the record
-            // is new we don't know its identity value; pass primary key as 0.
-            var tableMeta = await GetTableMetadataAsync(tableName).ConfigureAwait(false);
-            if (tableMeta?.IsHistorise == true)
+            if (string.IsNullOrWhiteSpace(tableName))
             {
-                var fieldsMeta = await GetFieldsMetadataAsync(tableMeta.Id).ConfigureAwait(false);
-                var newValues = new Dictionary<string, object?>();
-                foreach (var field in fieldsMeta)
+                throw new ArgumentNullException(nameof(tableName));
+            }
+
+            if (values is null || values.Count == 0)
+            {
+                throw new ArgumentException("Values cannot be null or empty", nameof(values));
+            }
+
+            var (tableMeta, fields) = await GetMetadataAsync(tableName).ConfigureAwait(false);
+            var fieldLookup = fields.Where(f => f.IsLinkToBdd)
+                .ToDictionary(f => f.Libelle, StringComparer.OrdinalIgnoreCase);
+
+            var sanitized = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+            foreach (var kvp in values)
+            {
+                if (fieldLookup.ContainsKey(kvp.Key))
                 {
-                    if (!field.IsHistorise) continue;
-                    if (values.TryGetValue(field.Libelle, out var val))
+                    sanitized[fieldLookup[kvp.Key].Libelle] = kvp.Value;
+                }
+            }
+
+            if (fieldLookup.ContainsKey("TenantId"))
+            {
+                sanitized["TenantId"] = _user.TenantId;
+            }
+
+            if (sanitized.Count == 0)
+            {
+                throw new ArgumentException("No matching columns found for insert operation.", nameof(values));
+            }
+
+            var columnNames = sanitized.Keys.ToArray();
+            var columnList = string.Join(", ", columnNames.Select(SqlIdentifierHelper.QuoteColumn));
+            var parameterList = string.Join(", ", columnNames.Select(c => "@" + c));
+            var paramDict = sanitized.ToDictionary(kvp => "@" + kvp.Key, kvp => kvp.Value);
+
+            var sql = $"INSERT INTO {SqlIdentifierHelper.QuoteTable(tableName)} ({columnList}) VALUES ({parameterList})";
+            var affected = await _db.ExecuteNonQueryAsync(sql, paramDict).ConfigureAwait(false);
+
+            if (tableMeta.IsHistorise)
+            {
+                var historised = new Dictionary<string, object?>();
+                foreach (var field in fields)
+                {
+                    if (!field.IsHistorise)
                     {
-                        newValues[field.Libelle] = val;
+                        continue;
+                    }
+
+                    if (sanitized.TryGetValue(field.Libelle, out var val))
+                    {
+                        historised[field.Libelle] = val;
                     }
                 }
-                await _historizer.SaveHistoryAsync(tableName, "INSERT", 0, newValues, null).ConfigureAwait(false);
+
+                if (historised.Count > 0)
+                {
+                    await _historizer.SaveHistoryAsync(tableName, "INSERT", 0, historised, null).ConfigureAwait(false);
+                }
             }
+
             return affected;
         }
 
@@ -590,43 +1008,87 @@ namespace Aion.DataEngine.Services
         /// <exception cref="ArgumentException"></exception>
         public async Task<int> UpdateAsync(string tableName, string primaryKeyName, object id, IDictionary<string, object?> values)
         {
-            if (string.IsNullOrWhiteSpace(tableName)) throw new ArgumentNullException(nameof(tableName));
-            if (string.IsNullOrWhiteSpace(primaryKeyName)) throw new ArgumentNullException(nameof(primaryKeyName));
-            if (values == null || values.Count == 0) throw new ArgumentException("Values cannot be null or empty", nameof(values));
-            var setClauses = values.Keys.Select(k => $"[{k}] = @{k}").ToArray();
-            var sql = $"UPDATE [{tableName}] SET {string.Join(", ", setClauses)} WHERE [{primaryKeyName}] = @id";
-            var paramDict = values.ToDictionary(kvp => "@" + kvp.Key, kvp => kvp.Value);
-            paramDict.Add("@id", id);
-            // Determine if historisation is enabled and fetch existing row before update if needed
-            var tableMeta = await GetTableMetadataAsync(tableName).ConfigureAwait(false);
-            IDictionary<string, object?>? existingRow = null;
-            IList<SField>? fieldsMetaForHistory = null;
-            if (tableMeta?.IsHistorise == true)
+            if (string.IsNullOrWhiteSpace(tableName))
             {
-                fieldsMetaForHistory = await GetFieldsMetadataAsync(tableMeta.Id).ConfigureAwait(false);
-                existingRow = await GetByIdAsync(tableName, primaryKeyName, id).ConfigureAwait(false);
+                throw new ArgumentNullException(nameof(tableName));
             }
-            // Execute the update
-            var affected = await _db.ExecuteNonQueryAsync(sql, paramDict).ConfigureAwait(false);
-            // Record history only if enabled on the table
-            if (tableMeta?.IsHistorise == true && fieldsMetaForHistory != null && existingRow != null)
+
+            if (string.IsNullOrWhiteSpace(primaryKeyName))
+            {
+                throw new ArgumentNullException(nameof(primaryKeyName));
+            }
+
+            if (values is null || values.Count == 0)
+            {
+                throw new ArgumentException("Values cannot be null or empty", nameof(values));
+            }
+
+            var (tableMeta, fields) = await GetMetadataAsync(tableName).ConfigureAwait(false);
+            var writableFields = fields.Where(f => f.IsLinkToBdd).ToList();
+            var lookup = writableFields.ToDictionary(f => f.Libelle, StringComparer.OrdinalIgnoreCase);
+
+            var sanitized = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+            foreach (var kvp in values)
+            {
+                if (lookup.TryGetValue(kvp.Key, out var field))
+                {
+                    sanitized[field.Libelle] = kvp.Value;
+                }
+            }
+
+            sanitized.Remove("TenantId");
+
+            if (sanitized.Count == 0)
+            {
+                throw new ArgumentException("No matching columns found for update operation.", nameof(values));
+            }
+
+            var setClauses = sanitized.Keys.Select(k => $"{SqlIdentifierHelper.QuoteColumn(k)} = @{k}").ToArray();
+            var parameters = sanitized.ToDictionary(kvp => "@" + kvp.Key, kvp => kvp.Value);
+            parameters["@id"] = id;
+
+            var whereConditions = new List<string> { $"{SqlIdentifierHelper.QuoteColumn(primaryKeyName)} = @id" };
+            if (TryAppendTenantFilter(writableFields, whereConditions, parameters))
+            {
+                // tenant guard added
+            }
+
+            var sql = $"UPDATE {SqlIdentifierHelper.QuoteTable(tableName)} SET {string.Join(", ", setClauses)} WHERE {string.Join(" AND ", whereConditions)}";
+
+            IDictionary<string, object?>? beforeUpdate = null;
+            if (tableMeta.IsHistorise)
+            {
+                beforeUpdate = await GetByIdAsync(tableName, primaryKeyName, id).ConfigureAwait(false);
+            }
+
+            var affected = await _db.ExecuteNonQueryAsync(sql, parameters).ConfigureAwait(false);
+
+            if (tableMeta.IsHistorise && beforeUpdate is not null)
             {
                 var newValues = new Dictionary<string, object?>();
                 var oldValues = new Dictionary<string, object?>();
-                foreach (var field in fieldsMetaForHistory)
+
+                foreach (var field in fields)
                 {
-                    if (!field.IsHistorise) continue;
-                    if (values.TryGetValue(field.Libelle, out var newVal))
+                    if (!field.IsHistorise)
+                    {
+                        continue;
+                    }
+
+                    if (sanitized.TryGetValue(field.Libelle, out var newVal))
                     {
                         newValues[field.Libelle] = newVal;
-                        if (existingRow.TryGetValue(field.Libelle, out var oldVal))
-                        {
-                            oldValues[field.Libelle] = oldVal;
-                        }
+                    }
+
+                    if (beforeUpdate.TryGetValue(field.Libelle, out var oldVal))
+                    {
+                        oldValues[field.Libelle] = oldVal;
                     }
                 }
+
                 await _historizer.SaveHistoryAsync(tableName, "UPDATE", id, newValues, oldValues).ConfigureAwait(false);
             }
+
             return affected;
         }
 
@@ -640,35 +1102,55 @@ namespace Aion.DataEngine.Services
         /// <exception cref="ArgumentNullException"></exception>
         public async Task<int> DeleteAsync(string tableName, string primaryKeyName, object id)
         {
-            if (string.IsNullOrWhiteSpace(tableName)) throw new ArgumentNullException(nameof(tableName));
-            if (string.IsNullOrWhiteSpace(primaryKeyName)) throw new ArgumentNullException(nameof(primaryKeyName));
-            var sql = $"DELETE FROM [{tableName}] WHERE [{primaryKeyName}] = @id";
-            // Determine if historisation is enabled
-            var tableMeta = await GetTableMetadataAsync(tableName).ConfigureAwait(false);
-            IDictionary<string, object?>? existingRow = null;
-            IList<SField>? fieldsMetaForHistory = null;
-            if (tableMeta?.IsHistorise == true)
+            if (string.IsNullOrWhiteSpace(tableName))
             {
-                fieldsMetaForHistory = await GetFieldsMetadataAsync(tableMeta.Id).ConfigureAwait(false);
-                // Fetch existing values before deletion only if history is enabled
+                throw new ArgumentNullException(nameof(tableName));
+            }
+
+            if (string.IsNullOrWhiteSpace(primaryKeyName))
+            {
+                throw new ArgumentNullException(nameof(primaryKeyName));
+            }
+
+            var (tableMeta, fields) = await GetMetadataAsync(tableName).ConfigureAwait(false);
+            var writableFields = fields.Where(f => f.IsLinkToBdd).ToList();
+
+            var parameters = new Dictionary<string, object?> { ["@id"] = id };
+            var conditions = new List<string> { $"{SqlIdentifierHelper.QuoteColumn(primaryKeyName)} = @id" };
+            if (TryAppendTenantFilter(writableFields, conditions, parameters))
+            {
+                // tenant guard added
+            }
+
+            var sql = $"DELETE FROM {SqlIdentifierHelper.QuoteTable(tableName)} WHERE {string.Join(" AND ", conditions)}";
+
+            IDictionary<string, object?>? existingRow = null;
+            if (tableMeta.IsHistorise)
+            {
                 existingRow = await GetByIdAsync(tableName, primaryKeyName, id).ConfigureAwait(false);
             }
-            // Perform the deletion
-            var affected = await _db.ExecuteNonQueryAsync(sql, new Dictionary<string, object?> { ["@id"] = id }).ConfigureAwait(false);
-            // Record history if enabled
-            if (tableMeta?.IsHistorise == true && fieldsMetaForHistory != null && existingRow != null)
+
+            var affected = await _db.ExecuteNonQueryAsync(sql, parameters).ConfigureAwait(false);
+
+            if (tableMeta.IsHistorise && existingRow is not null)
             {
                 var oldValues = new Dictionary<string, object?>();
-                foreach (var field in fieldsMetaForHistory)
+                foreach (var field in fields)
                 {
-                    if (!field.IsHistorise) continue;
-                    if (existingRow.TryGetValue(field.Libelle, out var oldVal))
+                    if (!field.IsHistorise)
                     {
-                        oldValues[field.Libelle] = oldVal;
+                        continue;
+                    }
+
+                    if (existingRow.TryGetValue(field.Libelle, out var value))
+                    {
+                        oldValues[field.Libelle] = value;
                     }
                 }
+
                 await _historizer.SaveHistoryAsync(tableName, "DELETE", id, new Dictionary<string, object?>(), oldValues).ConfigureAwait(false);
             }
+
             return affected;
         }
 

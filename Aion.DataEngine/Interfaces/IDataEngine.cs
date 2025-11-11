@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using System.Data;
+using System.Threading;
 using System.Threading.Tasks;
 using Aion.DataEngine.Entities;
+using Aion.DataEngine.Models;
 
 namespace Aion.DataEngine.Interfaces
 {
@@ -35,6 +37,11 @@ namespace Aion.DataEngine.Interfaces
         /// <param name="tableName">The physical table name.</param>
         /// <returns>A DataTable containing the rows.</returns>
         Task<DataTable> GetAllAsync(string tableName);
+
+        /// <summary>
+        /// Retrieves a paged subset of rows with optional filtering and sorting.
+        /// </summary>
+        Task<DataPage> GetPageAsync(DataPageRequest request, CancellationToken ct = default);
 
         /// <summary>
         /// Retrieves a single record by primary key.

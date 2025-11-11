@@ -25,11 +25,12 @@ namespace Aion.Infrastructure.Services
 
         public async Task<IReadOnlyList<SMenu>> GetAuthorizedMenuAsync(int tenantId, int userId, CancellationToken ct)
         {
-            // Récupération des IDs de menus autorisés
             var authorizedIds = await _rightService.GetAuthorizedMenuIdsAsync(userId, tenantId, ct);
+            var authorizedSet = authorizedIds.Count > 0
+                ? authorizedIds.ToHashSet()
+                : new HashSet<int>();
 
-            // Si aucun droit, retour vide
-            if (!authorizedIds.Any())
+            if (authorizedSet.Count == 0)
                 return new List<SMenu>();
 
 
@@ -39,7 +40,7 @@ namespace Aion.Infrastructure.Services
 
             var menus = await db.Set<SMenu>()
                 .Include(m => m.Module)
-                .Where(m => m.Actif && authorizedIds.Contains(m.Id))
+                .Where(m => m.TenantId == tenantId && m.Actif && authorizedSet.Contains(m.Id))
                 .OrderBy(m => m.Order)
                 .ToListAsync(ct);
 
@@ -60,7 +61,7 @@ namespace Aion.Infrastructure.Services
             {
                 var parents = await db.Set<SMenu>()
                     .Include(m => m.Module)
-                    .Where(m => parentIds.Contains(m.Id))
+                    .Where(m => parentIds.Contains(m.Id) && m.TenantId == tenantId)
                     .ToListAsync(ct);
 
                 if (!parents.Any())
@@ -90,7 +91,7 @@ namespace Aion.Infrastructure.Services
             await using var db = await _dbFactory.CreateDbContextAsync(ct);
             var menus = await db.Set<SMenu>()
                 .Include(m => m.Module)
-                .Where(m => m.Actif)
+                .Where(m => m.TenantId == tenantId && m.Actif)
                 .OrderBy(m => m.Order)
                 .ToListAsync(ct);
 
