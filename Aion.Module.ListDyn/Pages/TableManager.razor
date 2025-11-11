@@ -3,6 +3,7 @@
 @inject IDbContextFactory<Aion.Infrastructure.AionDbContext> DbFactory
 @inject IAionNavigationService Navigation
 @inject IModuleCatalog ModuleCatalog
+@inject NavigationManager NavigationManager
 
 <FluentLabel Typo="Typography.PageTitle">Mes tables</FluentLabel>
 
@@ -33,7 +34,7 @@ else
                     <td><FluentLabel>@table.Libelle</FluentLabel></td>
                     <td><FluentLabel>@table.Description</FluentLabel></td>
                     <td class="text-end">
-                        <FluentButton Appearance="Appearance.Accent" OnClick="@(() => OpenTableAsync(table))" Size="ControlSize.Small">Ouvrir</FluentButton>
+                        <FluentButton Appearance="Appearance.Accent" OnClick="@(async () => await OpenTableAsync(table))" Size="ControlSize.Small">Ouvrir</FluentButton>
                     </td>
                 </tr>
             }
@@ -74,13 +75,21 @@ else
 
     private async Task OpenTableAsync(STable table)
     {
-        var module = await ModuleCatalog.TryGetByRouteAsync("/dynamic/list", CancellationToken.None);
-        if (module is null)
+        if (string.IsNullOrWhiteSpace(table.Libelle))
         {
             return;
         }
 
         var parameters = new Dictionary<string, object?> { ["TableName"] = table.Libelle };
-        await Navigation.OpenModuleAsync(module.Key, parameters, CancellationToken.None);
+
+        var module = await ModuleCatalog.TryGetByRouteAsync("/dynamic/list", CancellationToken.None);
+        if (module is not null)
+        {
+            await Navigation.OpenModuleAsync(module.Key, parameters, CancellationToken.None);
+            return;
+        }
+
+        var encoded = Uri.EscapeDataString(table.Libelle);
+        NavigationManager.NavigateTo($"/dynamic/list/{encoded}");
     }
 }
