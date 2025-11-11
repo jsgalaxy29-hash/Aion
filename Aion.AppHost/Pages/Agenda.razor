@@ -70,7 +70,7 @@ else
                                  AlignItems="AlignItems.Center"
                                  JustifyContent="JustifyContent.SpaceBetween">
                         <FluentLabel Typo="Typography.H5">À venir</FluentLabel>
-                        <FluentBadge Appearance="BadgeAppearance.Tint">
+                        <FluentBadge Appearance="Appearance.Stealth">
                             @_events.Count(e => e.StartUtc >= DateTime.UtcNow)
                         </FluentBadge>
                     </FluentStack>
@@ -262,9 +262,9 @@ else
     private string? _selectedAgendaId;
     private string? _selectedStatusId;
     private DateTime? _startDateLocal;
-    private TimeSpan? _startTimeLocal;
+    private DateTime? _startTimeLocal;
     private DateTime? _endDateLocal;
-    private TimeSpan? _endTimeLocal;
+    private DateTime? _endTimeLocal;
 
     private List<SAgenda> _agendas = new();
     private List<RAgendaEventStatus> _statuses = new();
@@ -405,23 +405,23 @@ else
 
         var startLocal = _formModel.StartUtc.ToLocalTime();
         _startDateLocal = startLocal.Date;
-        _startTimeLocal = startLocal.TimeOfDay;
+        _startTimeLocal = startLocal.Date;
 
         var endLocal = _formModel.EndUtc.ToLocalTime();
         _endDateLocal = endLocal.Date;
-        _endTimeLocal = endLocal.TimeOfDay;
+        _endTimeLocal = endLocal.Date;
     }
 
     private void UpdateModelFromLocalValues()
     {
         var startDate = _startDateLocal ?? _formModel.StartUtc.ToLocalTime().Date;
-        var startTime = _startTimeLocal ?? _formModel.StartUtc.ToLocalTime().TimeOfDay;
-        var startLocal = startDate.Date + startTime;
+        var startTime = _startTimeLocal ?? _formModel.StartUtc.ToLocalTime().Date;
+        var startLocal = startDate.Date;
         _formModel.StartUtc = DateTime.SpecifyKind(startLocal, DateTimeKind.Local).ToUniversalTime();
 
         var endDate = _endDateLocal ?? _formModel.EndUtc.ToLocalTime().Date;
-        var endTime = _endTimeLocal ?? _formModel.EndUtc.ToLocalTime().TimeOfDay;
-        var endLocal = endDate.Date + endTime;
+        var endTime = _endTimeLocal ?? _formModel.EndUtc.ToLocalTime().Date;
+        var endLocal = endDate.Date;
         _formModel.EndUtc = DateTime.SpecifyKind(endLocal, DateTimeKind.Local).ToUniversalTime();
 
         EnsureEndAfterStart();
@@ -511,7 +511,7 @@ else
         UpdateModelFromLocalValues();
     }
 
-    private void OnStartTimeChanged(TimeSpan? value)
+    private void OnStartTimeChanged(DateTime? value)
     {
         if (value is null)
         {
@@ -522,7 +522,7 @@ else
         UpdateModelFromLocalValues();
     }
 
-    private void OnEndTimeChanged(TimeSpan? value)
+    private void OnEndTimeChanged(DateTime? value)
     {
         if (value is null)
         {
@@ -539,8 +539,8 @@ else
 
         if (value)
         {
-            _startTimeLocal = TimeSpan.Zero;
-            _endTimeLocal = TimeSpan.Zero;
+            _startTimeLocal = _startDateLocal;
+            _endTimeLocal = _startDateLocal;
             _endDateLocal = _startDateLocal;
             UpdateModelFromLocalValues();
             _formModel.EndUtc = _formModel.StartUtc.AddDays(1);
