@@ -1,4 +1,4 @@
-@using System
+﻿@using System
 @using System.Collections.Generic
 @using System.Threading
 @using System.Linq
@@ -297,12 +297,27 @@
 
     public async ValueTask DisposeAsync()
     {
-        if (_jsModule is not null)
+        try
         {
-            await _jsModule.InvokeVoidAsync("disposeCommandPalette");
-            await _jsModule.DisposeAsync();
+            if (_jsModule is not null)
+            {
+                // ✅ Vérifier que le module est initialisé
+                await _jsModule.InvokeVoidAsync("disposeCommandPalette");
+                await _jsModule.DisposeAsync();
+            }
         }
-
-        _selfRef?.Dispose();
+        catch (JSDisconnectedException)
+        {
+            // 🛡️ Le circuit Blazor est déjà fermé, ignorer
+        }
+        catch (Exception ex)
+        {
+            // 📝 Logger l'erreur sans crasher
+            Console.WriteLine($"[CommandPalette] Erreur dispose: {ex.Message}");
+        }
+        finally
+        {
+            _selfRef?.Dispose();
+        }
     }
 }
