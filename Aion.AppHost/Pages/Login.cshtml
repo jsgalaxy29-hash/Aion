@@ -188,8 +188,7 @@
                 <label asp-for="Input.Username">Nom d'utilisateur</label>
                 <input asp-for="Input.Username"
                        type="text"
-                       placeholder="admin"
-                       required
+                       placeholder="Nom d'utilisateur" required
                        autofocus />
                 <span asp-validation-for="Input.Username" class="text-danger"></span>
             </div>
@@ -203,11 +202,13 @@
                 <span asp-validation-for="Input.Password" class="text-danger"></span>
             </div>
 
-            @if (Model.RequirePasswordChange || !string.IsNullOrWhiteSpace(Model.Input.NewPassword))
+            @if (Model.RequirePasswordChange ||
+                        !string.IsNullOrWhiteSpace(Model.Input.NewPassword))
             {
                 <div class="alert alert-warning" style="margin-bottom: 1rem;">
                     🔄 Votre mot de passe doit être mis à jour avant d'accéder à l'application.<br />
-                    👉 Saisissez votre mot de passe actuel dans le champ «&nbsp;Mot de passe&nbsp;» (par défaut : <strong>admin</strong>),
+                    👉 Saisissez votre mot de passe actuel dans le champ «&nbsp;Mot de passe&nbsp;»
+                    (par défaut : <strong>admin</strong>),
                     puis choisissez un nouveau mot de passe ci-dessous.
                 </div>
 
@@ -235,8 +236,7 @@
                 <input asp-for="Input.TenantId"
                        type="number"
                        placeholder="1"
-                       value="1"
-                       required />
+                       value="@Model.Input.TenantId" required />
                 <span asp-validation-for="Input.TenantId" class="text-danger"></span>
             </div>
 

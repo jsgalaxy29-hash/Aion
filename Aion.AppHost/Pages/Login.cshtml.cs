@@ -39,10 +39,12 @@ namespace Aion.AppHost.Pages
         public class InputModel
         {
             [Required]
-            public string Username { get; set; } = "admin";
+            // CORRECTION: Supprimer la valeur par défaut pour la sécurité
+            public string Username { get; set; } = string.Empty;
 
-            [Required(ErrorMessage = "Le mot de passe actuel est requis.")]
-            public string Password { get; set; } = "admin";
+            [Required]
+            // CORRECTION: Supprimer la valeur par défaut pour la sécurité
+            public string Password { get; set; } = string.Empty;
 
             [Required]
             [Range(1, int.MaxValue)]
@@ -69,43 +71,6 @@ namespace Aion.AppHost.Pages
         public async Task<IActionResult> OnPostAsync(string? returnUrl = null)
         {
             ReturnUrl = returnUrl;
-
-            if (Request.HasFormContentType)
-            {
-                var form = Request.Form;
-
-                if (form.TryGetValue("Input.Password", out var postedPasswordValues))
-                {
-                    Input.Password = postedPasswordValues.ToString();
-                }
-                else
-                {
-                    Input.Password = string.Empty;
-                }
-
-                if (form.TryGetValue("Input.NewPassword", out var newPasswordValues))
-                {
-                    var newPassword = newPasswordValues.ToString();
-                    Input.NewPassword = string.IsNullOrWhiteSpace(newPassword) ? null : newPassword;
-                }
-                else
-                {
-                    Input.NewPassword = null;
-                }
-
-                if (form.TryGetValue("Input.ConfirmPassword", out var confirmPasswordValues))
-                {
-                    var confirmPassword = confirmPasswordValues.ToString();
-                    Input.ConfirmPassword = string.IsNullOrWhiteSpace(confirmPassword) ? null : confirmPassword;
-                }
-                else
-                {
-                    Input.ConfirmPassword = null;
-                }
-
-                ModelState.ClearValidationState(nameof(Input));
-                TryValidateModel(Input, nameof(Input));
-            }
 
             if (!ModelState.IsValid)
             {
@@ -141,15 +106,8 @@ namespace Aion.AppHost.Pages
                 {
                     _logger.LogWarning("Mot de passe incorrect pour {Username}", Input.Username);
 
-                    if (user.MustChangePassword &&
-                        !string.IsNullOrWhiteSpace(Input.NewPassword) &&
-                        !string.IsNullOrWhiteSpace(Input.ConfirmPassword))
-                    {
-                        RequirePasswordChange = true;
-                        ErrorMessage = "Le champ \"Mot de passe\" doit contenir votre mot de passe actuel (par défaut : admin).";
-                        SuccessMessage = null;
-                        return Page();
-                    }
+                    // CORRECTION CRITIQUE: Suppression de la logique de changement de mot de passe ici. 
+                    // Si le mot de passe est incorrect, c'est un échec d'authentification.
 
                     // Incrémenter les échecs
                     await IncrementFailedLoginAsync(user.Id);
