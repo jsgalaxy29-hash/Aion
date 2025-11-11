@@ -23,11 +23,11 @@ namespace Aion.DataEngine.Services
             var uid = _user.UserId;
 
             var id = await _db.ExecuteScalarAsync(@"
-                INSERT INTO dbo.FDocument(TableName, RecID, Categorie, [Path], Extension,
+                INSERT INTO dbo.FDocument(TableName, RecID, Categorie, [Path], Extension, TenantId,
                                            Actif, Doc, Deleted, DtCreation, UsrCreationId)
-                VALUES(@t,@r,@c,@p,@e, 1, 0, 0, @now, @uid);
+                VALUES(@t,@r,@c,@p,@e,@tenant, 1, 0, 0, @now, @uid);
                 SELECT CAST(SCOPE_IDENTITY() AS INT);",
-                new Dictionary<string, object?> { ["@t"]=tableName, ["@r"]=recId, ["@c"]=categorie, ["@p"]=path, ["@e"]=extension, ["@now"]=now, ["@uid"]=uid });
+                new Dictionary<string, object?> { ["@t"]=tableName, ["@r"]=recId, ["@c"]=categorie, ["@p"]=path, ["@e"]=extension, ["@tenant"]=_user.TenantId, ["@now"]=now, ["@uid"]=uid });
 
             var tableIdentifier = SqlIdentifierHelper.QuoteTable(tableName);
             await _db.ExecuteNonQueryAsync($@"UPDATE {tableIdentifier} SET Doc = 1, DtModification=@now, UsrModificationId=@uid WHERE Id=@id AND TenantId=@tenant",
