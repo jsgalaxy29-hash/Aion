@@ -81,7 +81,12 @@ namespace Aion.AppHost.Pages
 
             try
             {
-                _logger.LogInformation("Tentative de connexion pour {Username}", Input.Username);
+                var rawUsername = Input.Username?.Trim() ?? string.Empty;
+                var normalizedUsername = rawUsername.ToUpperInvariant();
+
+                Input.Username = rawUsername;
+
+                _logger.LogInformation("Tentative de connexion pour {Username}", rawUsername);
 
                 // Recherche de l'utilisateur
                 await using var db = await _dbFactory.CreateDbContextAsync();
@@ -89,14 +94,15 @@ namespace Aion.AppHost.Pages
                 var user = await db.SUser
                     .AsNoTracking()
                     .FirstOrDefaultAsync(u =>
-                        u.NormalizedUserName == Input.Username.ToUpperInvariant() &&
+                        (u.NormalizedUserName == normalizedUsername ||
+                         u.UserName == rawUsername) &&
                         u.TenantId == Input.TenantId &&
                         u.IsActive &&
                         !u.Deleted);
 
                 if (user == null)
                 {
-                    _logger.LogWarning("Utilisateur {Username} introuvable", Input.Username);
+                    _logger.LogWarning("Utilisateur {Username} introuvable", rawUsername);
                     ErrorMessage = "Identifiants incorrects.";
                     return Page();
                 }
@@ -104,7 +110,7 @@ namespace Aion.AppHost.Pages
                 // Vérification du mot de passe
                 if (!VerifyPassword(Input.Password, user.PasswordHash))
                 {
-                    _logger.LogWarning("Mot de passe incorrect pour {Username}", Input.Username);
+                    _logger.LogWarning("Mot de passe incorrect pour {Username}", rawUsername);
 
                     // CORRECTION CRITIQUE: Suppression de la logique de changement de mot de passe ici. 
                     // Si le mot de passe est incorrect, c'est un échec d'authentification.
@@ -160,7 +166,7 @@ namespace Aion.AppHost.Pages
                 // Vérification du lockout
                 if (user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTime.UtcNow)
                 {
-                    _logger.LogWarning("Compte {Username} verrouillé", Input.Username);
+                    _logger.LogWarning("Compte {Username} verrouillé", rawUsername);
                     ErrorMessage = $"Compte verrouillé jusqu'à {user.LockoutEnd.Value.ToLocalTime():HH:mm}";
                     return Page();
                 }
@@ -195,7 +201,7 @@ namespace Aion.AppHost.Pages
                     principal,
                     authProperties);
 
-                _logger.LogInformation("✅ Connexion réussie pour {Username}", Input.Username);
+                _logger.LogInformation("✅ Connexion réussie pour {Username}", rawUsername);
 
                 // Mise à jour dernière connexion
                 await UpdateLastLoginAsync(user.Id);
