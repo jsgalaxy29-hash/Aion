@@ -1,9 +1,11 @@
+@using System
 @using System.Collections.Generic
 @using System.Threading
 @using System.Linq
 @using Aion.AppHost.Services.Navigation
 @using Aion.Domain.Services.Navigation
 @using Aion.Domain.UI.Navigation
+@using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.FluentUI.AspNetCore.Components
 @using Microsoft.JSInterop
@@ -13,12 +15,15 @@
 @inject IJSRuntime Js
 @implements IAsyncDisposable
 
-<FluentDialog Visible="@_isOpen" OnDismiss="@Close" Style="--dialog-width: min(720px, 100vw);">
+<FluentDialog Hidden="@(!_isOpen)"
+              @ondialogdismiss="OnDialogDismissAsync"
+              Style="--dialog-width: min(720px, 100vw);">
     <div class="command-palette">
         <FluentTextField Value="_query"
-                          ValueChanged="OnQueryChanged"
+                          ValueChanged="OnQueryChangedAsync"
                           ValueExpression="() => _query"
                           Placeholder="Rechercher un module ou taper une commande"
+                          @oninput="OnQueryInputAsync"
                           @onkeydown="OnKeyDown"
                           Clearable="true" />
 
@@ -89,14 +94,22 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    public Task Close()
+    public Task CloseAsync()
+        => CloseInternalAsync();
+
+    private async Task CloseInternalAsync()
     {
+        if (!_isOpen)
+        {
+            return;
+        }
+
         _isOpen = false;
         _query = string.Empty;
         _results.Clear();
         _command = null;
         _activeIndex = 0;
-        return InvokeAsync(StateHasChanged);
+        await InvokeAsync(StateHasChanged);
     }
 
     [JSInvokable]
@@ -113,8 +126,19 @@
         }
     }
 
-    private async Task OnQueryChanged(string? value)
+    private Task OnQueryChangedAsync(string? value)
+        => UpdateQueryAsync(value);
+
+    private Task OnQueryInputAsync(ChangeEventArgs args)
+        => UpdateQueryAsync(args.Value?.ToString());
+
+    private async Task UpdateQueryAsync(string? value)
     {
+        if (string.Equals(_query, value, StringComparison.Ordinal))
+        {
+            return;
+        }
+
         _query = value;
         await EvaluateQueryAsync();
     }
@@ -162,7 +186,7 @@
         switch (args.Key)
         {
             case "Escape":
-                await Close();
+                await CloseAsync();
                 break;
             case "Enter":
                 await ExecuteSelectionAsync();
@@ -210,7 +234,7 @@
 
         var module = _results[index];
         await Navigation.OpenModuleAsync(module.Key, null, CancellationToken.None);
-        await Close();
+        await CloseAsync();
     }
 
     private async Task ExecuteCommandAsync()
@@ -233,8 +257,11 @@
                 break;
         }
 
-        await Close();
+        await CloseAsync();
     }
+
+    private Task OnDialogDismissAsync(DialogEventArgs args)
+        => CloseInternalAsync();
 
     private static Icon GetCommandIcon(NavigationCommandType type)
         => type switch
