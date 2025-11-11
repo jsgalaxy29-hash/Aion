@@ -56,24 +56,20 @@ var databaseProvider = builder.Configuration.GetValue<string>("DatabaseProvider"
 if (string.Equals(databaseProvider, "Sqlite", StringComparison.OrdinalIgnoreCase))
 {
     builder.Services.AddDbContextFactory<AionDbContext>((_, opt) =>
-        opt.UseSqlite(connectionString),
-        ServiceLifetime.Singleton);
+        opt.UseSqlite(connectionString));
 
     builder.Services.AddDbContextFactory<SecurityDbContext>((_, opt) =>
-        opt.UseSqlite(connectionString),
-        ServiceLifetime.Singleton);
+        opt.UseSqlite(connectionString));
 
     builder.Services.AddScoped<IDataProvider, SqliteDataProvider>();
 }
 else
 {
     builder.Services.AddDbContextFactory<AionDbContext>((_, opt) =>
-        opt.UseSqlServer(connectionString),
-        ServiceLifetime.Singleton);
+        opt.UseSqlServer(connectionString));
 
     builder.Services.AddDbContextFactory<SecurityDbContext>((_, opt) =>
-        opt.UseSqlServer(connectionString),
-        ServiceLifetime.Singleton);
+        opt.UseSqlServer(connectionString));
 
     builder.Services.AddScoped<IDataProvider, SqlDataProvider>();
 }

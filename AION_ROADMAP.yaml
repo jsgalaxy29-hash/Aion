@@ -1,6 +1,6 @@
 aion:
   name: "Aion ERP"
-  version: "0.3.x"
+  version: "0.4.0-preview"
   description: "Source de vérité modulaire : modules, menus, métabase, droits, actions, rapports, endpoints."
   regen_command: "dotnet run --project Aion.AppHost -- --regen-meta"
 
@@ -57,6 +57,27 @@ aion:
       audit_trail:
         enabled: false   # journalisation avancée (S_Audit) désactivée pour 0.3.x
 
+  multi_tenant:
+    enabled: true
+    tenant_field: "TenantId"
+
+  ai:
+    intents:
+      engine: "RuleBasedIntentRecognizer"
+      description: "Analyse les commandes naturelles et les mappe sur des intentions métiers (modules, tables, actions)."
+    planner:
+      engine: "SimplePlanner"
+      description: "Construit les étapes à exécuter pour aligner le code et la roadmap."
+    patcher:
+      engine: "YamlRoadmapPatcher"
+      description: "Génère les diffs YAML pour `AION_ROADMAP.yaml`."
+    simulator:
+      engine: "InMemorySimulator"
+      description: "Exécute le plan dans un bac à sable pour produire les artefacts (fichiers, scripts, rapports)."
+    audit:
+      table: "SAuditRecord"
+      provider: "DatabaseAuditTrailService"
+
   system_schema:
     tables:
       - name: "SUser"
@@ -107,6 +128,16 @@ aion:
         - "SField"
         - "SModule"
         - "SAction"
+      actions:
+        - code: "RefreshMetadata"
+          label: "Rafraîchir les métadonnées"
+          right: { target: "Action", flag: "Right1" }
+      reports: []
+      endpoints:
+        - method: "GET"
+          route: "/api/system/catalog/menus"
+        - method: "POST"
+          route: "/api/system/catalog/metadata/sync"
       rights:
         defaults:
           group: "Administrators"
@@ -131,6 +162,16 @@ aion:
         - "SRightType"
         - "SRight"
         - "STenant"
+      actions:
+        - code: "ResetPassword"
+          label: "Réinitialiser le mot de passe"
+          right: { target: "Action", flag: "Right1" }
+      reports:
+        - code: "SecurityAudit"
+          label: "Audit des connexions"
+      endpoints:
+        - method: "POST"
+          route: "/api/security/users/{id}/reset-password"
 
     - code: "DATA_ENGINE"
       name: "Moteur de données"
@@ -142,6 +183,11 @@ aion:
           route: "/modules/DATA_ENGINE"
           is_leaf: true
           icon: "Database"
+      tables:
+        - "SXAiConfig"
+        - "SXSynonym"
+        - "SXTemplate"
+        - "SAuditRecord"
       actions:
         - code: "RegenMetadata"
           label: "Régénérer les métadonnées"
@@ -149,6 +195,12 @@ aion:
         - code: "RebuildCache"
           label: "Reconstruire le cache"
           right: { target: "Action", flag: "Right1" }
+      reports:
+        - code: "MetadataCoverage"
+          label: "Couverture des métadonnées"
+      endpoints:
+        - method: "POST"
+          route: "/api/data-engine/refresh"
 
     - code: "ACTION_ENGINE"
       name: "Moteur d’actions"
@@ -160,6 +212,15 @@ aion:
           route: "/modules/ACTION_ENGINE"
           is_leaf: true
           icon: "Play"
+      tables: []
+      actions:
+        - code: "ExecuteScheduled"
+          label: "Exécuter les actions planifiées"
+          right: { target: "Action", flag: "Right1" }
+      reports: []
+      endpoints:
+        - method: "POST"
+          route: "/api/actions/run"
 
     - code: "REPORT_ENGINE"
       name: "Moteur de rapports"
@@ -171,7 +232,13 @@ aion:
           route: "/modules/REPORT_ENGINE"
           is_leaf: true
           icon: "BarChart"
-      reports: []   # placeholder pour 0.3.x
+      tables:
+        - "SReport"
+      actions: []
+      reports: []   # placeholder pour 0.4.x
+      endpoints:
+        - method: "POST"
+          route: "/api/reports/run"
 
     - code: "CRM"
       name: "CRM"
@@ -195,8 +262,72 @@ aion:
           route: "/modules/CRM/contacts"
           is_leaf: true
           icon: "Contact"
-      tables: []    # volontairement vide pour 0.3.x (à définir plus tard)
+      tables:
+        - "FCompany"
+        - "FContact"
+      actions:
+        - code: "ImportCompanies"
+          label: "Importer les entreprises"
+          right: { target: "Action", flag: "Right1" }
+      reports:
+        - code: "SalesPipeline"
+          label: "Pipeline des ventes"
+      endpoints:
+        - method: "GET"
+          route: "/api/crm/companies"
+        - method: "GET"
+          route: "/api/crm/contacts"
 
-  endpoints: []     # section préparée mais vide (0.3.x)
+    - code: "TABLE_MANAGER"
+      name: "Table Manager"
+      tables: [STable, SField]
+      actions:
+        - code: "InspectTable"
+          label: "Inspecter une table SQL"
+          right: { target: "Action", flag: "Right1" }
+      reports: []
+      endpoints:
+        - method: "GET"
+          route: "/api/table-manager/tables"
 
-  reports: []       # central registry optionnel, conservé vide pour 0.3.x
+    - code: "LIST_DYN"
+      name: "Dynamic List"
+      tables: []
+      actions:
+        - code: "PersistFilters"
+          label: "Sauvegarder les filtres utilisateur"
+          right: { target: "Action", flag: "Right1" }
+      reports: []
+      endpoints:
+        - method: "POST"
+          route: "/api/list-dyn/preferences"
+
+    - code: "FORM_DYN"
+      name: "Dynamic Form"
+      tables: []
+      actions:
+        - code: "ValidateLayout"
+          label: "Valider un layout dynamique"
+          right: { target: "Action", flag: "Right1" }
+      reports: []
+      endpoints:
+        - method: "POST"
+          route: "/api/form-dyn/validate"
+
+    - code: "AI_ENGINE"
+      name: "AI Engine"
+      tables: [SAudit, SAuditRecord]
+      actions:
+        - code: "GeneratePlan"
+          label: "Générer un plan IA"
+          right: { target: "Action", flag: "Right1" }
+      reports:
+        - code: "AiUsage"
+          label: "Journal des générations"
+      endpoints:
+        - method: "POST"
+          route: "/api/ai/generate"
+
+  endpoints: []     # section préparée mais vide (0.4.x)
+
+  reports: []       # central registry optionnel, conservé vide pour 0.4.x

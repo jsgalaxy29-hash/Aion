@@ -451,49 +451,44 @@ namespace Aion.DataEngine.Services
         {
             const string query = @"
                 SELECT
-                    c.COLUMN_NAME,
-                    c.COLUMN_DEFAULT,
-                    c.IS_NULLABLE,
-                    c.DATA_TYPE,
-                    c.CHARACTER_MAXIMUM_LENGTH,
-                    c.NUMERIC_PRECISION,
-                    c.NUMERIC_SCALE,
-                    CASE WHEN pk.COLUMN_NAME IS NOT NULL THEN 'Oui' ELSE 'Non' END AS IsPrimaryKey,
-                    CASE WHEN uq.COLUMN_NAME IS NOT NULL THEN 'Oui' ELSE 'Non' END AS IsUnique,
-                    fk.ReferencedTableName AS FKTable
-                FROM INFORMATION_SCHEMA.COLUMNS c
-                LEFT JOIN (
-                    SELECT ku.TABLE_NAME, ku.COLUMN_NAME
-                    FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
-                    JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE ku
-                        ON tc.CONSTRAINT_NAME = ku.CONSTRAINT_NAME
-                    WHERE tc.CONSTRAINT_TYPE = 'PRIMARY KEY'
-                ) pk ON c.TABLE_NAME = pk.TABLE_NAME AND c.COLUMN_NAME = pk.COLUMN_NAME
-                LEFT JOIN (
-                    SELECT ku.TABLE_NAME, ku.COLUMN_NAME
-                    FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
-                    JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE ku
-                        ON tc.CONSTRAINT_NAME = ku.CONSTRAINT_NAME
-                    WHERE tc.CONSTRAINT_TYPE = 'UNIQUE'
-                ) uq ON c.TABLE_NAME = uq.TABLE_NAME AND c.COLUMN_NAME = uq.COLUMN_NAME
-                LEFT JOIN (
-                    SELECT
-                        OBJECT_NAME(fk.parent_object_id)            AS TableName,
-                        pc.name                                     AS ColumnName,
-                        OBJECT_NAME(fk.referenced_object_id)        AS ReferencedTableName
-                    FROM sys.foreign_keys fk
-                    JOIN sys.foreign_key_columns fkc
-                        ON fk.object_id = fkc.constraint_object_id
-                    JOIN sys.columns pc
-                        ON fkc.parent_object_id = pc.object_id
-                       AND fkc.parent_column_id = pc.column_id
-                ) fk ON c.TABLE_NAME = fk.TableName AND c.COLUMN_NAME = fk.ColumnName
-                WHERE c.TABLE_NAME = @tableName
-                ORDER BY c.ORDINAL_POSITION;";
+                    C.TABLE_NAME,
+                    C.COLUMN_NAME,
+                    C.COLUMN_DEFAULT,
+                    C.IS_NULLABLE,
+                    C.DATA_TYPE,
+                    C.CHARACTER_MAXIMUM_LENGTH,
+                    C.NUMERIC_PRECISION,
+                    C.NUMERIC_SCALE,
+                    COLUMNPROPERTY(object_id(C.TABLE_NAME), C.COLUMN_NAME, 'IsIdentity') AS IsIdentity,
+                    CASE WHEN C.COLUMN_NAME IN (
+                        SELECT COLUMN_NAME
+                        FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+                        WHERE OBJECTPROPERTY(OBJECT_ID(CONSTRAINT_NAME), 'IsPrimaryKey') = 1
+                          AND TABLE_NAME = C.TABLE_NAME
+                    ) THEN 1 ELSE 0 END AS IsPrimaryKey,
+                    CASE WHEN C.COLUMN_NAME IN (
+                        SELECT COLUMN_NAME
+                        FROM INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE ccu
+                        JOIN INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
+                            ON tc.CONSTRAINT_NAME = ccu.CONSTRAINT_NAME
+                        WHERE tc.CONSTRAINT_TYPE = 'UNIQUE'
+                          AND ccu.TABLE_NAME = C.TABLE_NAME
+                    ) THEN 1 ELSE 0 END AS IsUnique,
+                    (
+                        SELECT FK.TABLE_NAME
+                        FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS RC
+                        JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE KCU1 ON KCU1.CONSTRAINT_NAME = RC.CONSTRAINT_NAME
+                        JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE KCU2 ON KCU2.CONSTRAINT_NAME = RC.UNIQUE_CONSTRAINT_NAME
+                        JOIN INFORMATION_SCHEMA.TABLES FK ON FK.TABLE_NAME = KCU2.TABLE_NAME
+                        WHERE KCU1.COLUMN_NAME = C.COLUMN_NAME AND KCU1.TABLE_NAME = C.TABLE_NAME
+                    ) AS ForeignKeyTable
+                FROM INFORMATION_SCHEMA.COLUMNS C
+                WHERE C.TABLE_NAME = @TableName
+                ORDER BY C.ORDINAL_POSITION;";
 
             var rows = await _db.ExecuteQueryAsync(query, new Dictionary<string, object?>
             {
-                ["@tableName"] = tableName
+                ["@TableName"] = tableName
             }).ConfigureAwait(false);
 
             var result = new List<ColumnMetadata>(rows.Rows.Count);
@@ -524,15 +519,15 @@ namespace Aion.DataEngine.Services
                     }
                 }
 
-                var fkValue = row["FKTable"];
+                var fkValue = row["ForeignKeyTable"];
                 var defaultValue = row["COLUMN_DEFAULT"];
 
                 result.Add(new ColumnMetadata(
                     row["COLUMN_NAME"].ToString()!,
                     dataType,
                     string.Equals(row["IS_NULLABLE"].ToString(), "YES", StringComparison.OrdinalIgnoreCase),
-                    string.Equals(row["IsPrimaryKey"].ToString(), "Oui", StringComparison.OrdinalIgnoreCase),
-                    string.Equals(row["IsUnique"].ToString(), "Oui", StringComparison.OrdinalIgnoreCase),
+                    Convert.ToInt32(row["IsPrimaryKey"], CultureInfo.InvariantCulture) == 1,
+                    Convert.ToInt32(row["IsUnique"], CultureInfo.InvariantCulture) == 1,
                     fkValue == null || fkValue == DBNull.Value ? null : fkValue.ToString(),
                     maxLength,
                     defaultValue == null || defaultValue == DBNull.Value ? null : defaultValue.ToString()

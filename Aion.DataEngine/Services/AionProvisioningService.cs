@@ -156,6 +156,7 @@ BEGIN
     FullName NVARCHAR(256) NULL,
     IsActive BIT NOT NULL DEFAULT(1),
     LastLoginDate DATETIME NULL,
+    MustChangePassword BIT NOT NULL DEFAULT(1),
     AccessFailedCount INT NOT NULL DEFAULT(0),
     LockoutEnd DATETIME NULL,
     TenantId INT NOT NULL DEFAULT(1),

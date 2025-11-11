@@ -104,12 +104,12 @@ BEGIN
     CREATE UNIQUE INDEX IX_SXTemplate_TemplateKey ON dbo.SXTemplate(TemplateKey);
 END";
 
-            const string ensureGenerationLogSql = @"
-IF OBJECT_ID(N'dbo.SXGenerationLog', N'U') IS NULL
+            const string ensureAuditRecordSql = @"
+IF OBJECT_ID(N'dbo.SAuditRecord', N'U') IS NULL
 BEGIN
-    CREATE TABLE dbo.SXGenerationLog
+    CREATE TABLE dbo.SAuditRecord
     (
-        Id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_SXGenerationLog PRIMARY KEY,
+        Id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_SAuditRecord PRIMARY KEY,
         TenantId INT NOT NULL DEFAULT(1),
         Actif BIT NOT NULL DEFAULT(1),
         Doc BIT NOT NULL DEFAULT(0),
@@ -135,7 +135,7 @@ END";
             await dbContext.Database.ExecuteSqlRawAsync(ensureConfigSql, cancellationToken).ConfigureAwait(false);
             await dbContext.Database.ExecuteSqlRawAsync(ensureSynonymSql, cancellationToken).ConfigureAwait(false);
             await dbContext.Database.ExecuteSqlRawAsync(ensureTemplateSql, cancellationToken).ConfigureAwait(false);
-            await dbContext.Database.ExecuteSqlRawAsync(ensureGenerationLogSql, cancellationToken).ConfigureAwait(false);
+            await dbContext.Database.ExecuteSqlRawAsync(ensureAuditRecordSql, cancellationToken).ConfigureAwait(false);
         }
     }
 

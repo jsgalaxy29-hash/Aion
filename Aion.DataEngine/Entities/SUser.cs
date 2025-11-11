@@ -4,9 +4,9 @@ using System.ComponentModel.DataAnnotations;
 namespace Aion.DataEngine.Entities
 {
     /// <summary>
-    /// Utilisateur du système Aion.
-    /// Gère l'authentification et les informations utilisateur de base.
-    /// Les droits sont gérés via l'appartenance aux groupes (<see cref="SUserGroup"/>).
+    /// Utilisateur du systÃ¨me Aion.
+    /// GÃ¨re l'authentification et les informations utilisateur de base.
+    /// Les droits sont gÃ©rÃ©s via l'appartenance aux groupes (<see cref="SUserGroup"/>).
     /// </summary>
     public class SUser : BaseEntity
     {
@@ -17,7 +17,7 @@ namespace Aion.DataEngine.Entities
         public string UserName { get; set; } = string.Empty;
 
         /// <summary>
-        /// Version normalisée du nom d'utilisateur (uppercase pour recherche).
+        /// Version normalisÃ©e du nom d'utilisateur (uppercase pour recherche).
         /// </summary>
         [MaxLength(128)]
         public string NormalizedUserName { get; set; } = string.Empty;
@@ -29,7 +29,7 @@ namespace Aion.DataEngine.Entities
         public string? Email { get; set; }
 
         /// <summary>
-        /// Version normalisée de l'email.
+        /// Version normalisÃ©e de l'email.
         /// </summary>
         [MaxLength(256)]
         public string? NormalizedEmail { get; set; }
@@ -52,17 +52,22 @@ namespace Aion.DataEngine.Entities
         public bool IsActive { get; set; } = true;
 
         /// <summary>
-        /// Date de dernière connexion.
+        /// <summary>
+        /// Indique si l'utilisateur doit changer son mot de passe lors de la prochaine connexion.
+        /// </summary>
+        public bool MustChangePassword { get; set; } = true;
+
+        /// Date de derniÃ¨re connexion.
         /// </summary>
         public DateTime? LastLoginDate { get; set; }
 
         /// <summary>
-        /// Nombre d'échecs de connexion consécutifs.
+        /// Nombre d'Ã©checs de connexion consÃ©cutifs.
         /// </summary>
         public int AccessFailedCount { get; set; } = 0;
 
         /// <summary>
-        /// Date de verrouillage du compte (si dépassement tentatives).
+        /// Date de verrouillage du compte (si dÃ©passement tentatives).
         /// </summary>
         public DateTime? LockoutEnd { get; set; }
 
