@@ -177,7 +177,15 @@ BEGIN
   PRINT 'Table SUser créée';
 END
 ELSE
+BEGIN
   PRINT 'Table SUser existe déjà';
+  IF COL_LENGTH('dbo.SUser','MustChangePassword') IS NULL
+  BEGIN
+    ALTER TABLE dbo.SUser ADD MustChangePassword BIT NOT NULL DEFAULT(1);
+    UPDATE dbo.SUser SET MustChangePassword = 1 WHERE MustChangePassword IS NULL;
+    PRINT 'Colonne MustChangePassword ajoutée à SUser';
+  END
+END
 
 -- Table SUserGroup (association user-groupe)
 IF OBJECT_ID('dbo.SUserGroup','U') IS NULL
