@@ -1,0 +1,265 @@
+@using System.Collections.Generic
+@using System.Threading
+@using System.Linq
+@using Aion.AppHost.Services.Navigation
+@using Aion.Domain.UI.Navigation
+@using Microsoft.AspNetCore.Components.Web
+@inject IAionNavigationService Navigation
+@inject IModuleCatalog ModuleCatalog
+@inject ICommandInterpreter CommandInterpreter
+@inject IJSRuntime Js
+@implements IAsyncDisposable
+
+<FluentDialog Visible="@_isOpen" OnDismiss="Close" Style="--dialog-width: min(720px, 100vw);">
+    <div class="command-palette">
+        <FluentTextField Value="_query"
+                          ValueChanged="OnQueryChanged"
+                          ValueExpression="() => _query"
+                          Placeholder="Rechercher un module ou taper une commande"
+                          OnKeyDown="OnKeyDown"
+                          Clearable="true"
+                          Size="ControlSize.Large" />
+
+        <div class="command-palette-shortcut">Ctrl + K</div>
+
+        @if (_command is not null)
+        {
+            <div class="command-palette-command" @onclick="ExecuteCommandAsync">
+                <FluentIcon Value="@GetCommandIcon(_command.Type)" />
+                <div>
+                    <strong>@GetCommandLabel(_command)</strong>
+                    @if (_command.Module is not null)
+                    {
+                        <div class="command-palette-command-sub">@_command.Module.Title</div>
+                    }
+                </div>
+            </div>
+        }
+
+        <div class="command-palette-results">
+            @if (_results.Count == 0 && _command is null)
+            {
+                <div class="command-palette-empty">Aucun module correspondant.</div>
+            }
+            else
+            {
+                @foreach (var result in _results.Select((m, index) => (Module: m, Index: index)))
+                {
+                    var isActive = result.Index == _activeIndex;
+                    <button type="button"
+                            class="command-palette-item @(isActive ? "active" : string.Empty)"
+                            @onclick="() => ExecuteModuleAsync(result.Index)">
+                        <FluentIcon Value="@(result.Module.Icon ?? "TabDesktop20Regular")" />
+                        <div>
+                            <div class="command-palette-item-title">@result.Module.Title</div>
+                            @if (!string.IsNullOrWhiteSpace(result.Module.Description))
+                            {
+                                <div class="command-palette-item-desc">@result.Module.Description</div>
+                            }
+                        </div>
+                    </button>
+                }
+            }
+        </div>
+    </div>
+</FluentDialog>
+
+@code {
+    private bool _isOpen;
+    private string? _query;
+    private readonly List<ModuleSummary> _results = new();
+    private NavigationCommand? _command;
+    private int _activeIndex;
+    private IJSObjectReference? _jsModule;
+    private DotNetObjectReference<CommandPalette>? _selfRef;
+
+    public async Task OpenAsync()
+    {
+        if (_isOpen)
+        {
+            return;
+        }
+
+        _isOpen = true;
+        _query = string.Empty;
+        _activeIndex = 0;
+        await EvaluateQueryAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public Task Close()
+    {
+        _isOpen = false;
+        _query = string.Empty;
+        _results.Clear();
+        _command = null;
+        _activeIndex = 0;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public Task ShowFromShortcut()
+        => OpenAsync();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _jsModule = await Js.InvokeAsync<IJSObjectReference>("import", "./js/navigation.js");
+            _selfRef = DotNetObjectReference.Create(this);
+            await _jsModule.InvokeVoidAsync("registerCommandPalette", _selfRef);
+        }
+    }
+
+    private async Task OnQueryChanged(string? value)
+    {
+        _query = value;
+        await EvaluateQueryAsync();
+    }
+
+    private async Task EvaluateQueryAsync()
+    {
+        if (!_isOpen)
+        {
+            return;
+        }
+
+        _results.Clear();
+        _command = null;
+
+        if (!string.IsNullOrWhiteSpace(_query))
+        {
+            _command = await CommandInterpreter.TryInterpretAsync(_query, ModuleCatalog, CancellationToken.None);
+            var modules = await ModuleCatalog.SearchAsync(_query, 8, CancellationToken.None);
+            _results.AddRange(modules);
+        }
+        else
+        {
+            var modules = await ModuleCatalog.GetModulesAsync(CancellationToken.None);
+            _results.AddRange(modules.Take(8));
+        }
+
+        if (_results.Count == 0)
+        {
+            _activeIndex = -1;
+        }
+        else if (_activeIndex < 0)
+        {
+            _activeIndex = 0;
+        }
+        else if (_activeIndex >= _results.Count)
+        {
+            _activeIndex = _results.Count - 1;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs args)
+    {
+        switch (args.Key)
+        {
+            case "Escape":
+                await Close();
+                break;
+            case "Enter":
+                await ExecuteSelectionAsync();
+                break;
+            case "ArrowDown":
+                MoveSelection(1);
+                break;
+            case "ArrowUp":
+                MoveSelection(-1);
+                break;
+        }
+    }
+
+    private void MoveSelection(int delta)
+    {
+        if (_results.Count == 0)
+        {
+            return;
+        }
+
+        _activeIndex = (_activeIndex + delta + _results.Count) % _results.Count;
+        StateHasChanged();
+    }
+
+    private async Task ExecuteSelectionAsync()
+    {
+        if (_command is not null && (_command.Type == NavigationCommandType.CloseAll || _command.Module is not null))
+        {
+            await ExecuteCommandAsync();
+            return;
+        }
+
+        if (_activeIndex >= 0 && _activeIndex < _results.Count)
+        {
+            await ExecuteModuleAsync(_activeIndex);
+        }
+    }
+
+    private async Task ExecuteModuleAsync(int index)
+    {
+        if (index < 0 || index >= _results.Count)
+        {
+            return;
+        }
+
+        var module = _results[index];
+        await Navigation.OpenModuleAsync(module.Key, null, CancellationToken.None);
+        await Close();
+    }
+
+    private async Task ExecuteCommandAsync()
+    {
+        if (_command is null)
+        {
+            return;
+        }
+
+        switch (_command.Type)
+        {
+            case NavigationCommandType.OpenModule when _command.Module is not null:
+                await Navigation.OpenModuleAsync(_command.Module.Key, null, CancellationToken.None);
+                break;
+            case NavigationCommandType.CloseModule when _command.Module is not null:
+                await Navigation.CloseModuleAsync(_command.Module.Key, CancellationToken.None);
+                break;
+            case NavigationCommandType.CloseAll:
+                await Navigation.CloseAllAsync(CancellationToken.None);
+                break;
+        }
+
+        await Close();
+    }
+
+    private static string GetCommandIcon(NavigationCommandType type)
+        => type switch
+        {
+            NavigationCommandType.OpenModule => "ArrowEnter20Regular",
+            NavigationCommandType.CloseModule => "Dismiss20Regular",
+            NavigationCommandType.CloseAll => "TabProhibited20Regular",
+            _ => "TextBulletList20Regular"
+        };
+
+    private static string GetCommandLabel(NavigationCommand command)
+        => command.Type switch
+        {
+            NavigationCommandType.OpenModule when command.Module is not null => $"Ouvrir {command.Module.Title}",
+            NavigationCommandType.CloseModule when command.Module is not null => $"Fermer {command.Module.Title}",
+            NavigationCommandType.CloseAll => "Fermer tous les modules",
+            _ => string.Empty
+        };
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_jsModule is not null)
+        {
+            await _jsModule.InvokeVoidAsync("disposeCommandPalette");
+            await _jsModule.DisposeAsync();
+        }
+
+        _selfRef?.Dispose();
+    }
+}

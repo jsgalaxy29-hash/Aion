@@ -1,7 +1,8 @@
 @page "/dynamic/manager"
 @using Microsoft.EntityFrameworkCore
 @inject IDbContextFactory<Aion.Infrastructure.AionDbContext> DbFactory
-@inject ITabService Tabs
+@inject IAionNavigationService Navigation
+@inject IModuleCatalog ModuleCatalog
 
 <FluentLabel Typo="Typography.PageTitle">Mes tables</FluentLabel>
 
@@ -73,7 +74,13 @@ else
 
     private async Task OpenTableAsync(STable table)
     {
+        var module = await ModuleCatalog.TryGetByRouteAsync("/dynamic/list", CancellationToken.None);
+        if (module is null)
+        {
+            return;
+        }
+
         var parameters = new Dictionary<string, object?> { ["TableName"] = table.Libelle };
-        await Tabs.OpenAsync(table.Description ?? table.Libelle, "/dynamic/list", parameters, true, CancellationToken.None);
+        await Navigation.OpenModuleAsync(module.Key, parameters, CancellationToken.None);
     }
 }

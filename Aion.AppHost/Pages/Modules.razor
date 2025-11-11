@@ -1,0 +1,207 @@
+@page "/modules"
+@using Aion.AppHost.Services.Navigation
+@using Aion.Domain.UI.Navigation
+@using Microsoft.FluentUI.AspNetCore.Components
+@inject IModuleCatalog ModuleCatalog
+@inject IAionNavigationService Navigation
+@inject AionNavigationState NavigationState
+
+<PageTitle>Modules</PageTitle>
+
+<FluentStack Orientation="Orientation.Vertical" Gap="16">
+    <FluentTextField Placeholder="Rechercher un module" Value="_search" ValueChanged="OnSearchChanged" ValueExpression="() => _search" Clearable="true" />
+
+    @if (_isLoading)
+    {
+        <FluentProgressRing />
+    }
+    else if (_modules.Count == 0)
+    {
+        <FluentMessageBar Intent="MessageIntent.Warning">Aucun module disponible.</FluentMessageBar>
+    }
+    else
+    {
+        @if (_recentModules.Count > 0)
+        {
+            <section class="modules-section">
+                <h3>Récents</h3>
+                <div class="modules-grid">
+                    @foreach (var module in _recentModules)
+                    {
+                        @RenderModuleCard(module)
+                    }
+                </div>
+            </section>
+        }
+
+        @if (_favoriteModules.Count > 0)
+        {
+            <section class="modules-section">
+                <h3>Favoris</h3>
+                <div class="modules-grid">
+                    @foreach (var module in _favoriteModules)
+                    {
+                        @RenderModuleCard(module)
+                    }
+                </div>
+            </section>
+        }
+
+        @foreach (var group in _groupedModules)
+        {
+            if (group.Value.Count == 0)
+            {
+                continue;
+            }
+
+            <section class="modules-section">
+                <h3>@group.Key</h3>
+                <div class="modules-grid">
+                    @foreach (var module in group.Value)
+                    {
+                        @RenderModuleCard(module)
+                    }
+                </div>
+            </section>
+        }
+    }
+</FluentStack>
+
+@code {
+    private readonly List<ModuleSummary> _modules = new();
+    private readonly List<ModuleSummary> _recentModules = new();
+    private readonly List<ModuleSummary> _favoriteModules = new();
+    private readonly Dictionary<string, List<ModuleSummary>> _groupedModules = new();
+    private string? _search;
+    private bool _isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadModulesAsync();
+    }
+
+    private async Task LoadModulesAsync()
+    {
+        _isLoading = true;
+        StateHasChanged();
+
+        var modules = await ModuleCatalog.GetModulesAsync(CancellationToken.None);
+        _modules.Clear();
+        _modules.AddRange(modules);
+
+        await LoadRecentAsync();
+        LoadFavorites();
+        GroupModules();
+
+        _isLoading = false;
+    }
+
+    private async Task LoadRecentAsync()
+    {
+        _recentModules.Clear();
+        foreach (var key in NavigationState.RecentModuleKeys)
+        {
+            var module = await ModuleCatalog.TryGetByKeyAsync(key, CancellationToken.None);
+            if (module is not null)
+            {
+                _recentModules.Add(module);
+            }
+        }
+    }
+
+    private void LoadFavorites()
+    {
+        _favoriteModules.Clear();
+        foreach (var module in _modules.Where(m => NavigationState.IsFavorite(m.Key)))
+        {
+            _favoriteModules.Add(module);
+        }
+    }
+
+    private void GroupModules()
+    {
+        _groupedModules.Clear();
+        var query = string.IsNullOrWhiteSpace(_search)
+            ? _modules
+            : _modules.Where(m => MatchesSearch(m, _search));
+
+        foreach (var group in query.GroupBy(m => string.IsNullOrWhiteSpace(m.Group) ? "Autres" : m.Group))
+        {
+            _groupedModules[group.Key] = group
+                .Where(m => !_favoriteModules.Any(f => f.Key == m.Key) && !_recentModules.Any(r => r.Key == m.Key))
+                .OrderBy(m => m.Title)
+                .ToList();
+        }
+    }
+
+    private static bool MatchesSearch(ModuleSummary module, string term)
+        => module.Title.Contains(term, StringComparison.OrdinalIgnoreCase)
+           || (!string.IsNullOrWhiteSpace(module.Description) && module.Description.Contains(term, StringComparison.OrdinalIgnoreCase));
+
+    private void OnSearchChanged(string? value)
+    {
+        _search = value;
+        GroupModules();
+        StateHasChanged();
+    }
+
+    private RenderFragment RenderModuleCard(ModuleSummary module) => builder =>
+    {
+        var sequence = 0;
+        builder.OpenComponent<FluentCard>(sequence++);
+        builder.AddAttribute(sequence++, "Class", "module-card");
+        builder.AddAttribute(sequence++, "ChildContent", (RenderFragment)(childBuilder =>
+        {
+            var childSeq = 0;
+            childBuilder.OpenElement(childSeq++, "header");
+            childBuilder.AddContent(childSeq++, module.Title);
+            if (!string.IsNullOrWhiteSpace(module.Icon))
+            {
+                childBuilder.OpenComponent<FluentIcon>(childSeq++);
+                childBuilder.AddAttribute(childSeq++, "Value", module.Icon);
+                childBuilder.CloseComponent();
+            }
+            childBuilder.CloseElement();
+
+            if (!string.IsNullOrWhiteSpace(module.Description))
+            {
+                childBuilder.OpenElement(childSeq++, "p");
+                childBuilder.AddContent(childSeq++, module.Description);
+                childBuilder.CloseElement();
+            }
+
+            childBuilder.OpenElement(childSeq++, "div");
+            childBuilder.AddAttribute(childSeq++, "class", "module-actions");
+            childBuilder.OpenComponent<FluentButton>(childSeq++);
+            childBuilder.AddAttribute(childSeq++, "Appearance", Appearance.Accent);
+            childBuilder.AddAttribute(childSeq++, "ChildContent", (RenderFragment)(b =>
+            {
+                b.AddContent(0, "Ouvrir");
+            }));
+            childBuilder.AddAttribute(childSeq++, "OnClick", EventCallback.Factory.Create(this, () => OpenModuleAsync(module)));
+            childBuilder.CloseComponent();
+
+            childBuilder.OpenComponent<FluentButton>(childSeq++);
+            childBuilder.AddAttribute(childSeq++, "Appearance", Appearance.Stealth);
+            childBuilder.AddAttribute(childSeq++, "StartIcon", NavigationState.IsFavorite(module.Key) ? "Star24Filled" : "Star24Regular");
+            childBuilder.AddAttribute(childSeq++, "ChildContent", (RenderFragment)(b => b.AddContent(0, NavigationState.IsFavorite(module.Key) ? "Favori" : "Ajouter")));
+            childBuilder.AddAttribute(childSeq++, "OnClick", EventCallback.Factory.Create(this, () => ToggleFavorite(module)));
+            childBuilder.CloseComponent();
+            childBuilder.CloseElement();
+        }));
+        builder.CloseComponent();
+    };
+
+    private async Task OpenModuleAsync(ModuleSummary module)
+    {
+        await Navigation.OpenModuleAsync(module.Key, null, CancellationToken.None);
+    }
+
+    private void ToggleFavorite(ModuleSummary module)
+    {
+        NavigationState.ToggleFavorite(module.Key);
+        LoadFavorites();
+        GroupModules();
+        StateHasChanged();
+    }
+}

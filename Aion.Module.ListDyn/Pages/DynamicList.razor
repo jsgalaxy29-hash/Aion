@@ -1,7 +1,8 @@
 @page "/dynamic/list"
 @page "/dynamic/list/{TableName}"
 @inject IDataEngine DataEngine
-@inject ITabService Tabs
+@inject IAionNavigationService Navigation
+@inject IModuleCatalog ModuleCatalog
 
 <FluentLabel Typo="Typography.PageTitle">@(_tableTitle ?? TableName ?? "Liste dynamique")</FluentLabel>
 
@@ -83,6 +84,12 @@ else
             ["PrimaryKey"] = row.PrimaryKeyName
         };
 
-        await Tabs.OpenAsync(title, "/dynamic/form", parameters, true, CancellationToken.None);
+        var module = await ModuleCatalog.TryGetByRouteAsync("/dynamic/form", CancellationToken.None);
+        if (module is null)
+        {
+            return;
+        }
+
+        await Navigation.OpenModuleAsync(module.Key, parameters, CancellationToken.None);
     }
 }
