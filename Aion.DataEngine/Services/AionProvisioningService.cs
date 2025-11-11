@@ -1173,6 +1173,59 @@ BEGIN
       Actif = 1
   WHERE ID = @tableManagerModuleId;
 END
+DECLARE @adminRootMenuId INT = (SELECT ID FROM dbo.SMenu WHERE Libelle = 'Administration' AND TenantId = 1);
+IF @adminRootMenuId IS NULL
+BEGIN
+  INSERT INTO dbo.SMenu(ParentId, ModuleId, Libelle, IsLeaf, Icon, Parametre, [Order], TenantId, Actif, Doc, Deleted, DtCreation)
+  VALUES(NULL, NULL, 'Administration', 0, 'Settings20Regular', NULL, ISNULL(@adminOrder, 900), 1, 1, 0, 0, @utcNow);
+  SET @adminRootMenuId = SCOPE_IDENTITY();
+END
+ELSE
+BEGIN
+  UPDATE dbo.SMenu
+  SET ParentId = NULL,
+      ModuleId = NULL,
+      Libelle = 'Administration',
+      IsLeaf = 0,
+      Icon = COALESCE(Icon, 'Settings20Regular'),
+      [Order] = CASE WHEN [Order] IS NULL OR [Order] = 0 THEN ISNULL(@adminOrder, 900) ELSE [Order] END,
+      Deleted = 0,
+      Actif = 1
+  WHERE ID = @adminRootMenuId;
+END
+
+DECLARE @listDynMenuId INT = (SELECT ID FROM dbo.SMenu WHERE ModuleId = @listDynModuleId AND TenantId = 1);
+IF @listDynMenuId IS NULL
+BEGIN
+  INSERT INTO dbo.SMenu(ParentId, ModuleId, Libelle, IsLeaf, Icon, Parametre, [Order], TenantId, Actif, Doc, Deleted, DtCreation)
+  VALUES(@adminRootMenuId, @listDynModuleId, 'Liste dynamique', 1, 'Apps20Regular', NULL, ISNULL(@listOrder, ISNULL(@rightsOrder, ISNULL(@adminOrder, 900) + 1) + 1), 1, 1, 0, 0, @utcNow);
+  SET @listDynMenuId = SCOPE_IDENTITY();
+END
+ELSE
+BEGIN
+  UPDATE dbo.SMenu
+  SET ParentId = @adminRootMenuId,
+      ModuleId = @listDynModuleId,
+      Libelle = 'Liste dynamique',
+      IsLeaf = 1,
+      Icon = COALESCE(Icon, 'Apps20Regular'),
+      Parametre = NULL,
+      [Order] = CASE WHEN [Order] IS NULL OR [Order] = 0 THEN ISNULL(@listOrder, ISNULL(@rightsOrder, ISNULL(@adminOrder, 900) + 1) + 1) ELSE [Order] END,
+      Deleted = 0,
+      Actif = 1
+  WHERE ID = @listDynMenuId;
+END
+
+DECLARE @adminGroupId INT = (SELECT TOP 1 ID FROM dbo.SGroup WHERE TenantId = 1 AND Name IN ('Administrateurs', 'Administrateur'));
+IF @adminGroupId IS NOT NULL AND @listDynMenuId IS NOT NULL
+BEGIN
+  IF NOT EXISTS(SELECT 1 FROM dbo.SRight WHERE GroupId = @adminGroupId AND Target = 'Menu' AND SubjectId = @listDynMenuId)
+  BEGIN
+    INSERT INTO dbo.SRight(GroupId, Target, SubjectId, Right1, TenantId, Actif, Doc, Deleted, DtCreation)
+    VALUES(@adminGroupId, 'Menu', @listDynMenuId, 1, 1, 1, 0, 0, @utcNow);
+  END
+END
+
 ";
 
         private static string SqlEnsureAgendaModule() => @"
