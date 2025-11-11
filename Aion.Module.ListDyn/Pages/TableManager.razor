@@ -30,10 +30,10 @@ else
             @foreach (var table in FilterTables())
             {
                 <tr>
-                    <FluentLabel>@table.Libelle</FluentLabel>
-                    <FluentLabel>@table.Description</FluentLabel>
+                    <td><FluentLabel>@table.Libelle</FluentLabel></td>
+                    <td><FluentLabel>@table.Description</FluentLabel></td>
                     <td class="text-end">
-                        <FluentButton Appearance="Appearance.Accent" OnClick="() => OpenTableAsync(table)" Size="ControlSize.Small">Ouvrir</FluentButton>
+                        <FluentButton Appearance="Appearance.Accent" OnClick="@(() => OpenTableAsync(table))" Size="ControlSize.Small">Ouvrir</FluentButton>
                     </td>
                 </tr>
             }
