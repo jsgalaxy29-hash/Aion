@@ -1,14 +1,7 @@
 @page "/agenda"
-@using Aion.DataEngine.Interfaces
-@using Aion.Infrastructure
-@using Microsoft.AspNetCore.Authorization
-@using Microsoft.EntityFrameworkCore
-@using Microsoft.AspNetCore.Components.Forms
-@using Microsoft.FluentUI.AspNetCore.Components
-@using Microsoft.JSInterop
+@* UI partagée : composant Agenda utilisé par Aion.AppHost et Aion.Mobile *@
 @using System.Globalization
 @using System.Linq
-@using Aion.Domain.Agenda
 @inject IAgendaService AgendaService
 @inject IUserContext UserContext
 @inject IDbContextFactory<AionDbContext> DbContextFactory
