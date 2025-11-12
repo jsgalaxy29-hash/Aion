@@ -21,15 +21,19 @@
 
         body {
             font-family: 'Orbitron', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: radial-gradient(circle at top left, rgba(212, 175, 55, 0.15), transparent 40%),
-                        radial-gradient(circle at bottom right, rgba(212, 175, 55, 0.1), transparent 35%),
-                        #050505;
+            background: #050505;
+            background-image:
+                radial-gradient(circle at top left, rgba(212, 175, 55, 0.18), transparent 42%),
+                radial-gradient(circle at bottom right, rgba(212, 175, 55, 0.12), transparent 38%),
+                linear-gradient(140deg, rgba(212, 175, 55, 0.08) 0%, rgba(0, 0, 0, 0) 40%),
+                repeating-linear-gradient(135deg, rgba(212, 175, 55, 0.04) 0, rgba(212, 175, 55, 0.04) 1px, transparent 1px, transparent 26px),
+                #050505;
             color: #f7f3e3;
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 1.5rem;
+            padding: clamp(1.25rem, 2vw, 2.75rem);
             position: relative;
             overflow: hidden;
         }
@@ -38,155 +42,234 @@
         body::after {
             content: '';
             position: absolute;
-            width: 280px;
-            height: 280px;
-            border: 1px solid rgba(212, 175, 55, 0.4);
-            border-radius: 50%;
-            filter: blur(1px);
+            inset: -20vh;
+            background: radial-gradient(circle at center, rgba(212, 175, 55, 0.12), transparent 55%);
+            mix-blend-mode: screen;
+            opacity: 0.55;
+            filter: blur(120px);
             z-index: 0;
         }
 
-        body::before {
-            top: -120px;
-            right: -80px;
+        body::after {
+            inset: auto -40vw -40vh auto;
+            width: 70vw;
+            height: 70vh;
+            background: conic-gradient(from 120deg, rgba(212, 175, 55, 0.35), rgba(212, 175, 55, 0));
+            filter: blur(140px);
+            opacity: 0.45;
+            animation: aurora 22s linear infinite;
         }
 
-        body::after {
-            bottom: -140px;
-            left: -100px;
+        @keyframes aurora {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            50% {
+                transform: rotate(180deg) scale(1.05);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         .login-card {
-            background: linear-gradient(145deg, rgba(10, 10, 10, 0.85), rgba(10, 10, 10, 0.6));
-            padding: 2.75rem 2.5rem;
-            border-radius: 20px;
-            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+            background:
+                linear-gradient(155deg, rgba(12, 12, 12, 0.88), rgba(8, 8, 8, 0.65)) padding-box,
+                linear-gradient(155deg, rgba(212, 175, 55, 0.38), rgba(57, 43, 8, 0.2)) border-box;
+            padding: 3rem 2.75rem;
+            border-radius: 22px;
+            box-shadow: 0 40px 90px rgba(0, 0, 0, 0.65), 0 0 80px rgba(212, 175, 55, 0.08);
             width: 100%;
-            max-width: 460px;
-            border: 1px solid rgba(212, 175, 55, 0.3);
+            max-width: 480px;
+            border: 1px solid transparent;
             position: relative;
             overflow: hidden;
-            backdrop-filter: blur(12px);
+            backdrop-filter: blur(14px) saturate(135%);
+            z-index: 1;
         }
 
         .login-card::before {
             content: '';
             position: absolute;
             inset: 1px;
-            border-radius: 18px;
-            border: 1px solid rgba(212, 175, 55, 0.12);
+            border-radius: 20px;
+            border: 1px solid rgba(212, 175, 55, 0.16);
+            background: linear-gradient(160deg, rgba(212, 175, 55, 0.18), rgba(18, 18, 18, 0.2) 50%, rgba(212, 175, 55, 0.05));
+            opacity: 0.45;
+            pointer-events: none;
+        }
+
+        .login-card::after {
+            content: '';
+            position: absolute;
+            top: -40%;
+            right: -35%;
+            width: 65%;
+            height: 65%;
+            background: radial-gradient(circle at center, rgba(255, 227, 137, 0.45), rgba(255, 227, 137, 0));
+            filter: blur(40px);
+            opacity: 0.55;
             pointer-events: none;
         }
 
         .login-header {
             text-align: center;
-            margin-bottom: 2.5rem;
+            margin-bottom: 2.75rem;
             position: relative;
             z-index: 1;
         }
 
             .login-header h1 {
-                font-size: 2.2rem;
+                font-size: 2.35rem;
                 font-weight: 600;
-                margin-bottom: 0.75rem;
-                letter-spacing: 0.1em;
-                color: #f5cf75;
+                margin-bottom: 0.85rem;
+                letter-spacing: 0.12em;
                 text-transform: uppercase;
+                background: linear-gradient(92deg, #fff2b7 0%, #f5cf75 45%, #b88f2f 100%);
+                -webkit-background-clip: text;
+                color: transparent;
+                text-shadow: 0 0 22px rgba(245, 207, 117, 0.45);
             }
 
             .login-header p {
-                color: rgba(247, 243, 227, 0.75);
+                color: rgba(247, 243, 227, 0.78);
                 font-size: 1rem;
-                letter-spacing: 0.08em;
+                letter-spacing: 0.09em;
+                text-transform: uppercase;
+                text-shadow: 0 0 18px rgba(212, 175, 55, 0.15);
             }
 
         .form-group {
-            margin-bottom: 1.75rem;
+            margin-bottom: 1.85rem;
             position: relative;
             z-index: 1;
         }
 
             .form-group label {
                 display: block;
-                margin-bottom: 0.6rem;
-                color: rgba(247, 243, 227, 0.85);
+                margin-bottom: 0.65rem;
+                color: rgba(247, 243, 227, 0.88);
                 font-weight: 500;
-                letter-spacing: 0.06em;
+                letter-spacing: 0.07em;
                 text-transform: uppercase;
-                font-size: 0.8rem;
+                font-size: 0.78rem;
+                transition: color 0.3s ease, text-shadow 0.3s ease;
             }
 
             .form-group input {
                 width: 100%;
-                padding: 0.85rem 1.1rem;
-                border: 1px solid rgba(212, 175, 55, 0.25);
-                border-radius: 10px;
+                padding: 0.95rem 1.15rem;
+                border-radius: 12px;
                 font-size: 1rem;
-                background: rgba(8, 8, 8, 0.6);
+                background:
+                    linear-gradient(160deg, rgba(14, 14, 14, 0.92), rgba(10, 10, 10, 0.65)) padding-box,
+                    linear-gradient(160deg, rgba(212, 175, 55, 0.35), rgba(48, 36, 6, 0.2)) border-box;
+                border: 1px solid transparent;
                 color: #f7f3e3;
-                transition: border-color 0.3s ease, box-shadow 0.3s ease;
+                transition: border 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
                 letter-spacing: 0.03em;
+                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 20px 40px rgba(0, 0, 0, 0.45);
             }
 
                 .form-group input::placeholder {
-                    color: rgba(247, 243, 227, 0.35);
+                    color: rgba(247, 243, 227, 0.3);
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
                 }
 
                 .form-group input:focus {
                     outline: none;
-                    border-color: rgba(212, 175, 55, 0.8);
-                    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.25);
-                    background: rgba(8, 8, 8, 0.8);
+                    border: 1px solid rgba(245, 207, 117, 0.85);
+                    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 0 4px rgba(212, 175, 55, 0.22);
+                    background:
+                        linear-gradient(160deg, rgba(18, 18, 18, 0.95), rgba(10, 10, 10, 0.75)) padding-box,
+                        linear-gradient(160deg, rgba(245, 207, 117, 0.65), rgba(184, 146, 47, 0.4)) border-box;
                 }
 
                 .form-group input:disabled {
-                    background-color: rgba(40, 40, 40, 0.6);
+                    background: rgba(26, 26, 26, 0.75);
+                    border-color: rgba(90, 70, 24, 0.25);
                     cursor: not-allowed;
+                    box-shadow: none;
+                    color: rgba(247, 243, 227, 0.55);
                 }
+
+            .form-group:focus-within label {
+                color: #f5cf75;
+                text-shadow: 0 0 18px rgba(245, 207, 117, 0.35);
+            }
 
         .checkbox-group {
             display: flex;
             align-items: center;
-            gap: 0.6rem;
-            margin-bottom: 1.75rem;
+            gap: 0.65rem;
+            margin-bottom: 1.85rem;
             position: relative;
             z-index: 1;
-            color: rgba(247, 243, 227, 0.75);
-            font-size: 0.9rem;
-            letter-spacing: 0.04em;
+            color: rgba(247, 243, 227, 0.78);
+            font-size: 0.88rem;
+            letter-spacing: 0.05em;
         }
 
             .checkbox-group input[type="checkbox"] {
                 width: auto;
                 accent-color: #f5cf75;
+                box-shadow: 0 0 12px rgba(245, 207, 117, 0.2);
             }
 
         .btn-login {
             width: 100%;
-            padding: 0.9rem 1.1rem;
-            background: linear-gradient(135deg, #f5cf75, #b8922f);
+            padding: 1rem 1.2rem;
+            background: linear-gradient(120deg, #ffe7a8, #f5cf75 45%, #b98c2f 100%);
             color: #060606;
             border: none;
-            border-radius: 12px;
-            font-size: 1rem;
+            border-radius: 14px;
+            font-size: 1.05rem;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.25s ease, box-shadow 0.25s ease;
-            letter-spacing: 0.08em;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            letter-spacing: 0.09em;
             text-transform: uppercase;
-            box-shadow: 0 15px 30px rgba(181, 137, 47, 0.35);
+            box-shadow: 0 22px 45px rgba(181, 137, 47, 0.42);
+            position: relative;
+            overflow: hidden;
+            isolation: isolate;
         }
 
+            .btn-login::after {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -120%;
+                width: 120%;
+                height: 100%;
+                background: linear-gradient(100deg, transparent 0%, rgba(255, 255, 255, 0.35) 50%, transparent 100%);
+                transform: skewX(-18deg);
+                transition: transform 0.45s ease;
+                mix-blend-mode: screen;
+            }
+
             .btn-login:hover {
-                transform: translateY(-2px) scale(1.01);
-                box-shadow: 0 20px 40px rgba(181, 137, 47, 0.45);
+                transform: translateY(-3px) scale(1.015);
+                box-shadow: 0 30px 55px rgba(181, 137, 47, 0.55);
+            }
+
+            .btn-login:hover::after {
+                transform: translateX(210%) skewX(-18deg);
+            }
+
+            .btn-login:focus-visible {
+                outline: none;
+                box-shadow: 0 0 0 4px rgba(245, 207, 117, 0.35);
             }
 
             .btn-login:disabled {
-                background: linear-gradient(135deg, rgba(245, 207, 117, 0.6), rgba(184, 146, 47, 0.6));
+                background: linear-gradient(120deg, rgba(245, 207, 117, 0.58), rgba(184, 146, 47, 0.54));
                 cursor: not-allowed;
                 box-shadow: none;
-                opacity: 0.7;
+                opacity: 0.65;
             }
 
         .alert {
@@ -218,36 +301,62 @@
         .login-footer {
             margin-top: 2.5rem;
             padding-top: 1.75rem;
-            border-top: 1px solid rgba(212, 175, 55, 0.25);
+            border-top: 1px solid rgba(212, 175, 55, 0.28);
             text-align: center;
-            font-size: 0.85rem;
-            color: rgba(247, 243, 227, 0.65);
-            letter-spacing: 0.06em;
+            font-size: 0.86rem;
+            color: rgba(247, 243, 227, 0.7);
+            letter-spacing: 0.08em;
             position: relative;
             z-index: 1;
         }
 
+            .login-footer::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                width: 72%;
+                height: 2px;
+                background: linear-gradient(90deg, rgba(212, 175, 55, 0), rgba(245, 207, 117, 0.6), rgba(212, 175, 55, 0));
+                filter: blur(0.5px);
+            }
+
             .login-footer strong {
                 color: #f5cf75;
                 font-weight: 600;
+                letter-spacing: 0.12em;
             }
 
             .login-footer .warning {
                 color: #ff8d8d;
                 font-weight: 600;
+                letter-spacing: 0.1em;
             }
 
-        media (max-width: 520px) {
+        @media (max-width: 520px) {
             body {
-                padding: 1rem;
+                padding: 1.2rem;
             }
 
             .login-card {
-                padding: 2.25rem 1.75rem;
+                padding: 2.35rem 1.85rem;
             }
 
             .login-header h1 {
-                font-size: 1.8rem;
+                font-size: 1.9rem;
+            }
+
+            .checkbox-group {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.45rem;
+                font-size: 0.85rem;
+            }
+
+            .btn-login {
+                font-size: 0.95rem;
+                padding: 0.9rem 1rem;
             }
         }
     </style>
