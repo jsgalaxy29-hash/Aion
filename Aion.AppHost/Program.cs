@@ -44,8 +44,7 @@ builder.Services.AddFluentUIComponents();
 
 // ===== Services Blazor + Razor Pages =====
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents()
-    .AddAdditionalAssemblies(typeof(Agenda).Assembly); // UI partagée : inclusion du composant Agenda
+    .AddInteractiveServerComponents();
 
 builder.Services.AddRazorPages(); // IMPORTANT pour Login.cshtml
 builder.Services.AddHttpClient();
@@ -208,7 +207,8 @@ using (var scope = app.Services.CreateScope())
 
 // ===== Mapping =====
 app.MapRazorComponents<App>()
-   .AddInteractiveServerRenderMode();
+   .AddInteractiveServerRenderMode()
+   .AddAdditionalAssemblies(typeof(Agenda).Assembly); // UI partagée : inclusion du composant Agenda
 
 app.MapRazorPages(); // IMPORTANT pour /login
 
