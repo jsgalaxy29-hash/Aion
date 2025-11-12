@@ -25,6 +25,7 @@
     <ProjectReference Include="..\Aion.Domain\Aion.Domain.csproj" />
     <ProjectReference Include="..\Aion.Infrastructure\Aion.Infrastructure.csproj" />
     <ProjectReference Include="..\Aion.Security\Aion.Security.csproj" />
+    <ProjectReference Include="..\Aion.UI\Aion.UI.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.0" />

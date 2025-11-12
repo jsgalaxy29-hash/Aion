@@ -35,6 +35,7 @@ using Aion.Infrastructure.Services.Agenda;
 using Aion.AppHost.Services.Navigation;
 using Aion.Domain.UI.Navigation;
 using Aion.Domain.Services.Navigation;
+using Aion.UI.Components.Agenda;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -43,7 +44,8 @@ builder.Services.AddFluentUIComponents();
 
 // ===== Services Blazor + Razor Pages =====
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+    .AddInteractiveServerComponents()
+    .AddAdditionalAssemblies(typeof(Agenda).Assembly); // UI partagée : inclusion du composant Agenda
 
 builder.Services.AddRazorPages(); // IMPORTANT pour Login.cshtml
 builder.Services.AddHttpClient();
