@@ -44,6 +44,27 @@ public static class MauiProgram
         builder.Services.AddSingleton<IClock, SystemClock>();
         builder.Services.AddScoped<IAgendaService, AgendaService>();
 
-        return builder.Build();
+        var app = builder.Build();
+
+        InitializeLocalDatabases(app.Services);
+
+        return app;
+    }
+
+    private static void InitializeLocalDatabases(IServiceProvider services)
+    {
+        using var scope = services.CreateScope();
+        var logger = scope.ServiceProvider.GetService<ILoggerFactory>()?.CreateLogger(nameof(MauiProgram));
+
+        void EnsureDatabaseCreated<TContext>() where TContext : DbContext
+        {
+            var factory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<TContext>>();
+            using var context = factory.CreateDbContext();
+            context.Database.EnsureCreated();
+            logger?.LogInformation("Local database ready for {Context}", typeof(TContext).Name);
+        }
+
+        EnsureDatabaseCreated<AionDbContext>();
+        EnsureDatabaseCreated<SecurityDbContext>();
     }
 }
