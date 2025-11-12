@@ -1,0 +1,23 @@
+@page "/"
+@inject IAgendaService AgendaService
+
+<PageTitle>Aion Mobile</PageTitle>
+
+<h2>Bienvenue sur Aion Mobile</h2>
+<!-- Page de démonstration pour valider la DI avec le domaine existant. -->
+<p>Ce module MAUI Blazor hybride réutilise la logique métier existante.</p>
+
+<section class="home-section">
+    <p><strong>Service injecté :</strong> @AgendaService.GetType().Name</p>
+    <p><strong>Événement de démonstration :</strong> @_exemple.Libelle (@_exemple.StartUtc:u)</p>
+</section>
+
+@code {
+    private readonly SAgendaEvent _exemple = new()
+    {
+        AgendaId = 1,
+        Libelle = "Réunion d'équipe",
+        StartUtc = DateTime.UtcNow.AddHours(1),
+        EndUtc = DateTime.UtcNow.AddHours(2)
+    };
+}
