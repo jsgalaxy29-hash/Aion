@@ -1,5 +1,6 @@
 using Aion.Domain.Contracts;
 using Aion.Domain.UI;
+using Aion.UI.Components.Agenda;
 
 namespace Aion.AppHost;
 
@@ -10,6 +11,7 @@ public sealed class AgendaModuleBootstrapper : IModuleBootstrapper
 {
     public void Register()
     {
-        RouteRegistry.Register("/agenda", typeof(Pages.Agenda));
+        // La page Agenda est désormais fournie par la bibliothèque partagée Aion.UI.
+        RouteRegistry.Register("/agenda", typeof(Agenda));
     }
 }
