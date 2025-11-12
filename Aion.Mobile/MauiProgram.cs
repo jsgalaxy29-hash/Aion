@@ -44,6 +44,7 @@ public static class MauiProgram
         });
 
         builder.Services.AddSingleton<IClock, DataEngine.Interfaces.SystemClock>();
+        builder.Services.AddScoped<IUserContext, DefaultUserContext>();
         builder.Services.AddScoped<IAgendaService, AgendaService>();
 
         var app = builder.Build();
