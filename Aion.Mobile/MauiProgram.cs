@@ -9,6 +9,7 @@ using Microsoft.FluentUI.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.Storage;
+using Aion.DataEngine.Interfaces;
 
 namespace Aion.Mobile;
 
@@ -41,7 +42,7 @@ public static class MauiProgram
             options.UseSqlite($"Data Source={dbPath}");
         });
 
-        builder.Services.AddSingleton<IClock, SystemClock>();
+        builder.Services.AddSingleton<IClock, DataEngine.Interfaces.SystemClock>();
         builder.Services.AddScoped<IAgendaService, AgendaService>();
 
         var app = builder.Build();
