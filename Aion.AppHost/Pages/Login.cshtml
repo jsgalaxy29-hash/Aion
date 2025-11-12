@@ -1,5 +1,6 @@
 ﻿@page
 @model Aion.AppHost.Pages.LoginModel
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
 @{
     Layout = null;
 }
@@ -60,7 +61,7 @@
             animation: aurora 22s linear infinite;
         }
 
-        @keyframes aurora {
+            keyframes aurora {
             0% {
                 transform: rotate(0deg);
             }
@@ -334,7 +335,7 @@
                 letter-spacing: 0.1em;
             }
 
-        @media (max-width: 520px) {
+            media (max-width: 520px) {
             body {
                 padding: 1.2rem;
             }
@@ -437,7 +438,7 @@
                 <input asp-for="Input.TenantId"
                        type="number"
                        placeholder="1"
-                       value="@Model.Input.TenantId" required />
+                       required />
                 <span asp-validation-for="Input.TenantId" class="text-danger"></span>
             </div>
 
@@ -460,5 +461,6 @@
     @section Scripts {
         <partial name="_ValidationScriptsPartial" />
     }
+
 </body>
 </html>
