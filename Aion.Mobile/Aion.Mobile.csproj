@@ -18,6 +18,9 @@
     <SupportedOSPlatformVersion Condition="'$(TargetFramework)' == 'net10.0-windows10.0.19041.0'">10.0.19041.0</SupportedOSPlatformVersion>
     <TargetPlatformMinVersion Condition="'$(TargetFramework)' == 'net10.0-windows10.0.19041.0'">10.0.19041.0</TargetPlatformMinVersion>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-android'">
+    <DisableImplicitAspNetCoreRuntimePack>true</DisableImplicitAspNetCoreRuntimePack>
+  </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Aion.Domain\Aion.Domain.csproj" />
     <ProjectReference Include="..\Aion.Infrastructure\Aion.Infrastructure.csproj" />
