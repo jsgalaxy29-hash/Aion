@@ -76,7 +76,7 @@ namespace Aion.AppHost.Services
                 Mode = mode,
                 CustomColor = customColor ?? DefaultAionAccentColor,
                 NeutralBaseColor = neutralBaseColor ?? DefaultAionNeutralColor,
-                OfficeColor = customColor ?? DefaultAionAccentColor,
+                OfficeColor = null,
             };
 
         private void OnThemeChanged() => ThemeChanged?.Invoke();
