@@ -1,0 +1,129 @@
+.dashboard-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 0.5rem 0;
+}
+
+.dashboard-hero {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2rem;
+    padding: 2rem;
+    border: none;
+    background: linear-gradient(135deg, rgba(239, 191, 4, 0.9), rgba(247, 223, 130, 0.85), rgba(255, 255, 255, 0.95));
+    color: var(--aion-brand-night);
+    box-shadow: 0 25px 55px rgba(15, 23, 42, 0.25);
+}
+
+.dashboard-hero img {
+    width: 140px;
+    height: 140px;
+    border-radius: 28px;
+    background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.18), rgba(15, 23, 42, 0.95));
+    padding: 1rem;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.5);
+}
+
+.dashboard-hero-content {
+    flex: 1 1 320px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.dashboard-hero-eyebrow {
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.2em;
+    margin: 0;
+    color: rgba(15, 23, 42, 0.7);
+}
+
+.dashboard-hero h1 {
+    font-size: 2.1rem;
+    margin: 0;
+}
+
+.dashboard-hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1rem;
+}
+
+.dashboard-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    border: none;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+}
+
+.dashboard-card h2 {
+    margin: 0;
+}
+
+.dashboard-card-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.dashboard-card ul {
+    margin: 0;
+    padding-left: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.dashboard-theme-card {
+    background: linear-gradient(135deg, rgba(239, 191, 4, 0.12), rgba(247, 223, 130, 0.18));
+}
+
+.dashboard-theme-swatches {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.swatch {
+    flex: 1 1 120px;
+    padding: 1rem;
+    border-radius: 16px;
+    color: #0f172a;
+    font-weight: 600;
+    text-align: center;
+}
+
+.swatch span {
+    display: inline-block;
+    margin-top: 0.5rem;
+}
+
+.swatch-gold {
+    background-color: #EFBF04;
+}
+
+.swatch-soft {
+    background-color: #F7DF82;
+}
+
+@media (max-width: 600px) {
+    .dashboard-hero {
+        padding: 1.25rem;
+    }
+
+    .dashboard-hero img {
+        width: 110px;
+        height: 110px;
+    }
+}

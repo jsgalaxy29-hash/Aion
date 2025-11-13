@@ -2,6 +2,67 @@
 @page "/dashboard"
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
+@inject NavigationManager Navigation
 
-<h3>Dashboard</h3>
-<p>Bienvenue sur Aion.</p>
+<div class="dashboard-wrapper">
+    <FluentCard Class="dashboard-hero">
+        <img src="images/aion-logo.svg" alt="Logo Aion" />
+        <div class="dashboard-hero-content">
+            <p class="dashboard-hero-eyebrow">Univers de productivité Aion</p>
+            <h1>Bienvenue sur Aion</h1>
+            <p>
+                Retrouvez l'expérience emblématique mêlant blanc lumineux et doré #EFBF04.
+                Ce tableau de bord rassemble vos raccourcis préférés et applique le nouveau thème Aion.
+            </p>
+            <div class="dashboard-hero-actions">
+                <FluentButton Appearance="Appearance.Accent" OnClick="NavigateToModules">Accéder aux modules</FluentButton>
+                <FluentButton Appearance="Appearance.Stealth" OnClick="NavigateToAgenda">Consulter l'agenda</FluentButton>
+            </div>
+        </div>
+    </FluentCard>
+
+    <div class="dashboard-grid">
+        <FluentCard Class="dashboard-card">
+            <h2>Tâches rapides</h2>
+            <p>Accédez directement aux espaces les plus utilisés.</p>
+            <div class="dashboard-card-actions">
+                <FluentButton Size="ButtonSize.Small" Appearance="Appearance.Accent" OnClick="NavigateToModules">Ouvrir les modules</FluentButton>
+                <FluentButton Size="ButtonSize.Small" Appearance="Appearance.Accent" OnClick="NavigateToAgenda">Planifier un rendez-vous</FluentButton>
+                <FluentButton Size="ButtonSize.Small" Appearance="Appearance.Accent" OnClick="NavigateToCatalog">Paramétrer un catalogue</FluentButton>
+            </div>
+        </FluentCard>
+
+        <FluentCard Class="dashboard-card dashboard-theme-card">
+            <h2>Palette Aion</h2>
+            <p>
+                L'identité visuelle combine le doré #EFBF04 à un blanc chaud pour obtenir un ton doux #F7DF82,
+                idéal comme base neutre dans l'interface.
+            </p>
+            <div class="dashboard-theme-swatches">
+                <div class="swatch swatch-gold">
+                    <span>#EFBF04</span>
+                </div>
+                <div class="swatch swatch-soft">
+                    <span>#F7DF82</span>
+                </div>
+            </div>
+        </FluentCard>
+
+        <FluentCard Class="dashboard-card">
+            <h2>Prochaines étapes</h2>
+            <ul>
+                <li>Vérifier vos modules favoris.</li>
+                <li>Consulter les droits utilisateurs clés.</li>
+                <li>Synchroniser l'agenda de l'équipe.</li>
+            </ul>
+        </FluentCard>
+    </div>
+</div>
+
+@code {
+    private void NavigateToModules() => Navigation.NavigateTo("/modules");
+
+    private void NavigateToAgenda() => Navigation.NavigateTo("/agenda");
+
+    private void NavigateToCatalog() => Navigation.NavigateTo("/admin/catalog");
+}

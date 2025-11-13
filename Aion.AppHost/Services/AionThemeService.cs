@@ -17,6 +17,9 @@ namespace Aion.AppHost.Services
 
     public class AionThemeService : IAionThemeService
     {
+        private const string DefaultAionAccentColor = "#EFBF04";
+        private const string DefaultAionNeutralColor = "#F7DF82"; // mélange de #EFBF04 et blanc
+
         // _currentTheme stocke l'instance actuelle du thème. Nous la rendons réassignable.
         private FluentDesignTheme _currentTheme;
         private DesignThemeModes _currentThemeMode;
@@ -30,7 +33,7 @@ namespace Aion.AppHost.Services
 
         public AionThemeService()
         {
-            // Initialisation : on commence avec un nouveau thème clair
+            // Initialisation : on commence avec le thème Aion clair (accent doré + neutre doux)
             _currentTheme = CreateNewTheme(DesignThemeModes.Light);
             _currentThemeMode = _currentTheme.Mode;
         }
@@ -57,8 +60,8 @@ namespace Aion.AppHost.Services
             // Elle remplace l'ancien objet _currentTheme par un NOUVEAU.
             _currentTheme = CreateNewTheme(
                 _currentTheme.Mode, // Conserver le mode (Light/Dark)
-                accentCssColor,
-                neutralBaseCssColor ?? _currentTheme.NeutralBaseColor
+                string.IsNullOrWhiteSpace(accentCssColor) ? DefaultAionAccentColor : accentCssColor,
+                neutralBaseCssColor ?? _currentTheme.NeutralBaseColor ?? DefaultAionNeutralColor
             );
 
             // Si la méthode était appelée sans changement d'accent, elle sera inutilement appelée, 
@@ -71,9 +74,9 @@ namespace Aion.AppHost.Services
             => new()
             {
                 Mode = mode,
-                CustomColor = customColor,
-                NeutralBaseColor = neutralBaseColor,
-                // Les autres propriétés (comme OfficeColor) peuvent être ajoutées ici si elles sont utilisées
+                CustomColor = customColor ?? DefaultAionAccentColor,
+                NeutralBaseColor = neutralBaseColor ?? DefaultAionNeutralColor,
+                OfficeColor = customColor ?? DefaultAionAccentColor,
             };
 
         private void OnThemeChanged() => ThemeChanged?.Invoke();
