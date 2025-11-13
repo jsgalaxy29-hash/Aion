@@ -3,6 +3,12 @@
     Ajoutez ici les règles spécifiques à l'application.
 */
 
+:root {
+    --aion-brand-gold: #EFBF04;
+    --aion-brand-soft-gold: #F7DF82; /* mélange de #EFBF04 avec le blanc */
+    --aion-brand-night: #0F172A;
+}
+
 body {
     background-color: var(--neutral-layer-1, #f5f5f5);
     color: var(--neutral-foreground-1, #201f1e);
