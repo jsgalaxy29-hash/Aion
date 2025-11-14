@@ -21,9 +21,11 @@
     width: 140px;
     height: 140px;
     border-radius: 28px;
-    background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.18), rgba(15, 23, 42, 0.95));
-    padding: 1rem;
-    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.5);
+    padding: 0;
+    background: none;
+    object-fit: cover;
+    border: 1px solid rgba(15, 23, 42, 0.25);
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.45);
 }
 
 .dashboard-hero-content {
@@ -87,6 +89,18 @@
 
 .dashboard-theme-card {
     background: linear-gradient(135deg, rgba(239, 191, 4, 0.12), rgba(247, 223, 130, 0.18));
+}
+
+:global([data-theme='dark']) .dashboard-hero {
+    background: linear-gradient(145deg, #020202, #090909 65%, #040404);
+    color: #fdfdfd;
+    border: 1px solid rgba(239, 191, 4, 0.25);
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85);
+}
+
+:global([data-theme='dark']) .dashboard-hero img {
+    border-color: rgba(239, 191, 4, 0.35);
+    box-shadow: 0 20px 55px rgba(0, 0, 0, 0.8);
 }
 
 .dashboard-theme-swatches {

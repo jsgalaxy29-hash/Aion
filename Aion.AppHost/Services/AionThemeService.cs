@@ -33,8 +33,8 @@ namespace Aion.AppHost.Services
 
         public AionThemeService()
         {
-            // Initialisation : on commence avec le thème Aion clair (accent doré + neutre doux)
-            _currentTheme = CreateNewTheme(DesignThemeModes.Light);
+            // Initialisation : on commence désormais sur le thème sombre, demandé par défaut.
+            _currentTheme = CreateNewTheme(DesignThemeModes.Dark);
             _currentThemeMode = _currentTheme.Mode;
         }
 
