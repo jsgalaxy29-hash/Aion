@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <Sdk Name="Microsoft.NET.Sdk.Razor" />
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk.Razor" />
   <PropertyGroup>
     <TargetFrameworks>net10.0-android;net10.0-windows10.0.19041.0</TargetFrameworks>
     <OutputType>Exe</OutputType>
@@ -14,6 +14,7 @@
     <ApplicationId>com.aion.mobile</ApplicationId>
     <ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
     <ApplicationVersion>1</ApplicationVersion>
+    <EnableDefaultRazorItems>true</EnableDefaultRazorItems>
     <SupportedOSPlatformVersion Condition="'$(TargetFramework)' == 'net10.0-android'">21</SupportedOSPlatformVersion>
     <SupportedOSPlatformVersion Condition="'$(TargetFramework)' == 'net10.0-windows10.0.19041.0'">10.0.19041.0</SupportedOSPlatformVersion>
     <TargetPlatformMinVersion Condition="'$(TargetFramework)' == 'net10.0-windows10.0.19041.0'">10.0.19041.0</TargetPlatformMinVersion>
@@ -24,6 +25,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Aion.Domain\Aion.Domain.csproj" />
     <ProjectReference Include="..\Aion.Infrastructure\Aion.Infrastructure.csproj" />
+    <ProjectReference Include="..\Aion.DataEngine\Aion.DataEngine.csproj" />
     <ProjectReference Include="..\Aion.Security\Aion.Security.csproj" />
     <ProjectReference Include="..\Aion.UI\Aion.UI.csproj" />
   </ItemGroup>
@@ -36,4 +38,5 @@
   <ItemGroup>
     <PackageReference Update="Microsoft.Maui.Controls" Version="10.0.10" />
   </ItemGroup>
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk.Razor" />
 </Project>
