@@ -2,8 +2,8 @@
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    background-color: var(--neutral-layer-1);
-    background-image: linear-gradient(180deg, rgba(247, 223, 130, 0.12) 0%, rgba(255, 255, 255, 0) 60%);
+    background-color: #FFFFFF;
+    color: #000000;
 }
 
 .aion-topbar {
@@ -12,10 +12,10 @@
     justify-content: space-between;
     gap: 1rem;
     padding: 0.75rem 1.5rem;
-    border-bottom: none;
-    background: linear-gradient(120deg, var(--aion-brand-gold), var(--aion-brand-soft-gold), #ffffff);
-    box-shadow: 0 12px 35px rgba(15, 23, 42, 0.15);
-    color: var(--aion-brand-night);
+    border-bottom: 2px solid #FFD700;
+    background: linear-gradient(135deg, #FFFFFF 0%, #FFFEF0 100%);
+    box-shadow: 0 2px 10px rgba(255, 215, 0, 0.2);
+    color: #000000;
 }
 
 .aion-topbar-left {
@@ -24,13 +24,13 @@
     gap: 0.5rem;
     font-weight: 600;
     cursor: pointer;
-    color: var(--aion-brand-night);
+    color: #000000;
 }
 
-.aion-topbar-left span {
-    font-size: 1.1rem;
-    letter-spacing: 0.04em;
-}
+    .aion-topbar-left span {
+        font-size: 1.1rem;
+        letter-spacing: 0.04em;
+    }
 
 .aion-topbar-center {
     flex: 1 1 auto;
@@ -45,24 +45,24 @@
     min-width: 320px;
     justify-content: space-between;
     padding: 0.35rem 0.65rem;
-    background-color: rgba(255, 255, 255, 0.82);
-    border: 1px solid rgba(239, 191, 4, 0.25);
+    background-color: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(255, 215, 0, 0.4);
     border-radius: 999px;
-    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.15);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.aion-command-button kbd {
-    background-color: rgba(239, 191, 4, 0.18);
-    border-radius: 4px;
-    padding: 0.125rem 0.375rem;
-    font-size: 0.75rem;
-    color: var(--aion-brand-night);
-}
+    .aion-command-button kbd {
+        background-color: rgba(255, 215, 0, 0.2);
+        border-radius: 4px;
+        padding: 0.125rem 0.375rem;
+        font-size: 0.75rem;
+        color: #000000;
+    }
 
-.aion-command-button .plus {
-    margin: 0 0.25rem;
-    color: rgba(15, 23, 42, 0.6);
-}
+    .aion-command-button .plus {
+        margin: 0 0.25rem;
+        color: rgba(0, 0, 0, 0.6);
+    }
 
 .aion-topbar-right {
     display: flex;
@@ -75,6 +75,7 @@
     display: grid;
     grid-template-columns: 64px 1fr;
     min-height: 0;
+    background-color: #FFFFFF;
 }
 
 .aion-side-rail {
@@ -83,45 +84,46 @@
     align-items: center;
     gap: 0.5rem;
     padding: 1rem 0.5rem;
-    border-right: 1px solid rgba(239, 191, 4, 0.25);
-    background-color: rgba(247, 223, 130, 0.12);
+    border-right: 1px solid rgba(255, 215, 0, 0.3);
+    background-color: #FFFFFF;
 }
 
-.aion-side-rail fluent-button {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-    color: var(--aion-brand-night);
-    transition: transform 0.2s ease, background-color 0.2s ease;
-}
+    .aion-side-rail fluent-button {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        color: #000000;
+        transition: transform 0.2s ease, background-color 0.2s ease;
+    }
 
-.aion-side-rail fluent-button:hover {
-    background-color: rgba(239, 191, 4, 0.12);
-    transform: translateY(-2px);
-}
+        .aion-side-rail fluent-button:hover {
+            background-color: rgba(255, 215, 0, 0.15);
+            transform: translateY(-2px);
+        }
 
 .aion-content {
     padding: 1rem;
     min-height: 0;
+    background-color: #FFFFFF;
 }
 
 .aion-bottom-nav {
     display: none;
-    border-top: 1px solid rgba(239, 191, 4, 0.2);
-    background: linear-gradient(120deg, rgba(239, 191, 4, 0.25), rgba(247, 223, 130, 0.25));
+    border-top: 2px solid #FFD700;
+    background: linear-gradient(135deg, #FFFFFF 0%, #FFFEF0 100%);
 }
 
-.aion-bottom-nav button {
-    flex: 1 1 0;
-    padding: 0.75rem 0.5rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.25rem;
-    border: none;
-    background: transparent;
-    color: var(--aion-brand-night);
-}
+    .aion-bottom-nav button {
+        flex: 1 1 0;
+        padding: 0.75rem 0.5rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.25rem;
+        border: none;
+        background: transparent;
+        color: #000000;
+    }
 
 @media (max-width: 900px) {
     .aion-command-button {
@@ -146,68 +148,81 @@
     }
 }
 
+/* Thème Dark : Noir brillant + Or */
 :global([data-theme='dark']) .aion-shell {
-    background-color: #010102;
-    background-image: radial-gradient(circle at 22% 5%, rgba(239, 191, 4, 0.14), transparent 45%),
-        radial-gradient(circle at 80% 10%, rgba(239, 191, 4, 0.08), transparent 40%);
-    color: #fdfdfd;
+    background-color: #000000 !important;
+    color: #FFFFFF !important;
+}
+
+:global([data-theme='dark']) * {
+    background-color: inherit;
+}
+
+:global([data-theme='dark']) fluent-card,
+:global([data-theme='dark']) .fluent-card {
+    background-color: #000000 !important;
+    border: 1px solid rgba(255, 215, 0, 0.3) !important;
 }
 
 :global([data-theme='dark']) .aion-topbar,
 :global([data-theme='dark']) .aion-bottom-nav {
-    background: linear-gradient(145deg, #020202 0%, #080808 60%, #030303 100%);
-    border-bottom: 1px solid rgba(239, 191, 4, 0.35);
-    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-    color: #fefefe;
+    background: linear-gradient(135deg, #000000 0%, #1A1A1A 100%);
+    border-color: #FFD700;
+    box-shadow: 0 2px 10px rgba(255, 215, 0, 0.3);
+    color: #FFFFFF;
 }
 
-:global([data-theme='dark']) .aion-bottom-nav {
-    border-top: 1px solid rgba(239, 191, 4, 0.25);
-    border-bottom: none;
-}
-
-:global([data-theme='dark']) .aion-topbar-left,
-:global([data-theme='dark']) .aion-topbar-right,
-:global([data-theme='dark']) .aion-topbar-center,
-:global([data-theme='dark']) .aion-bottom-nav button {
-    color: #fdfdfd;
-}
+    :global([data-theme='dark']) .aion-topbar-left,
+    :global([data-theme='dark']) .aion-topbar-right,
+    :global([data-theme='dark']) .aion-topbar-center,
+    :global([data-theme='dark']) .aion-bottom-nav button {
+        color: #FFFFFF;
+    }
 
 :global([data-theme='dark']) .aion-command-button {
-    background-color: rgba(5, 5, 5, 0.95);
-    border-color: rgba(239, 191, 4, 0.65);
-    color: #ffffff;
-    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.75);
+    background-color: rgba(0, 0, 0, 0.95);
+    border-color: #FFD700;
+    color: #FFFFFF;
+    box-shadow: 0 2px 10px rgba(255, 215, 0, 0.2);
 }
 
-:global([data-theme='dark']) .aion-command-button kbd {
-    background-color: rgba(239, 191, 4, 0.2);
-    color: #050505;
-}
+    :global([data-theme='dark']) .aion-command-button kbd {
+        background-color: rgba(255, 215, 0, 0.3);
+        color: #000000;
+    }
 
-:global([data-theme='dark']) .aion-command-button .plus {
-    color: rgba(255, 255, 255, 0.75);
-}
+    :global([data-theme='dark']) .aion-command-button .plus {
+        color: rgba(255, 255, 255, 0.7);
+    }
 
 :global([data-theme='dark']) .aion-body {
-    background-color: transparent;
+    background-color: #000000;
 }
 
 :global([data-theme='dark']) .aion-side-rail {
-    border-right: 1px solid rgba(239, 191, 4, 0.25);
-    background-color: #050505;
-    box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.65);
+    border-right: 1px solid rgba(255, 215, 0, 0.3);
+    background-color: #000000;
+    box-shadow: inset -1px 0 0 rgba(255, 215, 0, 0.2);
 }
 
-:global([data-theme='dark']) .aion-side-rail fluent-button {
-    color: #fdfdfd;
-}
+    :global([data-theme='dark']) .aion-side-rail fluent-button {
+        color: #FFFFFF;
+    }
 
-:global([data-theme='dark']) .aion-side-rail fluent-button:hover {
-    background-color: rgba(239, 191, 4, 0.2);
-    color: #050505;
-}
+        :global([data-theme='dark']) .aion-side-rail fluent-button:hover {
+            background-color: rgba(255, 215, 0, 0.2);
+            color: #FFD700;
+        }
 
 :global([data-theme='dark']) .aion-bottom-nav button {
-    color: #fdfdfd;
+    color: #FFFFFF;
+}
+
+    :global([data-theme='dark']) .aion-bottom-nav button:hover {
+        background-color: rgba(255, 215, 0, 0.1);
+    }
+
+:global([data-theme='dark']) .aion-content {
+    background-color: #000000;
+    color: #FFFFFF;
 }

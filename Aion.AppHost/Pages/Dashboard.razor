@@ -4,14 +4,182 @@
 @attribute [Authorize]
 @inject NavigationManager Navigation
 
+<style>
+    .dashboard-wrapper {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .dashboard-hero {
+        padding: 3rem;
+        margin-bottom: 2rem;
+        text-align: center;
+        background: linear-gradient(135deg, var(--neutral-layer-1, #FFFFFF) 0%, var(--neutral-layer-2, #F5F5F5) 100%);
+        border: 2px solid #FFD700;
+        box-shadow: 0 8px 24px rgba(255, 215, 0, 0.15);
+    }
+
+    .dashboard-logo {
+        width: 120px;
+        height: 120px;
+        margin: 0 auto 1.5rem;
+        display: block;
+    }
+
+    .dashboard-hero-content {
+        max-width: 700px;
+        margin: 0 auto;
+    }
+
+    .dashboard-hero-eyebrow {
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #FFD700;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+
+    .dashboard-hero h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        color: var(--neutral-foreground-rest, #000000);
+    }
+
+    .dashboard-hero p {
+        font-size: 1.1rem;
+        line-height: 1.6;
+        margin-bottom: 2rem;
+        color: var(--neutral-foreground-rest, #333333);
+    }
+
+    .dashboard-hero-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .dashboard-card {
+        padding: 2rem;
+        background: var(--neutral-layer-1, #FFFFFF);
+        border: 1px solid rgba(255, 215, 0, 0.3);
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+
+        .dashboard-card h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--neutral-foreground-rest, #000000);
+        }
+
+        .dashboard-card p {
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+            color: var(--neutral-foreground-rest, #666666);
+        }
+
+    .dashboard-card-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .dashboard-theme-swatches {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .swatch {
+        flex: 1;
+        height: 80px;
+        border-radius: 8px;
+        display: flex;
+        align-items: flex-end;
+        padding: 0.75rem;
+        font-weight: 600;
+        font-size: 0.9rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .swatch-gold {
+        background-color: #FFD700;
+        color: #000000;
+    }
+
+    .swatch-black {
+        background-color: #000000;
+        color: #FFFFFF;
+    }
+
+    .dashboard-card ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+        .dashboard-card ul li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 215, 0, 0.2);
+        }
+
+            .dashboard-card ul li:last-child {
+                border-bottom: none;
+            }
+
+    /* Thème Dark */
+    :global([data-theme='dark']) .dashboard-wrapper {
+        background-color: #000000 !important;
+    }
+
+    :global([data-theme='dark']) .dashboard-hero,
+    :global([data-theme='dark']) .dashboard-card {
+        background: #000000 !important;
+        border-color: #FFD700 !important;
+        box-shadow: 0 8px 24px rgba(255, 215, 0, 0.2) !important;
+    }
+
+    :global([data-theme='dark']) fluent-card {
+        background-color: #000000 !important;
+    }
+
+    :global([data-theme='dark']) .dashboard-hero h1,
+    :global([data-theme='dark']) .dashboard-card h2 {
+        color: #FFFFFF;
+    }
+
+    :global([data-theme='dark']) .dashboard-hero p,
+    :global([data-theme='dark']) .dashboard-card p,
+    :global([data-theme='dark']) .dashboard-card ul li {
+        color: rgba(255, 255, 255, 0.8);
+    }
+
+    :global([data-theme='dark']) .dashboard-card ul li {
+        border-bottom-color: rgba(255, 215, 0, 0.3);
+    }
+</style>
+
 <div class="dashboard-wrapper">
     <FluentCard Class="dashboard-hero">
-        <img src="images/aion-logo.svg" alt="Logo Aion" />
+        <img src="images/aion-logo.svg"
+             alt="Logo Aion"
+             class="dashboard-logo" />
         <div class="dashboard-hero-content">
             <p class="dashboard-hero-eyebrow">Univers de productivité Aion</p>
             <h1>Bienvenue sur Aion</h1>
             <p>
-                Retrouvez l'expérience emblématique mêlant blanc lumineux et doré #EFBF04.
+                Découvrez l'expérience Aion avec son design élégant alliant noir brillant, blanc et or (#FFD700).
                 Ce tableau de bord rassemble vos raccourcis préférés et applique le nouveau thème Aion.
             </p>
             <div class="dashboard-hero-actions">
@@ -35,15 +203,15 @@
         <FluentCard Class="dashboard-card dashboard-theme-card">
             <h2>Palette Aion</h2>
             <p>
-                L'identité visuelle combine le doré #EFBF04 à un blanc chaud pour obtenir un ton doux #F7DF82,
-                idéal comme base neutre dans l'interface.
+                L'identité visuelle combine l'or #FFD700 avec le noir brillant #000000 (dark) ou le blanc #FFFFFF (light)
+                pour une esthétique premium et élégante.
             </p>
             <div class="dashboard-theme-swatches">
                 <div class="swatch swatch-gold">
-                    <span>#EFBF04</span>
+                    <span>#FFD700</span>
                 </div>
-                <div class="swatch swatch-soft">
-                    <span>#F7DF82</span>
+                <div class="swatch swatch-black">
+                    <span>#000000</span>
                 </div>
             </div>
         </FluentCard>
