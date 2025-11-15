@@ -1,9 +1,9 @@
+@using Microsoft.FluentUI.AspNetCore.Components
 @using System.Collections.Generic
 @using System.Linq
 @using System.Threading
 @using Aion.AppHost.Services.Navigation
 @using Aion.Domain.UI.Navigation
-@using Microsoft.FluentUI.AspNetCore.Components
 @inject IAionNavigationService Navigation
 @inject AionNavigationState NavigationState
 @inject IModuleCatalog ModuleCatalog
@@ -30,9 +30,12 @@
 else
 {
     <div class="modulehost-empty">
-        <FluentIcon Value='@FluentIconResolver.Resolve("Home48Regular")' Size="FluentIconSize.ExtraLarge" />
-        <h2>Bienvenue dans Aion</h2>
-        <p>Sélectionnez un module via la palette de commande (Ctrl+K) ou depuis le menu.</p>
+        
+        <img src="./images/aion-logo.png"
+             alt="Logo Aion"
+             class="aion-logo" />
+        <FluentLabel>Bienvenue dans Aion</FluentLabel>
+        <FluentLabel>Sélectionnez un module via la palette de commande (Ctrl+K) ou depuis le menu.</FluentLabel>
 
         @if (_recentModules.Count > 0)
         {
@@ -52,6 +55,15 @@ else
     </div>
 }
 
+<style>
+    .aion-logo {
+        width: 120px;
+        height: 120px;
+        margin: 0 auto 1.5rem;
+        display: block;
+    }
+
+</style>
 @implements IDisposable
 
 @code {

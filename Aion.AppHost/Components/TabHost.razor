@@ -4,13 +4,17 @@
 @using Aion.Domain.UI
 @inject ITabService Tabs
 
-<FluentTabs Orientation="Orientation.Horizontal" 
+<FluentTabs Orientation="Orientation.Horizontal"
             ActiveTabId="@SelectedTabId"
-            OnTabClose="@ClosedTab"  
-            OnTabChange="OnTabChange" ShowClose="true" >
+            OnTabClose="@ClosedTab"
+            OnTabChange="OnTabChange"
+            ShowClose="@HasClosableTabs">
     @foreach (var tab in Tabs.Tabs)
     {
-        <FluentTab Id="@GetTabHtmlId(tab.Id)" Label="@tab.Title" Data="@tab" />
+        <FluentTab Id="@GetTabHtmlId(tab.Id)"
+                   Label="@tab.Title"
+                   Data="@tab"
+                   Class="@GetTabCssClass(tab)" />
     }
 </FluentTabs>
 
@@ -39,10 +43,17 @@
     private TabDescriptor? _active;
     string SelectedTabId = "";
     
-    protected override void OnInitialized()
+    private const string DashboardRoute = "/dashboard";
+    private const string DashboardTitle = "Tableau de bord";
+
+    private bool HasClosableTabs => Tabs.Tabs.Any(t => t.CanClose);
+
+    protected override async Task OnInitializedAsync()
     {
         Tabs.TabsChanged += OnTabsChanged;
-    
+
+        await EnsureDashboardTabAsync();
+
         if (Tabs.Tabs.Count > 0)
         {
             _active = Tabs.Tabs[^1];
@@ -51,15 +62,19 @@
         }
     }
 
-    void OnTabsChanged()
+    private async void OnTabsChanged()
     {
-        
+        if (!Tabs.Tabs.Any(IsDashboardTab))
+        {
+            await EnsureDashboardTabAsync();
+            return;
+        }
+
         var activeTab = Tabs.Tabs.FirstOrDefault(t => t.IsActive);
         if (activeTab is not null)
         {
             _active = activeTab;
             _activeId = activeTab.Id;
-            SelectedTabId = GetActiveTabHtmlId() ?? "";
         }
         else if (_activeId is null || Tabs.Tabs.All(t => t.Id != _activeId))
         {
@@ -67,22 +82,21 @@
             {
                 _active = Tabs.Tabs[^1];
                 _activeId = _active.Id;
-                SelectedTabId = GetActiveTabHtmlId() ?? "";
             }
             else
             {
                 _active = null;
                 _activeId = null;
-                SelectedTabId = GetActiveTabHtmlId() ?? "";
             }
         }
         else if (_activeId is not null)
         {
             _active = Tabs.Tabs.FirstOrDefault(t => t.Id == _activeId);
-            SelectedTabId = GetActiveTabHtmlId() ?? "";
         }
 
-        InvokeAsync(StateHasChanged);
+        SelectedTabId = GetActiveTabHtmlId() ?? "";
+
+        await InvokeAsync(StateHasChanged);
     }
 
 
@@ -124,6 +138,11 @@
     {
         if (TryParseTabHtmlId(args.Id, out var id))
         {
+            var tab = Tabs.Tabs.FirstOrDefault(t => t.Id == id);
+            if (tab is not null && !tab.CanClose)
+            {
+                return;
+            }
             await Tabs.CloseAsync(id, CancellationToken.None);
             if (Tabs.Tabs.Count > 0)
             {
@@ -138,6 +157,19 @@
             }
         }
     }
+    private Task EnsureDashboardTabAsync()
+    {
+        if (Tabs.Tabs.Any(IsDashboardTab))
+        {
+            return Task.CompletedTask;
+        }
 
-  
+        return Tabs.OpenAsync(DashboardTitle, DashboardRoute, null, true, false, CancellationToken.None);
+    }
+
+    private static bool IsDashboardTab(TabDescriptor tab)
+        => string.Equals(tab.Route, DashboardRoute, StringComparison.OrdinalIgnoreCase);
+
+    private static string GetTabCssClass(TabDescriptor tab)
+        => tab.CanClose ? "tabhost-tab" : "tabhost-tab tabhost-tab--pinned";
 }

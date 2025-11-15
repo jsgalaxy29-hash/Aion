@@ -1,19 +1,19 @@
 @page "/"
 @page "/dashboard"
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.FluentUI.AspNetCore.Components
 @attribute [Authorize]
 @inject NavigationManager Navigation
 
 <div class="dashboard-wrapper">
     <FluentCard Class="dashboard-hero">
-        <img src="images/aion-logo.svg" alt="Logo Aion" />
+        
+        <img src="./images/aion-logo.png"
+             alt="Logo Aion"
+             class="dashboard-logo" />
         <div class="dashboard-hero-content">
             <p class="dashboard-hero-eyebrow">Univers de productivité Aion</p>
             <h1>Bienvenue sur Aion</h1>
-            <p>
-                Retrouvez l'expérience emblématique mêlant blanc lumineux et doré #EFBF04.
-                Ce tableau de bord rassemble vos raccourcis préférés et applique le nouveau thème Aion.
-            </p>
             <div class="dashboard-hero-actions">
                 <FluentButton Appearance="Appearance.Accent" OnClick="NavigateToModules">Accéder aux modules</FluentButton>
                 <FluentButton Appearance="Appearance.Stealth" OnClick="NavigateToAgenda">Consulter l'agenda</FluentButton>
@@ -35,15 +35,15 @@
         <FluentCard Class="dashboard-card dashboard-theme-card">
             <h2>Palette Aion</h2>
             <p>
-                L'identité visuelle combine le doré #EFBF04 à un blanc chaud pour obtenir un ton doux #F7DF82,
-                idéal comme base neutre dans l'interface.
+                L'identité visuelle combine l'or #FFD700 avec le noir brillant #000000 (dark) ou le blanc #FFFFFF (light)
+                pour une esthétique premium et élégante.
             </p>
             <div class="dashboard-theme-swatches">
                 <div class="swatch swatch-gold">
-                    <span>#EFBF04</span>
+                    <span>#FFD700</span>
                 </div>
-                <div class="swatch swatch-soft">
-                    <span>#F7DF82</span>
+                <div class="swatch swatch-black">
+                    <span>#000000</span>
                 </div>
             </div>
         </FluentCard>
