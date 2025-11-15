@@ -35,7 +35,7 @@ namespace Aion.AppHost.Services
 
         public AionThemeService()
         {
-            // Initialisation : thème Dark par défaut
+            // Initialisation : on commence désormais sur le thème sombre, demandé par défaut.
             _currentTheme = CreateNewTheme(DesignThemeModes.Dark);
             _currentThemeMode = _currentTheme.Mode;
         }

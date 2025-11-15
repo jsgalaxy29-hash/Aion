@@ -13,10 +13,17 @@
 
 /* Thème Light par défaut */
 body {
-    background-color: #FFFFFF;
-    color: #000000;
+    background-color: #ffffff;
+    color: #080808;
     min-height: 100vh;
     transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+html[data-theme="dark"],
+html[data-theme="dark"] body {
+    background-color: #010102;
+    color: #fdfdfd;
+    color-scheme: dark;
 }
 
 main,
@@ -217,33 +224,49 @@ html[data-theme="dark"] .agenda-upcoming-item {
     border-bottom: 1px solid rgba(255, 215, 0, 0.2);
 }
 
+/* -- Thème sombre personnalisé Aion -- */
+html[data-theme="dark"] .agenda-card,
+html[data-theme="dark"] .agenda-toolbar,
+html[data-theme="dark"] .agenda-calendar-card,
+html[data-theme="dark"] .agenda-upcoming-card,
+html[data-theme="dark"] .agenda-dialog-body {
+    background-color: #050505;
+    color: #fdfdfd;
+    border: 1px solid rgba(239, 191, 4, 0.18);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.65);
+}
+
+html[data-theme="dark"] .agenda-upcoming-item {
+    border-bottom: 1px solid rgba(239, 191, 4, 0.35);
+}
+
 html[data-theme="dark"] .agenda-upcoming-meta {
-    color: rgba(255, 255, 255, 0.7);
+    color: rgba(255, 255, 255, 0.72);
 }
 
 html[data-theme="dark"] .fc {
-    color: #FFFFFF;
-    background-color: #000000;
+    color: #fdfdfd;
+    background-color: #050505;
 }
 
-    html[data-theme="dark"] .fc .fc-col-header-cell,
-    html[data-theme="dark"] .fc .fc-timegrid-axis,
-    html[data-theme="dark"] .fc .fc-timegrid-all-day {
-        background-color: rgba(255, 215, 0, 0.05);
-        border-color: rgba(255, 215, 0, 0.3);
-        color: #FFFFFF;
-    }
+html[data-theme="dark"] .fc .fc-col-header-cell,
+html[data-theme="dark"] .fc .fc-timegrid-axis,
+html[data-theme="dark"] .fc .fc-timegrid-all-day {
+    background-color: rgba(255, 255, 255, 0.02);
+    border-color: rgba(239, 191, 4, 0.25);
+    color: #fdfdfd;
+}
 
-    html[data-theme="dark"] .fc .fc-timegrid-slot-label {
-        color: rgba(255, 255, 255, 0.6);
-    }
+html[data-theme="dark"] .fc .fc-timegrid-slot-label {
+    color: rgba(255, 255, 255, 0.65);
+}
 
-    html[data-theme="dark"] .fc .fc-event {
-        border-color: #FFD700;
-        background-color: #FFD700;
-        color: #000000;
-    }
+html[data-theme="dark"] .fc .fc-event {
+    border-color: rgba(239, 191, 4, 0.9);
+    background-color: rgba(239, 191, 4, 0.92);
+    color: #050505;
+}
 
-    html[data-theme="dark"] .fc .fc-highlight {
-        background: rgba(255, 215, 0, 0.25);
-    }
+html[data-theme="dark"] .fc .fc-highlight {
+    background: rgba(239, 191, 4, 0.25);
+}
