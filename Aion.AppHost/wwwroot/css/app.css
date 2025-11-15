@@ -10,10 +10,17 @@
 }
 
 body {
-    background-color: var(--neutral-layer-1, #f5f5f5);
-    color: var(--neutral-foreground-1, #201f1e);
+    background-color: #ffffff;
+    color: #080808;
     min-height: 100vh;
     transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+[data-theme="dark" i],
+[data-theme="dark" i] body {
+    background-color: #010102;
+    color: #fdfdfd;
+    color-scheme: dark;
 }
 
 main,
@@ -195,4 +202,51 @@ main,
         background: var(--accent-fill-rest, rgba(0,120,212,0.2));
     }
 
+}
+
+/* -- Thème sombre personnalisé Aion -- */
+[data-theme="dark" i] .agenda-card,
+[data-theme="dark" i] .agenda-toolbar,
+[data-theme="dark" i] .agenda-calendar-card,
+[data-theme="dark" i] .agenda-upcoming-card,
+[data-theme="dark" i] .agenda-dialog-body {
+    background-color: #050505;
+    color: #fdfdfd;
+    border: 1px solid rgba(239, 191, 4, 0.18);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.65);
+}
+
+[data-theme="dark" i] .agenda-upcoming-item {
+    border-bottom: 1px solid rgba(239, 191, 4, 0.35);
+}
+
+[data-theme="dark" i] .agenda-upcoming-meta {
+    color: rgba(255, 255, 255, 0.72);
+}
+
+[data-theme="dark" i] .fc {
+    color: #fdfdfd;
+    background-color: #050505;
+}
+
+[data-theme="dark" i] .fc .fc-col-header-cell,
+[data-theme="dark" i] .fc .fc-timegrid-axis,
+[data-theme="dark" i] .fc .fc-timegrid-all-day {
+    background-color: rgba(255, 255, 255, 0.02);
+    border-color: rgba(239, 191, 4, 0.25);
+    color: #fdfdfd;
+}
+
+[data-theme="dark" i] .fc .fc-timegrid-slot-label {
+    color: rgba(255, 255, 255, 0.65);
+}
+
+[data-theme="dark" i] .fc .fc-event {
+    border-color: rgba(239, 191, 4, 0.9);
+    background-color: rgba(239, 191, 4, 0.92);
+    color: #050505;
+}
+
+[data-theme="dark" i] .fc .fc-highlight {
+    background: rgba(239, 191, 4, 0.25);
 }

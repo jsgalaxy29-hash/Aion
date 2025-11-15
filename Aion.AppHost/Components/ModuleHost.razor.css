@@ -42,3 +42,18 @@
     justify-content: flex-start;
     gap: 0.75rem;
 }
+
+:global([data-theme='dark' i]) .modulehost-content {
+    background: radial-gradient(circle at 18% 15%, rgba(239, 191, 4, 0.08), transparent 40%), #040404;
+    border: 1px solid rgba(239, 191, 4, 0.25);
+    box-shadow: inset 0 0 28px rgba(0, 0, 0, 0.4);
+    color: #fefefe;
+}
+
+:global([data-theme='dark' i]) .modulehost-empty {
+    color: #fdfdfd;
+}
+
+:global([data-theme='dark' i]) .modulehost-empty p {
+    color: rgba(255, 255, 255, 0.72);
+}
