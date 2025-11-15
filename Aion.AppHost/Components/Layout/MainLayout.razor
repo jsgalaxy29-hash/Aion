@@ -19,7 +19,7 @@
         <header class="aion-topbar">
             <div class="aion-topbar-left" @onclick="@(() => Navigation.NavigateTo("/"))">
                 <FluentIcon Value='@FluentIconResolver.Resolve("Apps24Regular")' />
-                <span>Aion</span>
+                <FluentLabel>Aion</FluentLabel>
             </div>
 
             <div class="aion-topbar-center">
@@ -48,11 +48,11 @@
                 {
                     <FluentMenu>
                         <FluentMenuButton>
-                            <FluentAvatar Name="@_username" />
+                            <FluentLabel Name="@_username" />
                         </FluentMenuButton>
-                        <FluentMenuList>
+                        <FluentMenu>
                             <FluentMenuItem OnClick="Logout">Se déconnecter</FluentMenuItem>
-                        </FluentMenuList>
+                        </FluentMenu>
                     </FluentMenu>
                 }
             </div>
@@ -85,26 +85,26 @@
         @if (_isAuthenticated)
         {
             <nav class="aion-bottom-nav">
-                <button type="button" @onclick="@(() => Navigation.NavigateTo("/"))">
+                <FluentButton type="ButtonType.Button" @onclick="@(() => Navigation.NavigateTo("/"))">
                     <FluentIcon Value='@FluentIconResolver.Resolve("Home20Regular")' />
-                    <span>Accueil</span>
-                </button>
-                <button type="button" @onclick="OpenCommandPalette">
+                    <FluentLabel>Accueil</FluentLabel>
+                </FluentButton>
+                <FluentButton type="ButtonType.Button" @onclick="OpenCommandPalette">
                     <FluentIcon Value='@FluentIconResolver.Resolve("Search20Regular")' />
-                    <span>Recherche</span>
-                </button>
-                <button type="button" @onclick="@(() => Navigation.NavigateTo("/agenda"))">
+                    <FluentLabel>Recherche</FluentLabel>
+                </FluentButton>
+                <FluentButton type="ButtonType.Button" @onclick="@(() => Navigation.NavigateTo("/agenda"))">
                     <FluentIcon Value='@FluentIconResolver.Resolve("CalendarLtr20Regular")' />
-                    <span>Agenda</span>
-                </button>
-                <button type="button" @onclick="@(() => Navigation.NavigateTo("/modules"))">
+                    <FluentLabel>Agenda</FluentLabel>
+                </FluentButton>
+                <FluentButton type="ButtonType.Button" @onclick="@(() => Navigation.NavigateTo("/modules"))">
                     <FluentIcon Value='@FluentIconResolver.Resolve("Apps20Regular")' />
-                    <span>Modules</span>
-                </button>
-                <button type="button" @onclick="OpenUserMenu">
+                    <FluentLabel>Modules</FluentLabel>
+                </FluentButton>
+                <FluentButton type="ButtonType.Button" @onclick="OpenUserMenu">
                     <FluentIcon Value='@FluentIconResolver.Resolve("Person20Regular")' />
-                    <span>Profil</span>
-                </button>
+                    <FluentLabel>Profil</FluentLabel>
+                </FluentButton>
             </nav>
         }
 
