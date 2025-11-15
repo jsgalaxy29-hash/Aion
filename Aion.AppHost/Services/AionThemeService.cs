@@ -17,16 +17,18 @@ namespace Aion.AppHost.Services
 
     public class AionThemeService : IAionThemeService
     {
-        private const string DefaultAionAccentColor = "#EFBF04";
-        private const string DefaultAionNeutralColor = "#F7DF82"; // mélange de #EFBF04 et blanc
+        // Thème Dark : Noir brillant (#000000) + Or (#FFD700)
+        private const string DarkAccentColor = "#FFD700"; // Or
+        private const string DarkNeutralColor = "#000000"; // Noir brillant
 
-        // _currentTheme stocke l'instance actuelle du thème. Nous la rendons réassignable.
+        // Thème Light : Blanc (#FFFFFF) + Or (#FFD700)
+        private const string LightAccentColor = "#FFD700"; // Or
+        private const string LightNeutralColor = "#FFFFFF"; // Blanc
+
         private FluentDesignTheme _currentTheme;
         private DesignThemeModes _currentThemeMode;
 
-        // Current retourne l'instance actuelle.
         public FluentDesignTheme Current => _currentTheme;
-
         public DesignThemeModes CurrentMode => _currentThemeMode;
 
         public event Action? ThemeChanged;
@@ -40,47 +42,53 @@ namespace Aion.AppHost.Services
 
         public void UseLight()
         {
-            // IMPORTANT : Créer une NOUVELLE instance de thème
-            _currentTheme = CreateNewTheme(DesignThemeModes.Light, _currentTheme.CustomColor, _currentTheme.NeutralBaseColor);
+            _currentTheme = CreateNewTheme(DesignThemeModes.Light, LightAccentColor, LightNeutralColor);
             _currentThemeMode = _currentTheme.Mode;
             OnThemeChanged();
         }
 
         public void UseDark()
         {
-            // IMPORTANT : Créer une NOUVELLE instance de thème
-            _currentTheme = CreateNewTheme(DesignThemeModes.Dark, _currentTheme.CustomColor, _currentTheme.NeutralBaseColor);
+            _currentTheme = CreateNewTheme(DesignThemeModes.Dark, DarkAccentColor, DarkNeutralColor);
             _currentThemeMode = _currentTheme.Mode;
             OnThemeChanged();
         }
 
         public void SetAccent(string accentCssColor, string? neutralBaseCssColor = null)
         {
-            // C'EST CETTE LIGNE QUI EST CRUCIALE POUR LE REFRESH DE L'ACCENT.
-            // Elle remplace l'ancien objet _currentTheme par un NOUVEAU.
             _currentTheme = CreateNewTheme(
-                _currentTheme.Mode, // Conserver le mode (Light/Dark)
-                string.IsNullOrWhiteSpace(accentCssColor) ? DefaultAionAccentColor : accentCssColor,
-                neutralBaseCssColor ?? _currentTheme.NeutralBaseColor ?? DefaultAionNeutralColor
+                _currentTheme.Mode,
+                string.IsNullOrWhiteSpace(accentCssColor) ? DarkAccentColor : accentCssColor,
+                neutralBaseCssColor ?? _currentTheme.NeutralBaseColor ?? DarkNeutralColor
             );
 
-            // Si la méthode était appelée sans changement d'accent, elle sera inutilement appelée, 
-            // mais elle force la mise à jour pour le changement réel.
             OnThemeChanged();
         }
 
-        // Méthode utilitaire pour créer une nouvelle instance de thème, assurant une nouvelle référence.
         private static FluentDesignTheme CreateNewTheme(DesignThemeModes mode, string? customColor = null, string? neutralBaseColor = null)
-            => new()
+        {
+            if (mode == DesignThemeModes.Dark)
             {
-                Mode = mode,
-                CustomColor = customColor ?? DefaultAionAccentColor,
-                NeutralBaseColor = neutralBaseColor ?? DefaultAionNeutralColor,
-                OfficeColor = null,
-            };
+                return new FluentDesignTheme
+                {
+                    Mode = mode,
+                    CustomColor = customColor ?? DarkAccentColor,
+                    NeutralBaseColor = neutralBaseColor ?? DarkNeutralColor,
+                    OfficeColor = null,
+                };
+            }
+            else
+            {
+                return new FluentDesignTheme
+                {
+                    Mode = mode,
+                    CustomColor = customColor ?? LightAccentColor,
+                    NeutralBaseColor = neutralBaseColor ?? LightNeutralColor,
+                    OfficeColor = null,
+                };
+            }
+        }
 
         private void OnThemeChanged() => ThemeChanged?.Invoke();
-
-        // Suppression des champs _light, _dark et de la méthode ApplyBaseTheme, car ils ne sont plus nécessaires avec cette approche.
     }
 }

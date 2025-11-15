@@ -1,19 +1,29 @@
 /*
     Styles personnalisés pour l'hôte Blazor.
-    Ajoutez ici les règles spécifiques à l'application.
+    Thème Aion : Dark (noir brillant + or) / Light (blanc + or)
 */
 
 :root {
-    --aion-brand-gold: #EFBF04;
-    --aion-brand-soft-gold: #F7DF82; /* mélange de #EFBF04 avec le blanc */
-    --aion-brand-night: #0F172A;
+    /* Couleurs principales Aion */
+    --aion-brand-gold: #FFD700; /* Or */
+    --aion-brand-black: #000000; /* Noir brillant */
+    --aion-brand-white: #FFFFFF; /* Blanc */
+    --aion-brand-night: #0F172A; /* Nuance sombre pour textes */
 }
 
+/* Thème Light par défaut */
 body {
     background-color: #ffffff;
     color: #080808;
     min-height: 100vh;
-    transition: background-color 0.2s ease, color 0.2s ease;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+html[data-theme="dark"],
+html[data-theme="dark"] body {
+    background-color: #010102;
+    color: #fdfdfd;
+    color-scheme: dark;
 }
 
 [data-theme="dark" i],
@@ -28,7 +38,15 @@ main,
     padding: 1.5rem;
 }
 
+/* Thème Dark */
+html[data-theme="dark"],
+html[data-theme="dark"] body {
+    background-color: #000000; /* Noir brillant */
+    color: #FFFFFF; /* Blanc */
+    color-scheme: dark;
+}
 
+/* Agenda Layout */
 .agenda-layout {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
@@ -68,10 +86,10 @@ main,
     padding: 0.5rem 0.75rem;
 }
 
-.agenda-toolbar fluent-stack {
-    flex-wrap: wrap;
-    gap: 0.5rem;
-}
+    .agenda-toolbar fluent-stack {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
 
 .agenda-calendar-card {
     flex: 1;
@@ -80,9 +98,9 @@ main,
     min-height: 640px;
 }
 
-.agenda-calendar-card #aion-agenda-calendar {
-    flex: 1;
-}
+    .agenda-calendar-card #aion-agenda-calendar {
+        flex: 1;
+    }
 
 .agenda-upcoming {
     display: flex;
@@ -137,9 +155,9 @@ main,
     gap: 1rem !important;
 }
 
-.agenda-reminder-group .agenda-reminder-row {
-    flex-wrap: wrap;
-}
+    .agenda-reminder-group .agenda-reminder-row {
+        flex-wrap: wrap;
+    }
 
 @media (max-width: 992px) {
     .agenda-layout {
@@ -167,41 +185,97 @@ main,
         color: var(--neutral-foreground-rest, #111);
     }
 
-    /* En-têtes de colonnes (jours) */
     .fc .fc-col-header-cell {
         background-color: var(--neutral-layer-2, #f5f5f5);
         border-color: var(--neutral-stroke-layer-rest, #e0e0e0);
         font-weight: 600;
     }
 
-    /* Axe des heures */
     .fc .fc-timegrid-slot-label {
         color: var(--neutral-foreground-rest, #666);
         font-size: 0.8rem;
     }
 
-    /* Ligne All-day */
     .fc .fc-timegrid-axis,
     .fc .fc-timegrid-all-day {
         background-color: var(--neutral-layer-2, #f5f5f5);
         color: var(--neutral-foreground-rest, #333);
     }
 
-    /* Événements */
     .fc .fc-event {
         border-radius: 4px;
-        border: 1px solid var(--accent-stroke-control-rest, #0078d4);
-        background-color: var(--accent-fill-rest, #0078d4);
-        color: var(--neutral-foreground-on-accent-rest, #fff);
+        border: 1px solid #FFD700;
+        background-color: #FFD700;
+        color: #000000;
         padding: 2px 4px;
         font-size: 0.8rem;
     }
 
-    /* Sélection (quand on clique pour créer) */
     .fc .fc-highlight {
-        background: var(--accent-fill-rest, rgba(0,120,212,0.2));
+        background: rgba(255, 215, 0, 0.2);
     }
 
+/* -- Thème sombre Aion -- */
+html[data-theme="dark"] .agenda-card,
+html[data-theme="dark"] .agenda-toolbar,
+html[data-theme="dark"] .agenda-calendar-card,
+html[data-theme="dark"] .agenda-upcoming-card,
+html[data-theme="dark"] .agenda-dialog-body {
+    background-color: #000000;
+    color: #FFFFFF;
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    box-shadow: 0 4px 20px rgba(255, 215, 0, 0.15);
+}
+
+html[data-theme="dark"] .agenda-upcoming-item {
+    border-bottom: 1px solid rgba(255, 215, 0, 0.2);
+}
+
+/* -- Thème sombre personnalisé Aion -- */
+html[data-theme="dark"] .agenda-card,
+html[data-theme="dark"] .agenda-toolbar,
+html[data-theme="dark"] .agenda-calendar-card,
+html[data-theme="dark"] .agenda-upcoming-card,
+html[data-theme="dark"] .agenda-dialog-body {
+    background-color: #050505;
+    color: #fdfdfd;
+    border: 1px solid rgba(239, 191, 4, 0.18);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.65);
+}
+
+html[data-theme="dark"] .agenda-upcoming-item {
+    border-bottom: 1px solid rgba(239, 191, 4, 0.35);
+}
+
+html[data-theme="dark"] .agenda-upcoming-meta {
+    color: rgba(255, 255, 255, 0.72);
+}
+
+html[data-theme="dark"] .fc {
+    color: #fdfdfd;
+    background-color: #050505;
+}
+
+html[data-theme="dark"] .fc .fc-col-header-cell,
+html[data-theme="dark"] .fc .fc-timegrid-axis,
+html[data-theme="dark"] .fc .fc-timegrid-all-day {
+    background-color: rgba(255, 255, 255, 0.02);
+    border-color: rgba(239, 191, 4, 0.25);
+    color: #fdfdfd;
+}
+
+html[data-theme="dark"] .fc .fc-timegrid-slot-label {
+    color: rgba(255, 255, 255, 0.65);
+}
+
+html[data-theme="dark"] .fc .fc-event {
+    border-color: rgba(239, 191, 4, 0.9);
+    background-color: rgba(239, 191, 4, 0.92);
+    color: #050505;
+}
+
+html[data-theme="dark"] .fc .fc-highlight {
+    background: rgba(239, 191, 4, 0.25);
 }
 
 /* -- Thème sombre personnalisé Aion -- */

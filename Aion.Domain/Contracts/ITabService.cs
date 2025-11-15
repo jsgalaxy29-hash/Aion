@@ -13,7 +13,7 @@ namespace Aion.Domain.Contracts
     {
         public event Action? TabsChanged;
         IReadOnlyList<TabDescriptor> Tabs { get; }
-        Task<TabDescriptor> OpenAsync(string title, string route, IDictionary<string, object?>? parameters, bool activate, CancellationToken ct);
+        Task<TabDescriptor> OpenAsync(string title, string route, IDictionary<string, object?>? parameters, bool activate, bool canClose, CancellationToken ct);
         Task CloseAsync(Guid tabId, CancellationToken ct);
         void Activate(Guid tabId);
 
