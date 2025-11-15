@@ -92,14 +92,14 @@
     background: linear-gradient(135deg, rgba(239, 191, 4, 0.12), rgba(247, 223, 130, 0.18));
 }
 
-:global([data-theme='dark']) .dashboard-hero {
+:global([data-theme='dark' i]) .dashboard-hero {
     background: linear-gradient(145deg, #020202, #090909 65%, #040404);
     color: #fdfdfd;
     border: 1px solid rgba(239, 191, 4, 0.25);
     box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85);
 }
 
-:global([data-theme='dark']) .dashboard-hero img {
+:global([data-theme='dark' i]) .dashboard-hero img {
     border-color: rgba(239, 191, 4, 0.35);
     box-shadow: 0 20px 55px rgba(0, 0, 0, 0.8);
 }

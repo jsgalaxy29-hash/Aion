@@ -149,74 +149,74 @@
     }
 }
 
-:global([data-theme='dark']) .aion-shell {
+:global([data-theme='dark' i]) .aion-shell {
     background-color: #010102;
     background-image: radial-gradient(circle at 22% 5%, rgba(239, 191, 4, 0.14), transparent 45%),
         radial-gradient(circle at 80% 10%, rgba(239, 191, 4, 0.08), transparent 40%);
     color: #fdfdfd;
 }
 
-:global([data-theme='dark']) .aion-topbar,
-:global([data-theme='dark']) .aion-bottom-nav {
+:global([data-theme='dark' i]) .aion-topbar,
+:global([data-theme='dark' i]) .aion-bottom-nav {
     background: linear-gradient(145deg, #020202 0%, #080808 60%, #030303 100%);
     border-bottom: 1px solid rgba(239, 191, 4, 0.35);
     box-shadow: 0 18px 45px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.05);
     color: #fefefe;
 }
 
-:global([data-theme='dark']) .aion-bottom-nav {
+:global([data-theme='dark' i]) .aion-bottom-nav {
     border-top: 1px solid rgba(239, 191, 4, 0.25);
     border-bottom: none;
 }
 
-:global([data-theme='dark']) .aion-topbar-left,
-:global([data-theme='dark']) .aion-topbar-right,
-:global([data-theme='dark']) .aion-topbar-center,
-:global([data-theme='dark']) .aion-bottom-nav button {
+:global([data-theme='dark' i]) .aion-topbar-left,
+:global([data-theme='dark' i]) .aion-topbar-right,
+:global([data-theme='dark' i]) .aion-topbar-center,
+:global([data-theme='dark' i]) .aion-bottom-nav button {
     color: #fdfdfd;
 }
 
-:global([data-theme='dark']) .aion-command-button {
+:global([data-theme='dark' i]) .aion-command-button {
     background-color: rgba(5, 5, 5, 0.95);
     border-color: rgba(239, 191, 4, 0.65);
     color: #ffffff;
     box-shadow: 0 10px 32px rgba(0, 0, 0, 0.75);
 }
 
-:global([data-theme='dark']) .aion-command-button kbd {
+:global([data-theme='dark' i]) .aion-command-button kbd {
     background-color: rgba(239, 191, 4, 0.2);
     color: #050505;
 }
 
-:global([data-theme='dark']) .aion-command-button .plus {
+:global([data-theme='dark' i]) .aion-command-button .plus {
     color: rgba(255, 255, 255, 0.75);
 }
 
-:global([data-theme='dark']) .aion-body {
+:global([data-theme='dark' i]) .aion-body {
     background-color: #010102;
 }
 
-:global([data-theme='dark']) .aion-side-rail {
+:global([data-theme='dark' i]) .aion-side-rail {
     border-right: 1px solid rgba(239, 191, 4, 0.25);
     background-color: #030303;
     box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.65);
 }
 
-:global([data-theme='dark']) .aion-content {
+:global([data-theme='dark' i]) .aion-content {
     background: radial-gradient(circle at 20% 20%, rgba(239, 191, 4, 0.08), transparent 45%), #040404;
     border-left: 1px solid rgba(239, 191, 4, 0.18);
     box-shadow: inset 0 0 35px rgba(0, 0, 0, 0.45);
 }
 
-:global([data-theme='dark']) .aion-side-rail fluent-button {
+:global([data-theme='dark' i]) .aion-side-rail fluent-button {
     color: #fdfdfd;
 }
 
-:global([data-theme='dark']) .aion-side-rail fluent-button:hover {
+:global([data-theme='dark' i]) .aion-side-rail fluent-button:hover {
     background-color: rgba(239, 191, 4, 0.2);
     color: #050505;
 }
 
-:global([data-theme='dark']) .aion-bottom-nav button {
+:global([data-theme='dark' i]) .aion-bottom-nav button {
     color: #fdfdfd;
 }

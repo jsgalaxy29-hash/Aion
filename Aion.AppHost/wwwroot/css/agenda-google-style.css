@@ -228,7 +228,7 @@
 }
 
 /* === Mode sombre === */
-[data-theme="dark"] {
+[data-theme="dark" i] {
     --google-border: #3c4043;
     --google-hover-bg: #2d2e30;
     --google-text: #e8eaed;
@@ -236,20 +236,20 @@
     --google-text-tertiary: #5f6368;
 }
 
-    [data-theme="dark"] .fc {
+    [data-theme="dark" i] .fc {
         --fc-border-color: #3c4043;
         --fc-today-bg-color: rgba(138, 180, 248, 0.1);
     }
 
-    [data-theme="dark"] .fc-daygrid-day-number {
+    [data-theme="dark" i] .fc-daygrid-day-number {
         color: #e8eaed !important;
     }
 
-    [data-theme="dark"] .fc-col-header-cell {
+    [data-theme="dark" i] .fc-col-header-cell {
         color: #9aa0a6 !important;
     }
 
-    [data-theme="dark"] .mini-calendar {
+    [data-theme="dark" i] .mini-calendar {
         background: #202124;
     }
 
