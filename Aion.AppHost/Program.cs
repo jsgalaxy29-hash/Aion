@@ -135,6 +135,7 @@ builder.Services.AddSingleton<IModuleBootstrapper, ListDynBootstrapper>();
 builder.Services.AddSingleton<IModuleBootstrapper, TableManagerBootstrapper>();
 builder.Services.AddSingleton<IModuleBootstrapper, FormDynBootstrapper>();
 builder.Services.AddSingleton<IModuleBootstrapper, AgendaModuleBootstrapper>();
+builder.Services.AddSingleton<IModuleBootstrapper, DashboardBootstrapper>();
 builder.Services.AddScoped<StartupOrchestrator>();
 builder.Services.AddAionAi();
 builder.Services.AddScoped<IAuditTrailService, DatabaseAuditTrailService>();

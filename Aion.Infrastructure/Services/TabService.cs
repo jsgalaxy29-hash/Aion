@@ -16,10 +16,10 @@ namespace Aion.Infrastructure.Services
         private readonly List<TabDescriptor> _tabs = new();
         public IReadOnlyList<TabDescriptor> Tabs => _tabs;
 
-        public Task<TabDescriptor> OpenAsync(string title, string route, IDictionary<string, object?>? parameters, bool activate, CancellationToken ct)
+        public Task<TabDescriptor> OpenAsync(string title, string route, IDictionary<string, object?>? parameters, bool activate, bool canClose, CancellationToken ct)
         {
             var tab = new TabDescriptor(Guid.NewGuid(), title, route,
-                parameters is null ? null : new Dictionary<string, object?>(parameters), false);
+                parameters is null ? null : new Dictionary<string, object?>(parameters), false, canClose);
 
             if (activate)
             {

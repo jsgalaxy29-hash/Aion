@@ -8,7 +8,7 @@ namespace Aion.Domain.UI
     /// </summary>
     public sealed class TabDescriptor
     {
-        public TabDescriptor(Guid id, string title, string route, IDictionary<string, object?>? parameters,  bool isDirty)
+        public TabDescriptor(Guid id, string title, string route, IDictionary<string, object?>? parameters,  bool isDirty, bool canClose = true)
         {
             Id = id;
             Title = title;
@@ -16,6 +16,7 @@ namespace Aion.Domain.UI
             Parameters = parameters ?? new Dictionary<string, object?>();
             IsDirty = isDirty;
             IsActive = false;
+            CanClose = canClose;
         }
         public Guid Id { get; set; }
         public string Title { get; set; }
@@ -23,5 +24,6 @@ namespace Aion.Domain.UI
         public IDictionary<string, object?> Parameters { get; set; }
         public bool IsDirty { get; set; }
         public bool IsActive { get; set; }
+        public bool CanClose { get; set; }
     }
 }
