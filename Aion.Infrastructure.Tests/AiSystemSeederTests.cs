@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Aion.DataEngine.Interfaces;
+using Aion.DataEngine.Entities;
 using Aion.Domain.AI;
 using Aion.Infrastructure.Seeders;
 using FluentAssertions;
@@ -26,6 +27,12 @@ public class AiSystemSeederTests
         (await dbContext.SXAiConfigs.CountAsync()).Should().Be(1);
         (await dbContext.SXSynonyms.CountAsync()).Should().BeGreaterOrEqualTo(3);
         (await dbContext.SXTemplates.CountAsync()).Should().Be(2);
+
+        var moduleBuilder = await dbContext.SModule.FirstOrDefaultAsync(x => x.Name == "Natural Language Module Builder");
+        moduleBuilder.Should().NotBeNull();
+
+        var moduleMenu = await dbContext.SMenu.FirstOrDefaultAsync(x => x.ModuleId == moduleBuilder!.Id);
+        moduleMenu.Should().NotBeNull();
     }
 
     private sealed class TestUserContext : IUserContext

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Aion.DataEngine.Entities;
 using Aion.Domain.AI;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,9 +14,11 @@ public static class AiSystemSeeder
     public static async Task SeedAsync(AionDbContext dbContext, CancellationToken cancellationToken = default)
     {
         await EnsureAiTablesExistAsync(dbContext, cancellationToken).ConfigureAwait(false);
+        await EnsureModuleBuilderTablesExistAsync(dbContext, cancellationToken).ConfigureAwait(false);
         await SeedConfigAsync(dbContext, cancellationToken).ConfigureAwait(false);
         await SeedSynonymsAsync(dbContext, cancellationToken).ConfigureAwait(false);
         await SeedTemplatesAsync(dbContext, cancellationToken).ConfigureAwait(false);
+        await SeedModuleBuilderMetadataAsync(dbContext, cancellationToken).ConfigureAwait(false);
     }
 
     private static async Task EnsureAiTablesExistAsync(AionDbContext dbContext, CancellationToken cancellationToken)
@@ -139,6 +142,100 @@ END";
         }
     }
 
+    private static async Task EnsureModuleBuilderTablesExistAsync(AionDbContext dbContext, CancellationToken cancellationToken)
+    {
+        if (!dbContext.IsSqlServer())
+        {
+            await dbContext.Database.EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        const string ensureBlueprintTablesSql = @"
+IF OBJECT_ID(N'dbo.AiModuleBlueprint', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.AiModuleBlueprint
+    (
+        Id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_AiModuleBlueprint PRIMARY KEY,
+        TenantId INT NOT NULL DEFAULT(1),
+        Actif BIT NOT NULL DEFAULT(1),
+        Doc BIT NOT NULL DEFAULT(0),
+        Deleted BIT NOT NULL DEFAULT(0),
+        DtCreation DATETIME2 NOT NULL DEFAULT(GETUTCDATE()),
+        DtModification DATETIME2 NULL,
+        DtSuppression DATETIME2 NULL,
+        UsrCreationId INT NULL,
+        UsrModificationId INT NULL,
+        UsrSuppressionId INT NULL,
+        RowVersion ROWVERSION NULL,
+        Name NVARCHAR(256) NOT NULL,
+        Description NVARCHAR(1024) NULL,
+        NaturalLanguagePrompt NVARCHAR(MAX) NOT NULL,
+        ParsedSpecificationJson NVARCHAR(MAX) NOT NULL,
+        Status NVARCHAR(64) NOT NULL
+    );
+END
+
+IF OBJECT_ID(N'dbo.AiTableBlueprint', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.AiTableBlueprint
+    (
+        Id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_AiTableBlueprint PRIMARY KEY,
+        TenantId INT NOT NULL DEFAULT(1),
+        Actif BIT NOT NULL DEFAULT(1),
+        Doc BIT NOT NULL DEFAULT(0),
+        Deleted BIT NOT NULL DEFAULT(0),
+        DtCreation DATETIME2 NOT NULL DEFAULT(GETUTCDATE()),
+        DtModification DATETIME2 NULL,
+        DtSuppression DATETIME2 NULL,
+        UsrCreationId INT NULL,
+        UsrModificationId INT NULL,
+        UsrSuppressionId INT NULL,
+        RowVersion ROWVERSION NULL,
+        ModuleBlueprintId INT NOT NULL,
+        TechnicalName NVARCHAR(256) NOT NULL,
+        DisplayName NVARCHAR(256) NOT NULL,
+        Description NVARCHAR(1024) NULL
+    );
+
+    ALTER TABLE dbo.AiTableBlueprint
+    ADD CONSTRAINT FK_AiTableBlueprint_Module FOREIGN KEY(ModuleBlueprintId) REFERENCES dbo.AiModuleBlueprint(Id) ON DELETE CASCADE;
+END
+
+IF OBJECT_ID(N'dbo.AiFieldBlueprint', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.AiFieldBlueprint
+    (
+        Id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_AiFieldBlueprint PRIMARY KEY,
+        TenantId INT NOT NULL DEFAULT(1),
+        Actif BIT NOT NULL DEFAULT(1),
+        Doc BIT NOT NULL DEFAULT(0),
+        Deleted BIT NOT NULL DEFAULT(0),
+        DtCreation DATETIME2 NOT NULL DEFAULT(GETUTCDATE()),
+        DtModification DATETIME2 NULL,
+        DtSuppression DATETIME2 NULL,
+        UsrCreationId INT NULL,
+        UsrModificationId INT NULL,
+        UsrSuppressionId INT NULL,
+        RowVersion ROWVERSION NULL,
+        TableBlueprintId INT NOT NULL,
+        TechnicalName NVARCHAR(256) NOT NULL,
+        DisplayName NVARCHAR(256) NOT NULL,
+        DataType NVARCHAR(128) NOT NULL,
+        IsRequired BIT NOT NULL DEFAULT(0),
+        IsPrimaryKey BIT NOT NULL DEFAULT(0),
+        IsUnique BIT NOT NULL DEFAULT(0),
+        MaxLength INT NULL,
+        ForeignKeyTargetTable NVARCHAR(256) NULL,
+        ForeignKeyTargetField NVARCHAR(256) NULL
+    );
+
+    ALTER TABLE dbo.AiFieldBlueprint
+    ADD CONSTRAINT FK_AiFieldBlueprint_Table FOREIGN KEY(TableBlueprintId) REFERENCES dbo.AiTableBlueprint(Id) ON DELETE CASCADE;
+END";
+
+        await dbContext.Database.ExecuteSqlRawAsync(ensureBlueprintTablesSql, cancellationToken).ConfigureAwait(false);
+    }
+
     private static async Task SeedConfigAsync(AionDbContext dbContext, CancellationToken cancellationToken)
     {
         if (!await dbContext.SXAiConfigs.IgnoreQueryFilters().AnyAsync(cancellationToken).ConfigureAwait(false))
@@ -226,6 +323,89 @@ END";
                 Content = "Endpoint de validation pour les contrats, accessible aux rôles Gestionnaire.",
                 IsActive = true
             });
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task SeedModuleBuilderMetadataAsync(AionDbContext dbContext, CancellationToken cancellationToken)
+    {
+        const string moduleName = "Natural Language Module Builder";
+        const string moduleRoute = "/modules/ai-designer";
+
+        var module = await dbContext.SModule.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.Name == moduleName, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (module is null)
+        {
+            module = new SModule
+            {
+                Name = moduleName,
+                Description = "Création de modules dynamiques à partir d'un prompt IA",
+                Route = moduleRoute,
+                Icon = "SparkleFilled",
+                Order = 950
+            };
+
+            dbContext.SModule.Add(module);
+            await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            module.Description = "Création de modules dynamiques à partir d'un prompt IA";
+            module.Route = moduleRoute;
+            module.Icon ??= "SparkleFilled";
+            module.Actif = true;
+            module.Deleted = false;
+        }
+
+        var adminRoot = await dbContext.SMenu.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.Libelle == "Administration", cancellationToken)
+            .ConfigureAwait(false);
+
+        if (adminRoot is null)
+        {
+            adminRoot = new SMenu
+            {
+                Libelle = "Administration",
+                IsLeaf = false,
+                Icon = "Settings20Regular",
+                Order = 900
+            };
+
+            dbContext.SMenu.Add(adminRoot);
+            await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        var builderMenu = await dbContext.SMenu.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.ModuleId == module.Id, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (builderMenu is null)
+        {
+            builderMenu = new SMenu
+            {
+                ParentId = adminRoot.Id,
+                ModuleId = module.Id,
+                Libelle = "Designer IA",
+                IsLeaf = true,
+                Icon = "SparkleFilled",
+                Order = 955,
+                Parametre = moduleRoute
+            };
+
+            dbContext.SMenu.Add(builderMenu);
+        }
+        else
+        {
+            builderMenu.ParentId = adminRoot.Id;
+            builderMenu.Libelle = "Designer IA";
+            builderMenu.IsLeaf = true;
+            builderMenu.Icon ??= "SparkleFilled";
+            builderMenu.Parametre = moduleRoute;
+            builderMenu.Actif = true;
+            builderMenu.Deleted = false;
         }
 
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
