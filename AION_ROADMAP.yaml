@@ -331,3 +331,21 @@ aion:
   endpoints: []     # section préparée mais vide (0.4.x)
 
   reports: []       # central registry optionnel, conservé vide pour 0.4.x
+
+  - code: "AI_MODULE_BUILDER"
+    name: "Natural Language Module Builder"
+    type: "core"
+    description: "Permet de créer des modules Aion à partir d'une description en langage naturel."
+    tables:
+      - AiModuleBlueprint
+      - AiTableBlueprint
+      - AiFieldBlueprint
+    menus:
+      - path: "/modules/ai-designer"
+        label: "Designer IA"
+        access: "admin"
+    actions:
+      - code: "AnalyzePrompt"
+        label: "Analyser"
+      - code: "GenerateModule"
+        label: "Générer le module"
