@@ -122,6 +122,7 @@ builder.Services.AddScoped<ICommandInterpreter, SimpleCommandInterpreter>();
 builder.Services.AddScoped<IDataQueryResolver, DataQueryResolver>();
 builder.Services.AddScoped<IWidgetService, WidgetServiceEf>();
 builder.Services.AddScoped<IAionProvisioningService, AionProvisioningService>();
+builder.Services.AddScoped<INaturalLanguageModuleBuilder, NaturalLanguageModuleBuilderService>();
 builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
 builder.Services.AddSingleton<IClock, Aion.Infrastructure.Services.SystemClock>();
 builder.Services.AddScoped<IValidationService, SimpleValidationService>();
