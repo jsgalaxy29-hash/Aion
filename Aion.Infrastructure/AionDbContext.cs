@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Aion.DataEngine.Entities;
 using Aion.Domain.AI;
 using Aion.Domain.Agenda;
+using Aion.Domain.ModuleBuilder;
 
 namespace Aion.Infrastructure
 {
@@ -52,6 +53,9 @@ namespace Aion.Infrastructure
         public DbSet<RAgendaEventStatus> RAgendaEventStatuses => Set<RAgendaEventStatus>();
         public DbSet<RScheduledActionStatus> RScheduledActionStatuses => Set<RScheduledActionStatus>();
         public DbSet<RNotificationType> RNotificationTypes => Set<RNotificationType>();
+        public DbSet<AiModuleBlueprint> AiModuleBlueprints => Set<AiModuleBlueprint>();
+        public DbSet<AiTableBlueprint> AiTableBlueprints => Set<AiTableBlueprint>();
+        public DbSet<AiFieldBlueprint> AiFieldBlueprints => Set<AiFieldBlueprint>();
 
         public bool IsSqlServer()
         {
