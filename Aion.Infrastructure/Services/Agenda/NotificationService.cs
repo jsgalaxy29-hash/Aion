@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Aion.Domain.Agenda;
@@ -29,9 +30,9 @@ public class NotificationService(IDbContextFactory<AionDbContext> dbContextFacto
         await using var db = await _dbContextFactory.CreateDbContextAsync(ct);
 
         var evt = await db.SAgendaEvents
-            .IgnoreQueryFilters()
             .Include(e => e.Agenda)
-            .FirstOrDefaultAsync(e => e.Id == reminder.AgendaEventId, ct)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(e => e.Id == reminder.AgendaEventId && e.TenantId == reminder.TenantId, ct)
             .ConfigureAwait(false);
 
         if (evt?.Agenda == null)
@@ -40,8 +41,8 @@ public class NotificationService(IDbContextFactory<AionDbContext> dbContextFacto
         }
 
         var notificationTypeId = await db.RNotificationTypes
-            .IgnoreQueryFilters()
-            .Where(t => t.Code == "AGENDA_REMINDER")
+            .AsNoTracking()
+            .Where(t => t.Code == "AGENDA_REMINDER" && (t.TenantId == reminder.TenantId || t.TenantId == 0))
             .Select(t => (int?)t.Id)
             .FirstOrDefaultAsync(ct)
             .ConfigureAwait(false);

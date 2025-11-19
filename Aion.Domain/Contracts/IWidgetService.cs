@@ -11,6 +11,6 @@ namespace Aion.Domain.Contracts
     public interface IWidgetService
     {
         Task<IReadOnlyList<WidgetEntity>> GetAvailableWidgetsAsync(int tenantId, CancellationToken ct);
-        Task<object?> GetDataAsync(string widgetCode, IDictionary<string, object?>? settings, CancellationToken ct);
+        Task<object?> GetDataAsync(int tenantId, string widgetCode, IDictionary<string, object?>? settings, CancellationToken ct);
     }
 }
