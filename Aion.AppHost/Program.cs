@@ -36,6 +36,8 @@ using Aion.AppHost.Services.Navigation;
 using Aion.Domain.UI.Navigation;
 using Aion.Domain.Services.Navigation;
 using Aion.UI.Components.Agenda;
+using Aion.AI.Services;
+using Aion.Infrastructure.Ai;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -139,6 +141,19 @@ builder.Services.AddSingleton<IModuleBootstrapper, AgendaModuleBootstrapper>();
 builder.Services.AddSingleton<IModuleBootstrapper, DashboardBootstrapper>();
 builder.Services.AddScoped<StartupOrchestrator>();
 builder.Services.AddAionAi();
+builder.Services.Configure<MistralOptions>(builder.Configuration.GetSection("Mistral"));
+
+var moduleSpecProvider = builder.Configuration.GetValue<string>("Ai:ModuleSpecProvider") ?? "Mock";
+if (string.Equals(moduleSpecProvider, "Mistral", StringComparison.OrdinalIgnoreCase))
+{
+    builder.Services.AddHttpClient<MistralModuleSpecGenerator>();
+    builder.Services.AddScoped<IAiModuleSpecGenerator, MistralModuleSpecGenerator>();
+}
+else
+{
+    builder.Services.AddScoped<IAiModuleSpecGenerator, MockAiModuleSpecGenerator>();
+}
+
 builder.Services.AddScoped<IAuditTrailService, DatabaseAuditTrailService>();
 builder.Services.AddScoped<IAionProvisioningObserver, AiProvisioningObserver>();
 // Changez Scoped à Singleton pour garantir la même instance pour tous les composants
