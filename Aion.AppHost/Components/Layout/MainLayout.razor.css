@@ -1,10 +1,42 @@
+/* ========== LAYOUT GLOBAL AION ========== */
+
+
 .aion-shell {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    background-color: #FFFFFF;
-    color: #000000;
+    background-color: var(--neutral-layer-1, #FFFFFF);
+    color: var(--neutral-foreground-rest, #000000);
 }
+
+/* Etat dark "marque Aion" basé sur la classe aion-shell-dark */
+
+.aion-shell-dark {
+    background-color: #2D3642; /* proche du fond du logo */
+    color: #fdfdfd;
+}
+
+    /* Tout ce qui est dedans suit la teinte Aion */
+    .aion-shell-dark .aion-topbar,
+    .aion-shell-dark .aion-bottom-nav {
+        background: linear-gradient(135deg, #222a34 0%, #2D3642 50%, #222a34 100%);
+        color: #fdfdfd;
+        border-color: rgba(255, 215, 0, 0.6);
+    }
+
+    .aion-shell-dark .aion-side-rail {
+        background-color: #2D3642;
+        box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.7);
+        border-right: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .aion-shell-dark .aion-content {
+        background-color: #2D3642;
+        box-shadow: inset 0 0 32px rgba(0, 0, 0, 0.6);
+        border-left: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+/* ========== TOPBAR ========== */
 
 .aion-topbar {
     display: flex;
@@ -13,9 +45,8 @@
     gap: 1rem;
     padding: 0.75rem 1.5rem;
     border-bottom: 2px solid #FFD700;
-    background: linear-gradient(135deg, #FFFFFF 0%, #FFFEF0 100%);
-    box-shadow: 0 2px 10px rgba(255, 215, 0, 0.2);
-    color: #000000;
+    background: linear-gradient( 135deg, var(--neutral-layer-1, #FFFFFF) 0%, var(--neutral-layer-2, #F5F5F5) 100% );
+    color: var(--neutral-foreground-rest, #000000);
 }
 
 .aion-topbar-left {
@@ -24,7 +55,7 @@
     gap: 0.5rem;
     font-weight: 600;
     cursor: pointer;
-    color: #000000;
+    color: inherit;
 }
 
     .aion-topbar-left span {
@@ -38,6 +69,14 @@
     justify-content: center;
 }
 
+.aion-topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+/* ========== BOUTON PALETTE DE COMMANDE ========== */
+
 .aion-command-button {
     display: flex;
     align-items: center;
@@ -45,10 +84,11 @@
     min-width: 320px;
     justify-content: space-between;
     padding: 0.35rem 0.65rem;
-    background-color: rgba(255, 255, 255, 0.95);
+    background-color: var(--neutral-layer-1, #FFFFFF);
     border: 1px solid rgba(255, 215, 0, 0.4);
     border-radius: 999px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    color: var(--neutral-foreground-rest, #000000);
 }
 
     .aion-command-button kbd {
@@ -64,19 +104,17 @@
         color: rgba(0, 0, 0, 0.6);
     }
 
-.aion-topbar-right {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
+/* ========== CORPS PRINCIPAL (SIDE + CONTENU) ========== */
 
 .aion-body {
     flex: 1 1 auto;
     display: grid;
     grid-template-columns: 64px 1fr;
     min-height: 0;
-    background-color: #FFFFFF;
+    background-color: var(--neutral-layer-1, #FFFFFF);
 }
+
+/* ========== SIDE RAIL (DESKTOP) ========== */
 
 .aion-side-rail {
     display: flex;
@@ -85,36 +123,41 @@
     gap: 0.5rem;
     padding: 1rem 0.5rem;
     border-right: 1px solid rgba(255, 215, 0, 0.3);
-    background-color: #FFFFFF;
+    background-color: var(--neutral-layer-1, #FFFFFF);
 }
 
     .aion-side-rail fluent-button {
         width: 48px;
         height: 48px;
         border-radius: 12px;
-        color: #000000;
-        transition: transform 0.2s ease, background-color 0.2s ease;
+        color: var(--neutral-foreground-rest, #000000);
+        transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
     }
 
         .aion-side-rail fluent-button:hover {
-            background-color: rgba(255, 215, 0, 0.15);
+            background-color: var(--neutral-layer-2, #F5F5F5);
             transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
         }
+
+/* ========== CONTENU (MODULE HOST) ========== */
 
 .aion-content {
     padding: 1rem;
     min-height: 0;
-    background-color: #ffffff;
+    background-color: var(--neutral-layer-1, #FFFFFF);
     border-left: 1px solid rgba(15, 23, 42, 0.08);
 }
+
+/* ========== BOTTOM NAV (MOBILE) ========== */
 
 .aion-bottom-nav {
     display: none;
     border-top: 2px solid #FFD700;
-    background: linear-gradient(135deg, #FFFFFF 0%, #FFFEF0 100%);
+    background: linear-gradient( 135deg, var(--neutral-layer-1, #FFFFFF) 0%, var(--neutral-layer-2, #F5F5F5) 100% );
 }
 
-    .aion-bottom-nav button {
+    .aion-bottom-nav fluent-button {
         flex: 1 1 0;
         padding: 0.75rem 0.5rem;
         display: flex;
@@ -123,8 +166,19 @@
         gap: 0.25rem;
         border: none;
         background: transparent;
-        color: #000000;
+        color: var(--neutral-foreground-rest, #000000);
     }
+
+/* bottom nav collée en bas sur mobile */
+@media (max-width: 900px) {
+    .aion-bottom-nav {
+        position: sticky;
+        bottom: 0;
+        z-index: 20;
+    }
+}
+
+/* ========== RESPONSIVE ========== */
 
 @media (max-width: 900px) {
     .aion-command-button {
@@ -147,76 +201,4 @@
     .aion-content {
         padding: 0.5rem;
     }
-}
-
-:global([data-theme='dark' i]) .aion-shell {
-    background-color: #010102;
-    background-image: radial-gradient(circle at 22% 5%, rgba(239, 191, 4, 0.14), transparent 45%),
-        radial-gradient(circle at 80% 10%, rgba(239, 191, 4, 0.08), transparent 40%);
-    color: #fdfdfd;
-}
-
-:global([data-theme='dark' i]) .aion-topbar,
-:global([data-theme='dark' i]) .aion-bottom-nav {
-    background: linear-gradient(145deg, #020202 0%, #080808 60%, #030303 100%);
-    border-bottom: 1px solid rgba(239, 191, 4, 0.35);
-    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-    color: #fefefe;
-}
-
-:global([data-theme='dark' i]) .aion-bottom-nav {
-    border-top: 1px solid rgba(239, 191, 4, 0.25);
-    border-bottom: none;
-}
-
-:global([data-theme='dark' i]) .aion-topbar-left,
-:global([data-theme='dark' i]) .aion-topbar-right,
-:global([data-theme='dark' i]) .aion-topbar-center,
-:global([data-theme='dark' i]) .aion-bottom-nav button {
-    color: #fdfdfd;
-}
-
-:global([data-theme='dark' i]) .aion-command-button {
-    background-color: rgba(5, 5, 5, 0.95);
-    border-color: rgba(239, 191, 4, 0.65);
-    color: #ffffff;
-    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.75);
-}
-
-:global([data-theme='dark' i]) .aion-command-button kbd {
-    background-color: rgba(239, 191, 4, 0.2);
-    color: #050505;
-}
-
-:global([data-theme='dark' i]) .aion-command-button .plus {
-    color: rgba(255, 255, 255, 0.75);
-}
-
-:global([data-theme='dark' i]) .aion-body {
-    background-color: #010102;
-}
-
-:global([data-theme='dark' i]) .aion-side-rail {
-    border-right: 1px solid rgba(239, 191, 4, 0.25);
-    background-color: #030303;
-    box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.65);
-}
-
-:global([data-theme='dark' i]) .aion-content {
-    background: radial-gradient(circle at 20% 20%, rgba(239, 191, 4, 0.08), transparent 45%), #040404;
-    border-left: 1px solid rgba(239, 191, 4, 0.18);
-    box-shadow: inset 0 0 35px rgba(0, 0, 0, 0.45);
-}
-
-:global([data-theme='dark' i]) .aion-side-rail fluent-button {
-    color: #fdfdfd;
-}
-
-:global([data-theme='dark' i]) .aion-side-rail fluent-button:hover {
-    background-color: rgba(239, 191, 4, 0.2);
-    color: #050505;
-}
-
-:global([data-theme='dark' i]) .aion-bottom-nav button {
-    color: #fdfdfd;
 }

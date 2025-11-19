@@ -15,11 +15,11 @@
                    NeutralBaseColor="@ThemeService.Current.NeutralBaseColor"
                    OfficeColor="@ThemeService.Current.OfficeColor"
                    CustomColor="@ThemeService.Current.CustomColor">
-    <div class="aion-shell">
+    <div class="@ShellClass">
         <header class="aion-topbar">
             <div class="aion-topbar-left" @onclick="@(() => Navigation.NavigateTo("/"))">
                 <FluentIcon Value='@FluentIconResolver.Resolve("Apps24Regular")' />
-                <FluentLabel>Aion</FluentLabel>
+                <span>Aion</span>
             </div>
 
             <div class="aion-topbar-center">
@@ -125,6 +125,9 @@
     private string _username = "Utilisateur";
     private CommandPalette? _commandPalette;
 
+    private bool IsDark => ThemeService.Current.Mode == DesignThemeModes.Dark;
+    private string ShellClass => IsDark ? "aion-shell aion-shell-dark" : "aion-shell";
+
     protected override async Task OnInitializedAsync()
     {
         ThemeService.ThemeChanged += OnThemeChanged;
@@ -175,7 +178,6 @@
 
     private void OpenUserMenu()
     {
-        // Placeholder: user menu already available in top bar. Optionally open command palette.
         _ = OpenCommandPalette();
     }
 
