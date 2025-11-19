@@ -1,5 +1,7 @@
 @using Aion.Domain.Contracts
+@using Aion.DataEngine.Interfaces
 @inject IWidgetService WidgetService
+@inject IUserContext UserContext
 
 @if (_data is null)
 {
@@ -33,6 +35,6 @@ else
         var settings = string.IsNullOrWhiteSpace(SettingsJson)
             ? null
             : System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object?>>(SettingsJson);
-        _data = await WidgetService.GetDataAsync(Code, settings, CancellationToken.None);
+        _data = await WidgetService.GetDataAsync(UserContext.TenantId, Code, settings, CancellationToken.None);
     }
 }
