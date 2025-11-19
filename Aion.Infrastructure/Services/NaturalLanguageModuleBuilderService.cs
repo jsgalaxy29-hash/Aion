@@ -71,7 +71,7 @@ public class NaturalLanguageModuleBuilderService : INaturalLanguageModuleBuilder
                     Taille = field.MaxLength ?? 0,
                     IsNulleable = !field.IsRequired,
                     Referentiel = field.ForeignKeyTargetTable,
-                    ReferentielLibelle = field.ForeignKeyTargetField,
+                    //ReferentielLibelle = field.ForeignKeyTargetField,
                     IsVisible = true,
                     IsLinkToBdd = true
                 };
