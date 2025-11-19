@@ -14,11 +14,11 @@ namespace Aion.Domain.Contracts
         /// <summary>
         /// Récupère la disposition actuelle des widgets pour un utilisateur.
         /// </summary>
-        Task<IReadOnlyList<UserDashboardLayoutEntity>> GetLayoutAsync(Guid tenantId, Guid userId, CancellationToken ct);
+        Task<IReadOnlyList<UserDashboardLayoutEntity>> GetLayoutAsync(int tenantId, int userId, CancellationToken ct);
 
         /// <summary>
         /// Sauvegarde la disposition de widgets.
         /// </summary>
-        Task SaveLayoutAsync(Guid tenantId, Guid userId, IEnumerable<UserDashboardLayoutEntity> layout, CancellationToken ct);
+        Task SaveLayoutAsync(int tenantId, int userId, IEnumerable<UserDashboardLayoutEntity> layout, CancellationToken ct);
     }
 }

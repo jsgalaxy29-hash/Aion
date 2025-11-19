@@ -21,19 +21,36 @@ namespace Aion.Security.Claims
             // TODO: adjust mapping to your user table; example relies on ApplicationUser by UserName
             await using var db = await _dbFactory.CreateDbContextAsync();
 
-            var user = await db.SUser.FirstOrDefaultAsync(u => u.UserName == name);
+            var user = await db.SUser
+                .AsNoTracking()
+                .Where(u => u.UserName == name && !u.Deleted)
+                .Select(u => new { u.Id, u.TenantId })
+                .FirstOrDefaultAsync();
             if (user == null) return principal;
 
-            // Example: build rights from S_DROIT / S_DROIT_TYPE
-            var rights = await db.SRight.Join(db.SRightType, r => r.SubjectId, t => t.Id, (r,t) => new { r, t })
-                .Where(x => user.UserGroups.Any(g => g.GroupId == x.r.GroupId)) // replace with your actual linkage
+            var groupIds = await db.SUserGroup
+                .AsNoTracking()
+                .Where(g => g.UserId == user.Id && g.TenantId == user.TenantId && g.IsLinkActive && !g.Deleted)
+                .Select(g => g.GroupId)
+                .ToArrayAsync();
+
+            if (groupIds.Length == 0) return principal;
+
+            // Example: build rights from SRight / SRightType for the current tenant
+            var rights = await db.SRight
+                .AsNoTracking()
+                .Where(r => groupIds.Contains(r.GroupId) && r.TenantId == user.TenantId && !r.Deleted)
+                .Join(db.SRightType.AsNoTracking().Where(t => t.TenantId == user.TenantId && t.IsActive),
+                    r => r.Target,
+                    t => t.Code,
+                    (r, t) => new { Right = r, TypeCode = t.Code })
                 .ToListAsync();
 
             foreach (var x in rights)
             {
-                if (x.r.Right1 == true) id.AddClaim(new Claim("Right", $"{x.t.Code}:Lecture:{x.r.SubjectId}"));
-                if (x.r.Right2 == true) id.AddClaim(new Claim("Right", $"{x.t.Code}:Ecriture:{x.r.SubjectId}"));
-                if (x.r.Right3 == true) id.AddClaim(new Claim("Right", $"{x.t.Code}:Suppression:{x.r.SubjectId}"));
+                if (x.Right.Right1 == true) id.AddClaim(new Claim("Right", $"{x.TypeCode}:Lecture:{x.Right.SubjectId}"));
+                if (x.Right.Right2 == true) id.AddClaim(new Claim("Right", $"{x.TypeCode}:Ecriture:{x.Right.SubjectId}"));
+                if (x.Right.Right3 == true) id.AddClaim(new Claim("Right", $"{x.TypeCode}:Suppression:{x.Right.SubjectId}"));
             }
             return principal;
         }

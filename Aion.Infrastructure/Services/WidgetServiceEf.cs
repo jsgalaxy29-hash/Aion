@@ -48,10 +48,15 @@ namespace Aion.Infrastructure.Services
             return widgets;
         }
 
-        public async Task<object?> GetDataAsync(string widgetCode, IDictionary<string, object?>? settings, CancellationToken ct)
+        public async Task<object?> GetDataAsync(int tenantId, string widgetCode, IDictionary<string, object?>? settings, CancellationToken ct)
         {
             await using var db = await _dbFactory.CreateDbContextAsync(ct);
-            var widget = await db.SWidget.AsNoTracking().FirstOrDefaultAsync(w => w.Code == widgetCode, ct);
+            var widget = await db.SWidget
+                .AsNoTracking()
+                .FirstOrDefaultAsync(w => w.Code == widgetCode
+                    && (w.TenantId == tenantId || w.TenantId == 0)
+                    && w.IsActive,
+                    ct);
             if (widget is null) return null;
             return await _resolver.ExecuteAsync(widget.DataQueryRef, settings, ct);
         }

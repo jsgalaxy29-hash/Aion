@@ -10,8 +10,8 @@ namespace Aion.Domain.UI.State
     public sealed class UserDashboardLayoutEntity
     {
         public long Id { get; set; }
-        public Guid TenantId { get; set; }
-        public Guid UserId { get; set; }
+        public int TenantId { get; set; }
+        public int UserId { get; set; }
         public string WidgetCode { get; set; } = default!;
         public int X { get; set; }
         public int Y { get; set; }

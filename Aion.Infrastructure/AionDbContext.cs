@@ -36,6 +36,7 @@ namespace Aion.Infrastructure
         public DbSet<SHistoChange> SHistoChange => Set<SHistoChange>();
         public DbSet<STenant> STenant => Set<STenant>();
         public DbSet<SWidget> SWidget => Set<SWidget>();
+        public DbSet<UUserDashboardLayout> UserDashboardLayouts => Set<UUserDashboardLayout>();
         public DbSet<SAuditRecord> SAuditRecords => Set<SAuditRecord>();
         public DbSet<SXAiConfig> SXAiConfigs => Set<SXAiConfig>();
         public DbSet<SXSynonym> SXSynonyms => Set<SXSynonym>();
@@ -80,6 +81,7 @@ namespace Aion.Infrastructure
             modelBuilder.Entity<Aion.DataEngine.Entities.SUserGroup>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
             modelBuilder.Entity<Aion.DataEngine.Entities.SRightType>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
             modelBuilder.Entity<Aion.DataEngine.Entities.SRight>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
+            modelBuilder.Entity<UUserDashboardLayout>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
             modelBuilder.Entity<Aion.DataEngine.Entities.STable>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
             modelBuilder.Entity<Aion.DataEngine.Entities.SField>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
             modelBuilder.Entity<Aion.DataEngine.Entities.RRegex>().HasQueryFilter(e => e.TenantId == _userContext.TenantId);
@@ -211,6 +213,14 @@ namespace Aion.Infrastructure
                     .WithMany(t => t.Notifications)
                     .HasForeignKey(e => e.NotificationTypeId)
                     .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            modelBuilder.Entity<UUserDashboardLayout>(entity =>
+            {
+                entity.ToTable("U_UserDashboardLayout");
+                entity.Property(e => e.WidgetCode).IsRequired().HasMaxLength(128);
+                entity.Property(e => e.SettingsJson).HasMaxLength(4000);
+                entity.HasIndex(e => new { e.TenantId, e.UserId, e.WidgetCode, e.X, e.Y });
             });
 
             modelBuilder.Entity<SScheduledAction>(entity =>
