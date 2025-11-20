@@ -1,24 +1,231 @@
 @page "/modules/ai-designer"
+@using Aion.Domain.Contracts
+@using Aion.Domain.ModuleBuilder
+@using Microsoft.FluentUI.AspNetCore.Components
+@inject IAiModuleSpecGenerator SpecGenerator
+@inject INaturalLanguageModuleBuilder ModuleBuilder
+@inject ILogger<Pages.AiDesigner>? Logger
 
 <PageTitle>AI Designer</PageTitle>
 
-<div class="d-flex align-items-center gap-2 mb-3">
-    <h3 class="mb-0">AI Designer</h3>
-</div>
-
-<p class="text-muted">
-    Le concepteur de modules IA permet de générer des fonctionnalités à partir d'instructions en langage naturel.
-    Cette première version affiche une page d'accueil pour le module afin de débloquer la navigation.
-</p>
-
-<FluentCard>
-    <div class="d-flex flex-column gap-2">
-        <FluentLabel Typo="Typography.Body">
-            Prêt à concevoir votre prochain module ?
-        </FluentLabel>
-        <FluentLabel Typo="Typography.Body">
-            Les outils de génération seront bientôt disponibles. En attendant, vous pouvez décrire votre besoin
-            fonctionnel et partager cette page avec l'équipe pour suivi.
-        </FluentLabel>
+<FluentStack Orientation="Orientation.Vertical" Gap="16" Class="ai-designer">
+    <div class="d-flex align-items-center gap-2">
+        <h3 class="mb-0">AI Designer</h3>
+        <FluentBadge Appearance="BadgeAppearance.Accent" Shape="BadgeShape.Rounded">
+            Assistant de génération de modules
+        </FluentBadge>
     </div>
-</FluentCard>
+
+    <p class="text-muted">
+        Décrivez votre besoin fonctionnel en langage naturel puis laissez l'IA générer un plan de module.
+        Une fois satisfait du plan, appliquez-le pour créer les tables et champs dans le catalogue dynamique.
+    </p>
+
+    <div class="ai-designer__layout">
+        <FluentCard Class="ai-designer__card">
+            <FluentStack Orientation="Orientation.Vertical" Gap="12">
+                <div>
+                    <FluentLabel Typo="Typography.BodyStrong">Instruction fonctionnelle</FluentLabel>
+                    <FluentTextArea @bind-Value="_prompt"
+                                    Placeholder="Ex: Créer un module de gestion des formations avec les participants, les sessions et les feuilles de présence..."
+                                    Rows="8"
+                                    Class="w-100" />
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(_errorMessage))
+                {
+                    <FluentMessageBar Intent="MessageIntent.Error">@_errorMessage</FluentMessageBar>
+                }
+
+                @if (_buildSucceeded)
+                {
+                    <FluentMessageBar Intent="MessageIntent.Success">
+                        Module créé et ajouté au catalogue. Vous pouvez l'ouvrir depuis la page Modules.
+                    </FluentMessageBar>
+                }
+
+                <FluentStack Orientation="Orientation.Horizontal" Gap="8">
+                    <FluentButton Appearance="Appearance.Accent"
+                                  OnClick="GenerateAsync"
+                                  Disabled="_isGenerating || string.IsNullOrWhiteSpace(_prompt)"
+                                  IconStart="@(new Microsoft.FluentUI.AspNetCore.Components.Icons.Filled.Size16.Sparkle())">
+                        @if (_isGenerating)
+                        {
+                            <FluentProgressRing Size="ProgressRingSize.Small" />
+                            <span class="ms-2">Analyse en cours...</span>
+                        }
+                        else
+                        {
+                            <span>Générer le plan</span>
+                        }
+                    </FluentButton>
+
+                    <FluentButton Appearance="Appearance.Outline"
+                                  OnClick="BuildAsync"
+                                  Disabled="_blueprint is null || _isGenerating || _isBuilding"
+                                  IconStart="@(new Microsoft.FluentUI.AspNetCore.Components.Icons.Filled.Size16.CheckmarkCircle())">
+                        @if (_isBuilding)
+                        {
+                            <FluentProgressRing Size="ProgressRingSize.Small" />
+                            <span class="ms-2">Création du module...</span>
+                        }
+                        else
+                        {
+                            <span>Appliquer au catalogue</span>
+                        }
+                    </FluentButton>
+                </FluentStack>
+            </FluentStack>
+        </FluentCard>
+
+        <FluentCard Class="ai-designer__card">
+            <FluentStack Orientation="Orientation.Vertical" Gap="12">
+                <div class="d-flex align-items-center justify-content-between">
+                    <FluentLabel Typo="Typography.BodyStrong">Plan généré</FluentLabel>
+                    <FluentBadge Appearance="BadgeAppearance.Neutral" Shape="BadgeShape.Rounded">
+                        @_blueprint?.Status ?? "En attente"
+                    </FluentBadge>
+                </div>
+
+                @if (_blueprint is null)
+                {
+                    <FluentMessageBar Intent="MessageIntent.Info">
+                        Saisissez un prompt puis lancez la génération pour visualiser le plan du module.
+                    </FluentMessageBar>
+                }
+                else
+                {
+                    <div class="ai-designer__summary">
+                        <div>
+                            <p class="summary-title">@_blueprint.Name</p>
+                            @if (!string.IsNullOrWhiteSpace(_blueprint.Description))
+                            {
+                                <p class="text-muted">@_blueprint.Description</p>
+                            }
+                        </div>
+
+                        <FluentBadge Appearance="BadgeAppearance.Neutral">
+                            @_blueprint.Tables.Count @(_blueprint.Tables.Count > 1 ? "tables" : "table") détectée(s)
+                        </FluentBadge>
+                    </div>
+
+                    <div class="ai-designer__tables">
+                        @foreach (var table in _blueprint.Tables)
+                        {
+                            <div class="ai-designer__table">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <p class="table-title">@table.DisplayName</p>
+                                        <p class="text-muted mb-1">Nom technique : @table.TechnicalName</p>
+                                        @if (!string.IsNullOrWhiteSpace(table.Description))
+                                        {
+                                            <p class="text-muted">@table.Description</p>
+                                        }
+                                    </div>
+                                    <FluentBadge Appearance="BadgeAppearance.Lightweight">@table.Fields.Count champ(s)</FluentBadge>
+                                </div>
+
+                                <div class="ai-designer__fields">
+                                    @foreach (var field in table.Fields)
+                                    {
+                                        <div class="ai-designer__field">
+                                            <div class="d-flex align-items-center justify-content-between">
+                                                <span class="field-name">@field.DisplayName</span>
+                                                <span class="field-type">@field.DataType</span>
+                                            </div>
+                                            <div class="field-meta">
+                                                <span>Alias : @field.TechnicalName</span>
+                                                @if (field.IsPrimaryKey)
+                                                {
+                                                    <FluentBadge Appearance="BadgeAppearance.Accent">Clé primaire</FluentBadge>
+                                                }
+                                                @if (field.IsRequired)
+                                                {
+                                                    <FluentBadge Appearance="BadgeAppearance.Neutral">Obligatoire</FluentBadge>
+                                                }
+                                                @if (field.IsUnique)
+                                                {
+                                                    <FluentBadge Appearance="BadgeAppearance.Outline">Unique</FluentBadge>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <details class="ai-designer__json">
+                        <summary>Spécification JSON analysée</summary>
+                        <pre>@_blueprint.ParsedSpecificationJson</pre>
+                    </details>
+                }
+            </FluentStack>
+        </FluentCard>
+    </div>
+</FluentStack>
+
+@code {
+    private string _prompt = string.Empty;
+    private AiModuleBlueprint? _blueprint;
+    private bool _isGenerating;
+    private bool _isBuilding;
+    private bool _buildSucceeded;
+    private string? _errorMessage;
+
+    private async Task GenerateAsync()
+    {
+        _errorMessage = null;
+        _buildSucceeded = false;
+
+        if (string.IsNullOrWhiteSpace(_prompt))
+        {
+            _errorMessage = "Merci de décrire le besoin fonctionnel avant de lancer la génération.";
+            return;
+        }
+
+        _isGenerating = true;
+        try
+        {
+            _blueprint = await SpecGenerator.GenerateAsync(_prompt.Trim());
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "La génération a échoué. Vérifiez le prompt ou réessayez plus tard.";
+            Logger?.LogError(ex, "Erreur lors de la génération du blueprint IA");
+        }
+        finally
+        {
+            _isGenerating = false;
+        }
+    }
+
+    private async Task BuildAsync()
+    {
+        if (_blueprint is null)
+        {
+            _errorMessage = "Aucun plan généré. Lancez la génération avant d'appliquer le module.";
+            return;
+        }
+
+        _errorMessage = null;
+        _buildSucceeded = false;
+        _isBuilding = true;
+
+        try
+        {
+            await ModuleBuilder.BuildAsync(_blueprint);
+            _blueprint.Status = "Créé";
+            _buildSucceeded = true;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Impossible d'appliquer le module. Consultez les journaux pour plus de détails.";
+            Logger?.LogError(ex, "Erreur lors de l'application du blueprint IA");
+        }
+        finally
+        {
+            _isBuilding = false;
+        }
+    }
+}
