@@ -286,7 +286,9 @@ else
         {
             await using var db = await DbFactory.CreateDbContextAsync();
 
-            var rows = await db.STable.AsNoTracking()
+            var rows = await db.STable
+                .AsNoTracking()
+                .Where(t => t.TenantId == UserContext.TenantId && !t.Deleted)
                 .OrderBy(t => t.Libelle)
                 .Select(t => new { t.Id, t.Libelle })
                 .ToListAsync();
@@ -306,6 +308,7 @@ else
             {
                 _currentTable = null;
                 _fields = new List<FieldEditor>();
+                _currentField = null;
             }
         }
         catch (Exception ex)
@@ -330,16 +333,20 @@ else
             var entity = await db.STable
                 .Include(t => t.Champs)
                 .AsNoTracking()
+                .Where(t => t.TenantId == UserContext.TenantId && !t.Deleted)
                 .FirstOrDefaultAsync(t => t.Id == id);
 
             if (entity == null)
             {
+                _currentTable = null;
+                _fields = new List<FieldEditor>();
                 _errorMessage = $"Table {id} introuvable.";
                 return;
             }
 
             _currentTable = TableEditor.FromEntity(entity);
             _fields = entity.Champs
+                .Where(f => f.TenantId == UserContext.TenantId && !f.Deleted)
                 .OrderBy(f => f.Ordre ?? int.MaxValue)
                 .ThenBy(f => f.Libelle)
                 .Select(FieldEditor.FromEntity)
@@ -390,7 +397,10 @@ else
             }
             else
             {
-                entity = await db.STable.FirstAsync(t => t.Id == _currentTable.Id);
+                entity = await db.STable
+                    .Where(t => t.TenantId == UserContext.TenantId && !t.Deleted)
+                    .FirstOrDefaultAsync(t => t.Id == _currentTable.Id)
+                    ?? throw new InvalidOperationException($"Table {_currentTable.Id} introuvable pour ce locataire.");
                 entity.DtModification = DateTime.UtcNow;
                 entity.UsrModificationId = UserContext.UserId;
             }
@@ -428,13 +438,16 @@ else
         {
             await using var db = await DbFactory.CreateDbContextAsync();
 
-            var entity = await db.STable.Include(t => t.Champs).FirstOrDefaultAsync(t => t.Id == _currentTable.Id);
+            var entity = await db.STable
+                .Include(t => t.Champs)
+                .Where(t => t.TenantId == UserContext.TenantId && !t.Deleted)
+                .FirstOrDefaultAsync(t => t.Id == _currentTable.Id);
             if (entity == null)
             {
                 return;
             }
 
-            db.SField.RemoveRange(entity.Champs);
+            db.SField.RemoveRange(entity.Champs.Where(f => f.TenantId == UserContext.TenantId));
             db.STable.Remove(entity);
             await db.SaveChangesAsync();
             await DataEngine.InvalidateMetadataAsync(_currentTable.Id, _currentTable.Libelle);
@@ -459,8 +472,12 @@ else
         {
             await using var db = await DbFactory.CreateDbContextAsync();
 
-            var entity = await db.STable.Include(t => t.Champs).FirstAsync(t => t.Id == _currentTable.Id);
-            await DataEngine.CreatePhysicalTableAsync(entity, entity.Champs);
+            var entity = await db.STable
+                .Include(t => t.Champs)
+                .Where(t => t.TenantId == UserContext.TenantId && !t.Deleted)
+                .FirstAsync(t => t.Id == _currentTable.Id);
+            var fields = entity.Champs.Where(f => f.TenantId == UserContext.TenantId && !f.Deleted).ToList();
+            await DataEngine.CreatePhysicalTableAsync(entity, fields);
             await DataEngine.InvalidateMetadataAsync(entity.Id, entity.Libelle);
             _statusMessage = $"Table physique '{entity.Libelle}' créée.";
         }
@@ -526,7 +543,10 @@ else
             }
             else
             {
-                entity = await db.SField.FirstAsync(f => f.Id == _currentField.Id);
+                entity = await db.SField
+                    .Where(f => f.TableId == _currentTable.Id && f.TenantId == UserContext.TenantId && !f.Deleted)
+                    .FirstOrDefaultAsync(f => f.Id == _currentField.Id)
+                    ?? throw new InvalidOperationException($"Champ {_currentField.Id} introuvable pour ce locataire.");
                 entity.DtModification = DateTime.UtcNow;
                 entity.UsrModificationId = UserContext.UserId;
             }
@@ -572,7 +592,9 @@ else
         {
             await using var db = await DbFactory.CreateDbContextAsync();
 
-            var entity = await db.SField.FirstOrDefaultAsync(f => f.Id == id);
+            var entity = await db.SField
+                .Where(f => f.TableId == _currentTable.Id && f.TenantId == UserContext.TenantId && !f.Deleted)
+                .FirstOrDefaultAsync(f => f.Id == id);
             if (entity == null)
             {
                 return;
