@@ -42,13 +42,17 @@ namespace Aion.Domain.UI
                     }
 
                     var key = NormalizeParameterKey(kvp.Key);
+                    if (string.IsNullOrWhiteSpace(key))
+                    {
+                        continue;
+                    }
                     result[key] = kvp.Value;
                 }
             }
 
             foreach (var kvp in ParseQueryParameters(route))
             {
-                if (!result.ContainsKey(kvp.Key))
+                if (!string.IsNullOrWhiteSpace(kvp.Key) && !result.ContainsKey(kvp.Key))
                 {
                     result[kvp.Key] = kvp.Value;
                 }
@@ -65,6 +69,12 @@ namespace Aion.Domain.UI
             }
 
             var trimmed = key.Trim().TrimStart('#');
+            if (trimmed.StartsWith("/", StringComparison.Ordinal))
+            {
+                // Avoid propagating raw route segments as parameter names, which would break component binding.
+                return string.Empty;
+            }
+
             return trimmed.ToLowerInvariant() switch
             {
                 "tablename" or "table" => "TableName",
