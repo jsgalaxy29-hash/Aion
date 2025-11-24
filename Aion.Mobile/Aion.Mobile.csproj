@@ -6,6 +6,7 @@
     <RootNamespace>Aion.Mobile</RootNamespace>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>preview</LangVersion>
     <UseMaui>true</UseMaui>
     <SingleProject>true</SingleProject>
     <EnableDefaultMauiItems>true</EnableDefaultMauiItems>
