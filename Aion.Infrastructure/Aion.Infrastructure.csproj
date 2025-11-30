@@ -11,6 +11,8 @@
     <ProjectReference Include="..\Aion.Security\Aion.Security.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.2" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0" />
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
     <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="4.14.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.10" />
