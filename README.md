@@ -41,20 +41,30 @@
 ## 🏗️ Architecture
 
 ```
-Aion/
-├── Aion.Domain/          # Entités métier, Value Objects, Interfaces
-├── Aion.Infrastructure/  # DbContext, Repositories, Services
-├── Aion.Security/        # Authentification, Autorisation, RBAC
-├── Aion.AppHost/         # Application Blazor Server, UI, API
-└── AION_ROADMAP.yaml     # Source de vérité (métadonnées)
+/src
+  ├── Aion.Domain/          # Entités métier, Value Objects, interfaces métier (aucune dépendance)
+  ├── Aion.Infrastructure/  # DbContext, repositories, implémentations techniques dépendantes du domaine
+  ├── Aion.AI/              # Orchestration IA et contrats fournisseurs (dépend du domaine)
+  ├── Aion.AI/Providers.*   # Providers IA interchangeables (OpenAI, Mistral, etc.)
+  ├── Aion.AppHost/         # Hôte MAUI Blazor Hybrid (UI, navigation, DI uniquement)
+  └── AION_ROADMAP.yaml     # Source de vérité (métadonnées)
+
+/tests
+  ├── Aion.Domain.Tests/
+  └── Aion.Infrastructure.Tests/
+
+/docs
+  ├── AION_Vision/
+  ├── AION_Specification/
+  └── AION_Prompts/
 ```
 
 ### Principes architecturaux
 
-- **Hexagonal Architecture** : Séparation Domain / Infrastructure / AppHost
-- **CQRS léger** : Séparation lecture/écriture si nécessaire
-- **Dependency Injection** : Inversion de contrôle totale
-- **Generic Repositories** : Réutilisation maximale du code
+- **Séparation stricte** : Domaine isolé de toute dépendance UI ou infrastructure.
+- **MAUI comme AppHost** : Aucun DbContext, service métier ou logique IA n’y réside.
+- **Interchangeabilité IA** : Fournisseurs OpenAI / Mistral déclarés via configuration sécurisée.
+- **CQRS léger** : Séparation lecture/écriture si nécessaire.
 
 ---
 
@@ -80,10 +90,10 @@ dotnet restore
 # "AionDb": "Server=localhost;Database=AionDb;Trusted_Connection=True;TrustServerCertificate=True"
 
 # 4. Créer la base de données
-dotnet ef database update --project Aion.Security --startup-project Aion.AppHost
+dotnet ef database update --project src/Aion.Security --startup-project src/Aion.AppHost
 
 # 5. Lancer l'application
-dotnet run --project Aion.AppHost
+dotnet run --project src/Aion.AppHost
 ```
 
 ### Première connexion
@@ -103,6 +113,18 @@ dotnet restore
 dotnet build --configuration Release --no-restore
 dotnet test --no-build
 ```
+
+### Configuration IA sécurisée
+
+- Les exemples `src/Aion.AppHost/appsettings.OpenAI.example.json` et `src/Aion.AppHost/appsettings.Mistral.example.json` fournissent les clés attendues sans secret.
+- Les fichiers réels `appsettings.OpenAI.json` et `appsettings.Mistral.json` sont ignorés par Git ; configurez-les via `dotnet user-secrets` en local :
+
+```bash
+dotnet user-secrets set "OpenAI:ApiKey" "<clé>" --project src/Aion.AppHost
+dotnet user-secrets set "Mistral:ApiKey" "<clé>" --project src/Aion.AppHost
+```
+
+- En CI / production, privilégiez les variables d'environnement ou un provider de secrets externe.
 
 ---
 
@@ -212,7 +234,7 @@ modules:
 Après modification du YAML, régénérer les métadonnées :
 
 ```bash
-dotnet run --project Aion.AppHost -- --regen-meta
+dotnet run --project src/Aion.AppHost -- --regen-meta
 ```
 
 ---
