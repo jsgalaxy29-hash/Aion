@@ -2,41 +2,41 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
 VisualStudioVersion = 18.0.11116.177
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aion.AppHost", "Aion.AppHost\Aion.AppHost.csproj", "{E5C0D9CC-6B2C-4E25-9A5C-1C0D79C81431}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aion.AppHost", "src\Aion.AppHost\Aion.AppHost.csproj", "{E5C0D9CC-6B2C-4E25-9A5C-1C0D79C81431}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aion.AI", "Aion.AI\Aion.AI.csproj", "{0A89C9F9-61C5-4D3D-9B3F-823B4E0B2232}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aion.AI", "src\Aion.AI\Aion.AI.csproj", "{0A89C9F9-61C5-4D3D-9B3F-823B4E0B2232}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aion.AI.Tests", "Aion.AI.Tests\Aion.AI.Tests.csproj", "{3D5F13C7-ED90-4A6A-B0A2-1C2D47CA7A0C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aion.AI.Tests", "tests\Aion.AI.Tests\Aion.AI.Tests.csproj", "{3D5F13C7-ED90-4A6A-B0A2-1C2D47CA7A0C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aion.Infrastructure.Tests", "Aion.Infrastructure.Tests\Aion.Infrastructure.Tests.csproj", "{E27809C2-DB86-4F71-9D10-4DFB839A5B1A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aion.Infrastructure.Tests", "tests\Aion.Infrastructure.Tests\Aion.Infrastructure.Tests.csproj", "{E27809C2-DB86-4F71-9D10-4DFB839A5B1A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aion.Infrastructure", "Aion.Infrastructure\Aion.Infrastructure.csproj", "{7C4E9A44-29C6-4EAF-A5E7-7E3B8C42E4E9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aion.Infrastructure", "src\Aion.Infrastructure\Aion.Infrastructure.csproj", "{7C4E9A44-29C6-4EAF-A5E7-7E3B8C42E4E9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aion.Domain", "Aion.Domain\Aion.Domain.csproj", "{3B4E5B64-3B09-4CE8-8E1E-118A1E8795F3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aion.Domain", "src\Aion.Domain\Aion.Domain.csproj", "{3B4E5B64-3B09-4CE8-8E1E-118A1E8795F3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aion.UI", "Aion.UI\Aion.UI.csproj", "{6E4BEDAA-05F1-47C2-977F-72BBC4340A22}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aion.UI", "src\Aion.UI\Aion.UI.csproj", "{6E4BEDAA-05F1-47C2-977F-72BBC4340A22}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aion.DataEngine", "Aion.DataEngine\Aion.DataEngine.csproj", "{CE6994E9-1BFD-7D62-84E0-5BAFB2F1388C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aion.DataEngine", "src\Aion.DataEngine\Aion.DataEngine.csproj", "{CE6994E9-1BFD-7D62-84E0-5BAFB2F1388C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aion.Module.CRM", "Aion.Module.CRM\Aion.Module.CRM.csproj", "{04E4A2A0-B23F-A656-376B-853A88B53301}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aion.Module.CRM", "src\Aion.Module.CRM\Aion.Module.CRM.csproj", "{04E4A2A0-B23F-A656-376B-853A88B53301}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aion.Module.SystemCatalog", "Aion.Module.SystemCatalog\Aion.Module.SystemCatalog.csproj", "{8A1C1F9A-EBDA-4A7C-B7DA-7E4E4DBDF74E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aion.Module.SystemCatalog", "src\Aion.Module.SystemCatalog\Aion.Module.SystemCatalog.csproj", "{8A1C1F9A-EBDA-4A7C-B7DA-7E4E4DBDF74E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aion.Module.SecurityAdmin", "Aion.Module.SecurityAdmin\Aion.Module.SecurityAdmin.csproj", "{D3C9EA17-68A7-437E-80A2-4060C11166E1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aion.Module.SecurityAdmin", "src\Aion.Module.SecurityAdmin\Aion.Module.SecurityAdmin.csproj", "{D3C9EA17-68A7-437E-80A2-4060C11166E1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aion.Module.ListDyn", "Aion.Module.ListDyn\Aion.Module.ListDyn.csproj", "{5F6634F5-CB8D-4894-BD6C-E1B171DACAD5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aion.Module.ListDyn", "src\Aion.Module.ListDyn\Aion.Module.ListDyn.csproj", "{5F6634F5-CB8D-4894-BD6C-E1B171DACAD5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aion.Module.TableManager", "Aion.Module.TableManager\Aion.Module.TableManager.csproj", "{8388406E-36AE-4AE5-A285-AD1F43341DA8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aion.Module.TableManager", "src\Aion.Module.TableManager\Aion.Module.TableManager.csproj", "{8388406E-36AE-4AE5-A285-AD1F43341DA8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aion.Module.FormDyn", "Aion.Module.FormDyn\Aion.Module.FormDyn.csproj", "{7AB1483B-5FB2-4AE2-AA9A-D09AAE8204BD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aion.Module.FormDyn", "src\Aion.Module.FormDyn\Aion.Module.FormDyn.csproj", "{7AB1483B-5FB2-4AE2-AA9A-D09AAE8204BD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aion.Security", "Aion.Security\Aion.Security.csproj", "{5FE32BF2-FD8C-086F-1A61-B2F948A55D70}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aion.Security", "src\Aion.Security\Aion.Security.csproj", "{5FE32BF2-FD8C-086F-1A61-B2F948A55D70}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aion.Mobile", "Aion.Mobile\Aion.Mobile.csproj", "{04975F9B-AEA1-4867-993E-1A944CB6B3C8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aion.Mobile", "src\Aion.Mobile\Aion.Mobile.csproj", "{04975F9B-AEA1-4867-993E-1A944CB6B3C8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aion.AppHost.Tests", "Aion.AppHost.Tests\Aion.AppHost.Tests.csproj", "{BFE4C174-5A2D-4A9A-9085-6F0A7D95F5E3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aion.AppHost.Tests", "tests\Aion.AppHost.Tests\Aion.AppHost.Tests.csproj", "{BFE4C174-5A2D-4A9A-9085-6F0A7D95F5E3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AionMemory", "AionMemory\AionMemory.csproj", "{79A05D79-410E-4A49-A19F-AA7F9ABBBA7F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AionMemory", "src\AionMemory\AionMemory.csproj", "{79A05D79-410E-4A49-A19F-AA7F9ABBBA7F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

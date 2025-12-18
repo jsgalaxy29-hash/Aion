@@ -361,3 +361,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+# Local AI configuration
+src/Aion.AppHost/appsettings.OpenAI.json
+src/Aion.AppHost/appsettings.Mistral.json
